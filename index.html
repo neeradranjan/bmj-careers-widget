@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMJ Careers - Medical Jobs</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="main-wrapper">
+    <div class="job-count-header">
+        <div class="job-count-main" id="jobCountDisplay">
+            Found 0 jobs
+        </div>
+        <div class="job-count-subtitle">
+            Browse through available medical positions
+        </div>
+    </div>
+
+    <div class="category-buttons-wrapper">
+        <div class="category-buttons">
+            <button class="category-btn active" onclick="applyCategoryFilter('all')" id="btn-all">
+                <span class="emoji">🏥</span>
+                <span>All Jobs</span>
+            </button>
+            <button class="category-btn" onclick="applyCategoryFilter('consultant')" id="btn-consultant">
+                <span class="emoji">👨‍⚕️</span>
+                <span>Consultant</span>
+            </button>
+            <button class="category-btn" onclick="applyCategoryFilter('gp')" id="btn-gp">
+                <span class="emoji">🩺</span>
+                <span>GP Jobs</span>
+            </button>
+            <button class="category-btn" onclick="applyCategoryFilter('international')" id="btn-international">
+                <span class="emoji">🌍</span>
+                <span>International</span>
+            </button>
+            <button class="category-btn" onclick="applyCategoryFilter('training')" id="btn-training">
+                <span class="emoji">🎓</span>
+                <span>Training</span>
+            </button>
+            <button class="category-btn" onclick="applyCategoryFilter('special')" id="btn-special">
+                <span class="emoji">⚡</span>
+                <span>Special</span>
+            </button>
+            <button class="category-btn" onclick="applyCategoryFilter('research')" id="btn-research">
+                <span class="emoji">🔬</span>
+                <span>Research</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="content-container">
+        <div class="sidebar">
+            <div class="search-section">
+                <h3 class="search-title">Keyword Search</h3>
+                <input type="text" class="search-input" id="keywordSearch" placeholder="Enter keywords...">
+
+                <div class="keywords-section">
+                    <label class="keywords-label">Popular Keywords</label>
+                    <div class="keywords-list" id="keywordsList">
+                    </div>
+                </div>
+            </div>
+
+            <div class="filters-section">
+                <h3 class="filters-title">Filter By Category</h3>
+                <div id="filtersContainer">
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="jobs-section">
+                <div id="jobsList">
+                </div>
+            </div>
+
+            <div class="pagination-section">
+                <div class="pagination-info">
+                    Showing <span id="jobRangeStart">1</span>-<span id="jobRangeEnd">6</span> of <span id="totalJobsCount">0</span> jobs
+                </div>
+                <div class="pagination-controls">
+                    <button class="pagination-btn" id="firstBtn" onclick="goToPage(1)">First</button>
+                    <button class="pagination-btn" id="prevBtn" onclick="goToPage(getCurrentPage() - 1)">‹</button>
+                    <span id="pageNumbers"></span>
+                    <button class="pagination-btn" id="nextBtn" onclick="goToPage(getCurrentPage() + 1)">›</button>
+                    <button class="pagination-btn" id="lastBtn" onclick="goToPage(Math.ceil(filteredJobs.length / jobsPerPage))">Last</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button class="scroll-to-top" id="scrollToTop" title="Move To Top" onclick="scrollToTop()">
+    ↑
+</button>
+
+<script>
+    // Initialize with empty array - will be populated by API
+    let allJobsData = [];
+
+    const professionHierarchy = {
+        'GP': {
+            subcategories: [
+                'Digital GP',
+                'GP Partner',
+                'GP Trainee',
+                'Locum GP',
+                'Salaried GP'
+            ]
+        },
+        'Specialist Doctor': {
+            subcategories: [
+                'Acute Internal Medicine',
+                'Adult Critical Care',
+                'Anaesthesia',
+                'Anatomy',
+                'Audiological Medicine',
+                'BioChemistry',
+                'Cardiology',
+                'Cardiothoracic Surgery',
+                'Cytopathology',
+                'Dermatology',
+                'Diabetes & Endocrinology',
+                'Emergency medicine',
+                'ENT/Otolaryngology',
+                'Forensic Pathology',
+                'Gastroenterology',
+                'General Internal Medicine',
+                'General Surgery',
+                'Genetics',
+                'Genitourinary Medicine',
+                'Geriatric Medicine',
+                'GP in Emergency Medicine',
+                'Gynaecological Oncology',
+                'Haematology',
+                'Hepatology',
+                'Histopathology',
+                'Immunology',
+                'Intensive and Critical Care Medicine',
+                'Locum Doctor',
+                'Maternal and Foetal Medicine',
+                'Metabolic Medicine',
+                'Microbiology, Virology and Infectious Diseases',
+                'Neonatology',
+                'Nephrology/Renal Medicine',
+                'Neurology',
+                'Neuropathology',
+                'Neurophysiology',
+                'Neurosurgery',
+                'Nuclear Medicine',
+                'Obstetrics and Gynaecology',
+                'Occupational Medicine',
+                'Oncology',
+                'Ophthalmology',
+                'Oral and Maxillofacial Surgery',
+                {
+                    name: 'Paediatrics',
+                    subcategories: [
+                        'Paediatric cardiology',
+                        'Paediatric diabetes and endocrinology',
+                        'Paediatric emergency medicine',
+                        'Paediatric gastroenterology, Hepatology and Nutrition',
+                        'Paediatric immunology, infectious diseases and allergy',
+                        'Paediatric intensive Care Medicine',
+                        'Paediatric nephrology',
+                        'Paediatric neurodisability',
+                        'Paediatric neurology',
+                        'Paediatric oncology',
+                        'Paediatric palliative Medicine',
+                        'Paediatric pathology',
+                        'Paediatric respiratory medicine',
+                        'Paediatric rheumatology',
+                        'Paediatric surgery'
+                    ]
+                },
+                'Palliative medicine',
+                'Pathology',
+                'Pharmaceutical medicine',
+                'Pharmalogy and Therapeutics',
+                'Physiology',
+                'Plastic Surgery',
+                'Pre Hospital Emergency Medicine',
+                {
+                    name: 'Psychiatry',
+                    subcategories: [
+                        'Child and Adolescent Psychiatry',
+                        'Community Psychiatry',
+                        'Forensic Psychiatry',
+                        'General Adult Psychiatry',
+                        'Liaison Psychiatry',
+                        'Medical Psychotherapy',
+                        'Old-age Psychiatry',
+                        'Psychiatry of eating disorders',
+                        'Psychiatry of learning disablity',
+                        'Rehabilition Psychiatry',
+                        'Substance Misuse Psychiatry'
+                    ]
+                },
+                'Public Health Medicine and Epidemiology',
+                'Radiology',
+                'Rahabilitation Medicine',
+                'Respiratory Medicine',
+                'Rheumatology',
+                'RMO',
+                'Sexual and Reproductive Health',
+                'Spinal Injuries',
+                'Sports and Exercise Medicine',
+                'Stroke Medicine',
+                'Trauma and Orthopaedics',
+                'Tropical Medicine',
+                'Urogynaecology',
+                'Urology',
+                'Vascular Surgery'
+            ]
+        },
+        'Other Medical Roles': {
+            subcategories: [
+                'Armed Forces Doctor',
+                'Commissioning',
+                'Government and Health Policy',
+                'Healthtech',
+                'International medical Jobs',
+                'Medical Education and Training',
+                'Medical Examiner',
+                'Medical leadership',
+                'Medical training Initiative',
+                'Medico-legal',
+                'Occupational health',
+                'Pharmaceutical',
+                'Public Health',
+                'Special Appointements'
+            ]
+        },
+        'Nurse': {
+            subcategories: [
+                {
+                    name: 'Adult Nurse',
+                    subcategories: [
+                        'A&E Nurse',
+                        'Acute Nurse',
+                        'Anaesthesia Nurse',
+                        'Cancer Nurse',
+                        'Cardiology Nurse',
+                        'Elderly Care Nurse',
+                        'Fertility Nurse',
+                        'ICU Nurse',
+                        'Ophthalmics Nurse',
+                        'Palliative Care Nurse',
+                        'Renal Nurse',
+                        'Respiratory Nurse',
+                        'Sexual Health Nurse',
+                        'Theatre Nurse',
+                        'Trauma Nurse'
+                    ]
+                },
+                {
+                    name: 'Community Nurse',
+                    subcategories: [
+                        'Care Home Nurse',
+                        'Community MidWife',
+                        'District Nurse',
+                        'Health Visitor',
+                        'Mental Health Nurse - Community',
+                        'School Nurse'
+                    ]
+                },
+                'General Practice Nurse',
+                'Learning Disablity Nurse',
+                {
+                    name: 'Mental Health Nurse',
+                    subcategories: [
+                        'Adult Mental Health Nurse',
+                        'CAMHS Nurse',
+                        'Community Mental Health Nurse',
+                        'Eating Disorders Nurse',
+                        'Forensic Mental Health Nurse',
+                        'Mental Health Liaison Nurse',
+                        'Mental health Nurse in Primary care',
+                        'Old Age Mental Health Care Nurse',
+                        'Perinatal Mental Health Nurse',
+                        'Rehabilitation Mental Health Nurse',
+                        'Substance Misuse Nurse'
+                    ]
+                },
+                'Midwife',
+                'Nurse associate',
+                {
+                    name: 'Paediatric Nurse',
+                    subcategories: [
+                        'Neonatal Nurse',
+                        'Paediatric A&E Nurse'
+                    ]
+                },
+                'Prison Nurse'
+            ]
+        },
+        'Allied Health Professional': {
+            subcategories: [
+                'Art/Drama/Music Therapist',
+                'Dietician',
+                'Occupational Therapist',
+                'Operating department Practitioner',
+                'Paramedic',
+                'Physiotherapist',
+                'Podiatrist',
+                'Radiographer',
+                'Sonographer',
+                'Speech and Language Therapist'
+            ]
+        },
+        'Mental Health Professional': {
+            subcategories: [
+                'CBT Therapist',
+                'Counsellor',
+                'Mental health Practitioner',
+                'Psychologist',
+                'Psychotherapist'
+            ]
+        },
+        'Pharmacist': {
+            subcategories: [
+                'Pharmacy technician'
+            ]
+        },
+        'HealthCare Scientist': {
+            subcategories: [
+                'Audiologist',
+                'Biomedical Scientist',
+                'Clinicial Scientist',
+                'Informatician',
+                'Lab technician',
+                'Physiologist',
+                'Researcher'
+            ]
+        },
+        'Physician Associate': {
+            subcategories: []
+        },
+        'Senior Manager': {
+            subcategories: []
+        },
+        'Other Health Profession': {
+            subcategories: []
+        }
+    };
+
+    const locationHierarchy = {
+        'London': {
+            subcategories: [
+                'Central London',
+                'North London',
+                'South London',
+                'East London',
+                'West London',
+                'Greater London'
+            ]
+        },
+        'South East England': {
+            subcategories: [
+                'Brighton',
+                'Canterbury',
+                'Oxford',
+                'Reading',
+                'Southampton',
+                'Portsmouth',
+                'Guildford',
+                'Maidstone',
+                'Crawley',
+                'Slough',
+                'Milton Keynes',
+                'Luton',
+                'Medway',
+                'Ashford',
+                'Basingstoke',
+                'Eastbourne',
+                'Hastings',
+                'Worthing',
+                'Bracknell',
+                'Maidenhead',
+                'Windsor',
+                'Berkshire',
+                'Buckinghamshire',
+                'East Sussex',
+                'Hampshire',
+                'Isle of Wight',
+                'Kent',
+                'Oxfordshire',
+                'Surrey',
+                'West Sussex'
+            ]
+        },
+        'South West England': {
+            subcategories: [
+                'Bristol',
+                'Plymouth',
+                'Bournemouth',
+                'Swindon',
+                'Gloucester',
+                'Exeter',
+                'Bath',
+                'Cheltenham',
+                'Torbay',
+                'Poole',
+                'Taunton',
+                'Salisbury',
+                'Truro',
+                'Weymouth',
+                'Weston-super-Mare',
+                'Yeovil',
+                'Barnstaple',
+                'Bridgwater',
+                'Cornwall',
+                'Devon',
+                'Dorset',
+                'Gloucestershire',
+                'Somerset',
+                'Wiltshire'
+            ]
+        },
+        'East of England': {
+            subcategories: [
+                'Cambridge',
+                'Norwich',
+                'Peterborough',
+                'Ipswich',
+                'Colchester',
+                'Southend-on-Sea',
+                'Luton',
+                'Watford',
+                'St Albans',
+                'Chelmsford',
+                'Basildon',
+                'Harlow',
+                'Stevenage',
+                'Bedford',
+                'Bury St Edmunds',
+                'Hertford',
+                'Huntingdon',
+                'Kings Lynn',
+                'Lowestoft',
+                'Bedfordshire',
+                'Cambridgeshire',
+                'Essex',
+                'Hertfordshire',
+                'Norfolk',
+                'Suffolk'
+            ]
+        },
+        'East Midlands': {
+            subcategories: [
+                'Nottingham',
+                'Leicester',
+                'Derby',
+                'Northampton',
+                'Lincoln',
+                'Mansfield',
+                'Chesterfield',
+                'Kettering',
+                'Loughborough',
+                'Boston',
+                'Grantham',
+                'Corby',
+                'Hinckley',
+                'Newark',
+                'Wellingborough',
+                'Derbyshire',
+                'Leicestershire',
+                'Lincolnshire',
+                'Northamptonshire',
+                'Nottinghamshire',
+                'Rutland'
+            ]
+        },
+        'West Midlands': {
+            subcategories: [
+                'Birmingham',
+                'Coventry',
+                'Wolverhampton',
+                'Stoke-on-Trent',
+                'Solihull',
+                'Walsall',
+                'Dudley',
+                'Sandwell',
+                'Worcester',
+                'Shrewsbury',
+                'Telford',
+                'Stafford',
+                'Warwick',
+                'Hereford',
+                'Stratford-upon-Avon',
+                'Lichfield',
+                'Tamworth',
+                'Redditch',
+                'Kidderminster',
+                'Herefordshire',
+                'Shropshire',
+                'Staffordshire',
+                'Warwickshire',
+                'Worcestershire'
+            ]
+        },
+        'Yorkshire and the Humber': {
+            subcategories: [
+                'Leeds',
+                'Sheffield',
+                'Bradford',
+                'Hull',
+                'York',
+                'Huddersfield',
+                'Middlesbrough',
+                'Doncaster',
+                'Rotherham',
+                'Wakefield',
+                'Barnsley',
+                'Halifax',
+                'Harrogate',
+                'Scarborough',
+                'Dewsbury',
+                'Keighley',
+                'Scunthorpe',
+                'Grimsby',
+                'East Yorkshire',
+                'North Yorkshire',
+                'South Yorkshire',
+                'West Yorkshire'
+            ]
+        },
+        'North West England': {
+            subcategories: [
+                'Manchester',
+                'Liverpool',
+                'Warrington',
+                'Bolton',
+                'Blackpool',
+                'Preston',
+                'Chester',
+                'Stockport',
+                'Oldham',
+                'Rochdale',
+                'Salford',
+                'Wigan',
+                'Bury',
+                'Blackburn',
+                'St Helens',
+                'Carlisle',
+                'Lancaster',
+                'Crewe',
+                'Burnley',
+                'Macclesfield',
+                'Barrow-in-Furness',
+                'Runcorn',
+                'Ellesmere Port',
+                'Cheshire',
+                'Cumbria',
+                'Greater Manchester',
+                'Lancashire',
+                'Merseyside'
+            ]
+        },
+        'North East England': {
+            subcategories: [
+                'Newcastle upon Tyne',
+                'Sunderland',
+                'Durham',
+                'Gateshead',
+                'Middlesbrough',
+                'Stockton-on-Tees',
+                'Darlington',
+                'Hartlepool',
+                'South Shields',
+                'Tynemouth',
+                'Washington',
+                'Ashington',
+                'Blyth',
+                'Redcar',
+                'Bishop Auckland',
+                'County Durham',
+                'Northumberland',
+                'Tyne and Wear',
+                'Teesside'
+            ]
+        },
+        'Scotland': {
+            subcategories: [
+                'Edinburgh',
+                'Glasgow',
+                'Aberdeen',
+                'Dundee',
+                'Inverness',
+                'Perth',
+                'Stirling',
+                'Paisley',
+                'East Kilbride',
+                'Livingston',
+                'Hamilton',
+                'Cumbernauld',
+                'Dunfermline',
+                'Kirkcaldy',
+                'Ayr',
+                'Kilmarnock',
+                'Greenock',
+                'Coatbridge',
+                'Glenrothes',
+                'Falkirk'
+            ]
+        },
+        'Wales': {
+            subcategories: [
+                'Cardiff',
+                'Swansea',
+                'Newport',
+                'Wrexham',
+                'Barry',
+                'Neath',
+                'Cwmbran',
+                'Llanelli',
+                'Rhondda',
+                'Merthyr Tydfil',
+                'Bridgend',
+                'Caerphilly',
+                'Port Talbot',
+                'Pontypridd',
+                'Aberdare',
+                'Colwyn Bay',
+                'Rhyl',
+                'Flintshire',
+                'Gwynedd',
+                'Anglesey'
+            ]
+        },
+        'Northern Ireland': {
+            subcategories: [
+                'Belfast',
+                'Derry',
+                'Lisburn',
+                'Newtownabbey',
+                'Bangor',
+                'Craigavon',
+                'Castlereagh',
+                'Ballymena',
+                'Newtownards',
+                'Newry',
+                'Carrickfergus',
+                'Coleraine',
+                'Omagh',
+                'Larne',
+                'Banbridge',
+                'Armagh',
+                'Dungannon',
+                'Enniskillen',
+                'Strabane',
+                'Antrim'
+            ]
+        },
+        'International': {
+            subcategories: [
+                'Republic of Ireland',
+                'Channel Islands',
+                'Isle of Man',
+                'Europe',
+                'Middle East',
+                'Asia Pacific',
+                'North America',
+                'South America',
+                'Africa',
+                'Australia',
+                'New Zealand',
+                'Other International'
+            ]
+        }
+    };
+
+    let filterData = {};
+    let keywords = [];
+    let currentPage = 1;
+    const jobsPerPage = 10;
+    let filteredJobs = [];
+    let activeCategoryFilter = 'all';
+
+    const categoryFilters = {
+        all: {
+            name: 'All Jobs',
+            keywords: [],
+            filter: () => true
+        },
+        consultant: {
+            name: 'Consultant',
+            keywords: ['consultant', 'specialist doctor', 'associate specialist'],
+            filter: (job) => {
+                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+                return categoryFilters.consultant.keywords.some(keyword =>
+                    searchText.includes(keyword.toLowerCase())
+                );
+            }
+        },
+        gp: {
+            name: 'GP Jobs',
+            keywords: ['gp', 'general practitioner', 'family doctor', 'primary care'],
+            filter: (job) => {
+                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+                return categoryFilters.gp.keywords.some(keyword =>
+                    searchText.includes(keyword.toLowerCase())
+                );
+            }
+        },
+        international: {
+            name: 'International',
+            keywords: ['international', 'overseas', 'abroad', 'global', 'foreign', 'visa'],
+            filter: (job) => {
+                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+                return categoryFilters.international.keywords.some(keyword =>
+                    searchText.includes(keyword.toLowerCase())
+                );
+            }
+        },
+        training: {
+            name: 'Training',
+            keywords: ['training', 'education', 'foundation', 'registrar', 'fellowship', 'residency', 'trainee'],
+            filter: (job) => {
+                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+                return categoryFilters.training.keywords.some(keyword =>
+                    searchText.includes(keyword.toLowerCase())
+                );
+            }
+        },
+        special: {
+            name: 'Special',
+            keywords: ['locum', 'temporary', 'interim', 'contract', 'special', 'urgent', 'immediate'],
+            filter: (job) => {
+                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+                return categoryFilters.special.keywords.some(keyword =>
+                    searchText.includes(keyword.toLowerCase())
+                );
+            }
+        },
+        research: {
+            name: 'Research',
+            keywords: ['research', 'clinical trial', 'study', 'academic', 'university', 'scientist', 'laboratory'],
+            filter: (job) => {
+                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+                return categoryFilters.research.keywords.some(keyword =>
+                    searchText.includes(keyword.toLowerCase())
+                );
+            }
+        }
+    };
+
+    // All function definitions remain the same
+    function normalizeLocation(location) {
+        return location.toLowerCase().trim()
+            .replace(/\s+/g, ' ')
+            .replace(/[^\w\s-]/g, '');
+    }
+
+    function categorizeLocation(locationStr) {
+        const normalized = normalizeLocation(locationStr);
+
+        for (const [region, data] of Object.entries(locationHierarchy)) {
+            if (normalizeLocation(region) === normalized) {
+                return { region: region, isRegion: true };
+            }
+        }
+
+        for (const [region, data] of Object.entries(locationHierarchy)) {
+            for (const subcategory of data.subcategories) {
+                if (normalizeLocation(subcategory) === normalized) {
+                    return { region: region, subcategory: subcategory, isRegion: false };
+                }
+            }
+        }
+
+        const ukCountries = ['england', 'scotland', 'wales', 'northern ireland', 'uk', 'united kingdom', 'britain'];
+        const isUK = ukCountries.some(country => normalized.includes(country));
+
+        if (!isUK) {
+            return { region: 'International', subcategory: 'Other International', isRegion: false };
+        }
+
+        if (normalized.includes('london')) {
+            return { region: 'London', subcategory: 'Greater London', isRegion: false };
+        }
+
+        return { region: 'Other UK', subcategory: locationStr, isRegion: false };
+    }
+
+    function getCurrentDate() {
+        return new Date();
+    }
+
+    function parseDaysFromPublished(publishedString) {
+        if (!publishedString) return null;
+
+        const lowerStr = publishedString.toLowerCase();
+
+        if (lowerStr.includes('24 hours') || lowerStr.includes('today')) {
+            return 1;
+        } else if (lowerStr.includes('yesterday')) {
+            return 1;
+        } else if (lowerStr.includes('last') && lowerStr.includes('days')) {
+            const match = lowerStr.match(/(\d+)/);
+            return match ? parseInt(match[1]) : null;
+        } else if (lowerStr.includes('week')) {
+            const match = lowerStr.match(/(\d+)/);
+            return match ? parseInt(match[1]) * 7 : 7;
+        } else if (lowerStr.includes('month')) {
+            const match = lowerStr.match(/(\d+)/);
+            return match ? parseInt(match[1]) * 30 : 30;
+        }
+
+        return null;
+    }
+
+    function categorizePublishedString(publishedString) {
+        const days = parseDaysFromPublished(publishedString);
+
+        if (!days) return null;
+
+        if (days <= 7) return "A week ago";
+        else if (days <= 14) return "Two weeks ago";
+        else if (days <= 21) return "Three weeks ago";
+        else if (days <= 30) return "A month ago";
+        else if (days <= 60) return "Two months ago";
+        else if (days <= 90) return "Three months ago";
+        else return "Older than 3 months";
+    }
+
+    function filterActiveJobs(jobs) {
+        const currentDate = getCurrentDate();
+        return jobs.filter(job => {
+            if (job.job_end_date) {
+                const endDate = new Date(job.job_end_date);
+                return endDate >= currentDate;
+            }
+            return true;
+        });
+    }
+
+    window.applyCategoryFilter = function(category) {
+        activeCategoryFilter = category;
+        updateCategoryButtons();
+        applyFilters();
+        scrollToTop();
+    };
+
+    window.selectKeyword = function(keyword) {
+        document.getElementById('keywordSearch').value = keyword;
+        applyFilters();
+        scrollToTop();
+    };
+
+    window.toggleFilterGroup = function(groupName) {
+        const arrow = document.getElementById(groupName + 'Arrow');
+        const options = document.getElementById(groupName + 'Options');
+
+        if (options.classList.contains('collapsed')) {
+            options.classList.remove('collapsed');
+            arrow.classList.remove('collapsed');
+            arrow.textContent = '▼';
+        } else {
+            options.classList.add('collapsed');
+            arrow.classList.add('collapsed');
+            arrow.textContent = '▶';
+        }
+    };
+
+    window.toggleParentCategory = function(category, parentName) {
+        const arrow = document.getElementById(`${category}_parent_arrow_${parentName.replace(/\s+/g, '_')}`);
+        const subcategories = document.getElementById(`${category}_subcategories_${parentName.replace(/\s+/g, '_')}`);
+
+        if (subcategories.classList.contains('collapsed')) {
+            subcategories.classList.remove('collapsed');
+            arrow.classList.remove('collapsed');
+            arrow.textContent = '▼';
+        } else {
+            subcategories.classList.add('collapsed');
+            arrow.classList.add('collapsed');
+            arrow.textContent = '▶';
+        }
+    };
+
+    window.handleParentCategoryChange = function(category, parentName) {
+        const parentCheckbox = document.getElementById(`${category}_parent_${parentName.replace(/\s+/g, '_')}`);
+        const isChecked = parentCheckbox.checked;
+
+        const subcategoryContainer = document.getElementById(`${category}_subcategories_${parentName.replace(/\s+/g, '_')}`);
+        const subCheckboxes = subcategoryContainer.querySelectorAll(`.${category}-sub-checkbox`);
+
+        subCheckboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+
+        applyFilters();
+        scrollToTop();
+    };
+
+    window.handleSubCategoryChange = function(category, parentName, subName) {
+        updateParentCheckboxState(category, parentName);
+        applyFilters();
+        scrollToTop();
+    };
+
+    window.toggleProfessionParent = function(parentName) {
+        toggleParentCategory('profession', parentName);
+    };
+
+    window.handleParentProfessionChange = function(parentName) {
+        handleParentCategoryChange('profession', parentName);
+    };
+
+    window.handleSubProfessionChange = function(parentName, subName) {
+        handleSubCategoryChange('profession', parentName, subName);
+    };
+
+    window.handleFilterChange = function(category, value) {
+        applyFilters();
+        scrollToTop();
+    };
+
+    window.applyToJob = function(jobId) {
+        const job = allJobsData.find(j => j.id === jobId);
+        if (job && job.job_url) {
+            window.open(job.job_url, '_blank');
+        } else {
+            window.open('https://www.bmj.com/careers/jobs/', '_blank');
+        }
+    };
+
+    window.goToPage = function(page) {
+        const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
+        if (page < 1 || page > totalPages) return;
+
+        currentPage = page;
+        renderJobsList();
+        updatePagination();
+
+        document.querySelector('.jobs-section').scrollIntoView({ behavior: 'smooth' });
+    };
+
+    window.getCurrentPage = function() {
+        return currentPage;
+    };
+
+    window.scrollToTop = function() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
+
+    function handleScroll() {
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        if (window.pageYOffset > 300) {
+            scrollToTopBtn.classList.add('show');
+        } else {
+            scrollToTopBtn.classList.remove('show');
+        }
+    }
+
+    function updateCategoryButtons() {
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        const activeBtn = document.getElementById(`btn-${activeCategoryFilter}`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    function updateParentCheckboxState(category, parentName) {
+        const parentCheckbox = document.getElementById(`${category}_parent_${parentName.replace(/\s+/g, '_')}`);
+        const subcategoryContainer = document.getElementById(`${category}_subcategories_${parentName.replace(/\s+/g, '_')}`);
+        const subCheckboxes = subcategoryContainer.querySelectorAll(`.${category}-sub-checkbox`);
+
+        const checkedCount = Array.from(subCheckboxes).filter(cb => cb.checked).length;
+        const totalCount = subCheckboxes.length;
+
+        if (checkedCount === 0) {
+            parentCheckbox.checked = false;
+            parentCheckbox.classList.remove('indeterminate');
+        } else if (checkedCount === totalCount) {
+            parentCheckbox.checked = true;
+            parentCheckbox.classList.remove('indeterminate');
+        } else {
+            parentCheckbox.checked = false;
+            parentCheckbox.classList.add('indeterminate');
+        }
+    }
+
+    function countJobsForLocationCategory(categoryName, subcategories) {
+        const activeJobs = filterActiveJobs(allJobsData);
+        return activeJobs.filter(job => {
+            const location = job.location_description || '';
+            const categorized = categorizeLocation(location);
+
+            if (categorized.region === categoryName) {
+                return true;
+            }
+
+            return subcategories.some(subcat => {
+                const normalizedSubcat = normalizeLocation(subcat);
+                const normalizedLocation = normalizeLocation(location);
+                return normalizedLocation.includes(normalizedSubcat);
+            });
+        }).length;
+    }
+
+    function countJobsForSpecificLocation(locationName) {
+        const activeJobs = filterActiveJobs(allJobsData);
+        return activeJobs.filter(job => {
+            const location = job.location_description || '';
+            const normalizedLocation = normalizeLocation(location);
+            const normalizedSearch = normalizeLocation(locationName);
+            return normalizedLocation.includes(normalizedSearch);
+        }).length;
+    }
+
+    function buildLocationHierarchy() {
+        const locationData = [];
+        const activeJobs = filterActiveJobs(allJobsData);
+
+        const londonJobs = activeJobs.filter(job => {
+            const location = job.location_description || '';
+            const normalized = normalizeLocation(location);
+            return normalized === 'london' ||
+                   normalized === 'london england' ||
+                   normalized === 'london uk';
+        });
+
+        if (londonJobs.length > 0) {
+            locationData.push({
+                name: 'London',
+                count: londonJobs.length,
+                subcategories: []
+            });
+        }
+
+        Object.entries(locationHierarchy).forEach(([parentName, parentData]) => {
+            if (parentName === 'London') return;
+
+            const parentCount = countJobsForLocationCategory(parentName, parentData.subcategories);
+
+            if (parentCount > 0) {
+                const subcategoryData = [];
+
+                parentData.subcategories.forEach(subcategory => {
+                    const count = countJobsForSpecificLocation(subcategory);
+                    if (count > 0) {
+                        subcategoryData.push({ name: subcategory, count });
+                    }
+                });
+
+                locationData.push({
+                    name: parentName,
+                    count: parentCount,
+                    subcategories: subcategoryData
+                });
+            }
+        });
+
+        return locationData;
+    }
+
+    function getCheckedLocations() {
+        const checkedLocations = [];
+
+        const simpleCheckboxes = document.querySelectorAll('.location-checkbox:checked');
+        simpleCheckboxes.forEach(checkbox => {
+            const label = checkbox.nextElementSibling;
+            if (label && label.textContent) {
+                checkedLocations.push(label.textContent.trim());
+            }
+        });
+
+        const subCheckboxes = document.querySelectorAll('.location-sub-checkbox:checked');
+        subCheckboxes.forEach(checkbox => {
+            const label = checkbox.nextElementSibling;
+            if (label && label.textContent) {
+                checkedLocations.push(label.textContent.trim());
+            }
+        });
+
+        return checkedLocations;
+    }
+
+    function countJobsForProfessionCategory(categoryName, subcategories) {
+        const activeJobs = filterActiveJobs(allJobsData);
+        return activeJobs.filter(job => {
+            const sectors = job.sector || [];
+            const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+
+            return subcategories.some(subcat => {
+                if (typeof subcat === 'string') {
+                    return searchText.includes(subcat.toLowerCase()) || sectors.some(s => s.toLowerCase() === subcat.toLowerCase());
+                } else if (typeof subcat === 'object' && subcat.subcategories) {
+                    return searchText.includes(subcat.name.toLowerCase()) ||
+                           subcat.subcategories.some(nested => searchText.includes(nested.toLowerCase()));
+                }
+                return false;
+            });
+        }).length;
+    }
+
+    function countJobsForSpecificProfession(professionName) {
+        const activeJobs = filterActiveJobs(allJobsData);
+        return activeJobs.filter(job => {
+            const sectors = job.sector || [];
+            const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+            return searchText.includes(professionName.toLowerCase()) || sectors.some(s => s.toLowerCase() === professionName.toLowerCase());
+        }).length;
+    }
+
+    function buildProfessionHierarchy() {
+        const professionData = [];
+
+        Object.entries(professionHierarchy).forEach(([parentName, parentData]) => {
+            const parentCount = countJobsForProfessionCategory(parentName, parentData.subcategories);
+
+            if (parentCount > 0) {
+                const subcategoryData = [];
+
+                parentData.subcategories.forEach(subcategory => {
+                    if (typeof subcategory === 'string') {
+                        const count = countJobsForSpecificProfession(subcategory);
+                        if (count > 0) {
+                            subcategoryData.push({ name: subcategory, count });
+                        }
+                    } else if (typeof subcategory === 'object' && subcategory.subcategories) {
+                        const nestedCount = countJobsForSpecificProfession(subcategory.name);
+                        if (nestedCount > 0) {
+                            const nestedSubcategories = [];
+                            subcategory.subcategories.forEach(nestedSub => {
+                                const nestedSubCount = countJobsForSpecificProfession(nestedSub);
+                                if (nestedSubCount > 0) {
+                                    nestedSubcategories.push({ name: nestedSub, count: nestedSubCount });
+                                }
+                            });
+
+                            subcategoryData.push({
+                                name: subcategory.name,
+                                count: nestedCount,
+                                subcategories: nestedSubcategories
+                            });
+                        }
+                    }
+                });
+
+                professionData.push({
+                    name: parentName,
+                    count: parentCount,
+                    subcategories: subcategoryData
+                });
+            }
+        });
+
+        return professionData;
+    }
+
+    function getCheckedProfessions() {
+        const checkedProfessions = [];
+
+        const subCheckboxes = document.querySelectorAll('.profession-sub-checkbox:checked');
+        subCheckboxes.forEach(checkbox => {
+            const label = checkbox.nextElementSibling;
+            if (label && label.textContent) {
+                checkedProfessions.push(label.textContent.trim());
+            }
+        });
+
+        return checkedProfessions;
+    }
+
+    function calculateFilterCounts() {
+        filterData = {
+            published: {},
+            profession: {},
+            grade: {},
+            location: {}
+        };
+
+        const activeJobs = filterActiveJobs(allJobsData);
+
+        if (activeJobs.length === 0) return;
+
+        activeJobs.forEach(job => {
+            if (job.published) {
+                const category = categorizePublishedString(job.published);
+                if (category) {
+                    filterData.published[category] = (filterData.published[category] || 0) + 1;
+                }
+            }
+
+            if (job.grade) {
+                filterData.grade[job.grade] = (filterData.grade[job.grade] || 0) + 1;
+            }
+        });
+
+        filterData.profession = buildProfessionHierarchy();
+        filterData.location = buildLocationHierarchy();
+
+        ['grade'].forEach(category => {
+            const items = Object.entries(filterData[category]).map(([name, count]) => ({ name, count }));
+            filterData[category] = items.sort((a, b) => b.count - a.count);
+        });
+
+        const publishedOrder = [
+            "A week ago",
+            "Two weeks ago",
+            "Three weeks ago",
+            "A month ago",
+            "Two months ago",
+            "Three months ago",
+            "Older than 3 months"
+        ];
+
+        filterData.published = publishedOrder
+            .filter(category => filterData.published[category] > 0)
+            .map(category => ({
+                name: category,
+                count: filterData.published[category]
+            }));
+    }
+
+    function renderLocationFilters(locationData) {
+        return `
+            <div class="filter-group">
+                <div class="filter-header" onclick="toggleFilterGroup('location')">
+                    <span class="filter-arrow" id="locationArrow">▼</span>
+                    <span>Location</span>
+                </div>
+                <div class="filter-options" id="locationOptions">
+                    ${locationData.map(parent => {
+                        const hasSubcategories = parent.subcategories && parent.subcategories.length > 0;
+
+                        if (!hasSubcategories) {
+                            return `
+                                <div class="filter-item">
+                                    <input type="checkbox" class="filter-checkbox location-checkbox" id="location_${parent.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '').replace(/,/g, '')}"
+                                           onchange="handleFilterChange('location', '${parent.name}')">
+                                    <label class="filter-label" for="location_${parent.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '').replace(/,/g, '')}">${parent.name}</label>
+                                    <span class="filter-count">${parent.count}</span>
+                                </div>
+                            `;
+                        } else {
+                            return `
+                                <div class="profession-parent-group">
+                                    <div class="profession-parent-header" onclick="toggleParentCategory('location', '${parent.name}')">
+                                        <input type="checkbox" class="profession-parent-checkbox" id="location_parent_${parent.name.replace(/\s+/g, '_')}"
+                                               onchange="handleParentCategoryChange('location', '${parent.name}')" onclick="event.stopPropagation()">
+                                        <label class="profession-parent-label" for="location_parent_${parent.name.replace(/\s+/g, '_')}">${parent.name}</label>
+                                        <span class="filter-count">${parent.count}</span>
+                                        <span class="profession-parent-arrow" id="location_parent_arrow_${parent.name.replace(/\s+/g, '_')}">▼</span>
+                                    </div>
+                                    <div class="profession-subcategories" id="location_subcategories_${parent.name.replace(/\s+/g, '_')}">
+                                        ${parent.subcategories.map(sub => `
+                                            <div class="profession-sub-item">
+                                                <input type="checkbox" class="profession-sub-checkbox location-sub-checkbox" id="location_${sub.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '').replace(/,/g, '')}"
+                                                       onchange="handleSubCategoryChange('location', '${parent.name}', '${sub.name}')">
+                                                <label class="profession-sub-label" for="location_${sub.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '').replace(/,/g, '')}">${sub.name}</label>
+                                                <span class="filter-count">${sub.count}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderProfessionFilters(professionData) {
+        return `
+            <div class="filter-group">
+                <div class="filter-header" onclick="toggleFilterGroup('profession')">
+                    <span class="filter-arrow" id="professionArrow">▼</span>
+                    <span>Profession</span>
+                </div>
+                <div class="filter-options" id="professionOptions">
+                    ${professionData.map(parent => `
+                        <div class="profession-parent-group">
+                            <div class="profession-parent-header" onclick="toggleProfessionParent('${parent.name}')">
+                                <input type="checkbox" class="profession-parent-checkbox" id="profession_parent_${parent.name.replace(/\s+/g, '_')}"
+                                       onchange="handleParentProfessionChange('${parent.name}')" onclick="event.stopPropagation()">
+                                <label class="profession-parent-label" for="profession_parent_${parent.name.replace(/\s+/g, '_')}">${parent.name}</label>
+                                <span class="filter-count">${parent.count}</span>
+                                <span class="profession-parent-arrow" id="profession_parent_arrow_${parent.name.replace(/\s+/g, '_')}">▼</span>
+                            </div>
+                            <div class="profession-subcategories" id="profession_subcategories_${parent.name.replace(/\s+/g, '_')}">
+                                ${parent.subcategories.map(sub => {
+                                    if (sub.subcategories) {
+                                        return `
+                                            <div class="profession-parent-group" style="margin-left: 20px; margin-bottom: 10px;">
+                                                <div class="profession-parent-header" onclick="toggleProfessionParent('${sub.name}')">
+                                                    <input type="checkbox" class="profession-parent-checkbox" id="profession_parent_${sub.name.replace(/\s+/g, '_')}"
+                                                           onchange="handleParentProfessionChange('${sub.name}')" onclick="event.stopPropagation()">
+                                                    <label class="profession-parent-label" for="profession_parent_${sub.name.replace(/\s+/g, '_')}">${sub.name}</label>
+                                                    <span class="filter-count">${sub.count}</span>
+                                                    <span class="profession-parent-arrow" id="profession_parent_arrow_${sub.name.replace(/\s+/g, '_')}">▼</span>
+                                                </div>
+                                                <div class="profession-subcategories" id="profession_subcategories_${sub.name.replace(/\s+/g, '_')}">
+                                                    ${sub.subcategories.map(nestedSub => `
+                                                        <div class="profession-sub-item">
+                                                            <input type="checkbox" class="profession-sub-checkbox" id="profession_${nestedSub.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '').replace(/,/g, '')}"
+                                                                   onchange="handleSubProfessionChange('${sub.name}', '${nestedSub.name}')">
+                                                            <label class="profession-sub-label" for="profession_${nestedSub.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '').replace(/,/g, '')}">${nestedSub.name}</label>
+                                                            <span class="filter-count">${nestedSub.count}</span>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        `;
+                                    } else {
+                                        return `
+                                            <div class="profession-sub-item">
+                                                <input type="checkbox" class="profession-sub-checkbox" id="profession_${sub.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '').replace(/,/g, '')}"
+                                                       onchange="handleSubProfessionChange('${parent.name}', '${sub.name}')">
+                                                <label class="profession-sub-label" for="profession_${sub.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '').replace(/,/g, '')}">${sub.name}</label>
+                                                <span class="filter-count">${sub.count}</span>
+                                            </div>
+                                        `;
+                                    }
+                                }).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderFilters() {
+        const filtersContainer = document.getElementById('filtersContainer');
+
+        const filterHTML = Object.entries(filterData).map(([category, items]) => {
+            if (category === 'profession') {
+                return renderProfessionFilters(items);
+            } else if (category === 'location') {
+                return renderLocationFilters(items);
+            } else {
+                return `
+                    <div class="filter-group">
+                        <div class="filter-header" onclick="toggleFilterGroup('${category}')">
+                            <span class="filter-arrow" id="${category}Arrow">▼</span>
+                            <span>${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                        </div>
+                        <div class="filter-options" id="${category}Options">
+                            ${items.map(item => {
+                                const checkboxId = `${category}_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+                                return `
+                                    <div class="filter-item">
+                                        <input type="checkbox" class="filter-checkbox" id="${checkboxId}" onchange="handleFilterChange('${category}', '${item.name}')">
+                                        <label class="filter-label" for="${checkboxId}">${item.name}</label>
+                                        <span class="filter-count">${item.count}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }).join('');
+
+        filtersContainer.innerHTML = filterHTML;
+    }
+
+    function applyFilters() {
+        let activeJobs = filterActiveJobs(allJobsData);
+
+        const activeFilters = {};
+
+        Object.keys(filterData).forEach(category => {
+            activeFilters[category] = [];
+            if (category === 'profession') {
+                activeFilters[category] = getCheckedProfessions();
+            } else if (category === 'location') {
+                activeFilters[category] = getCheckedLocations();
+            } else {
+                filterData[category].forEach(item => {
+                    const checkboxId = `${category}_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+                    const checkbox = document.getElementById(checkboxId);
+                    if (checkbox && checkbox.checked) {
+                        activeFilters[category].push(item.name);
+                    }
+                });
+            }
+        });
+
+        const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
+
+        filteredJobs = activeJobs.filter(job => {
+            if (activeCategoryFilter !== 'all') {
+                if (!categoryFilters[activeCategoryFilter].filter(job)) {
+                    return false;
+                }
+            }
+
+            if (searchTerm.length > 0) {
+                const sectors = job.sector || [];
+                const employer = job.alternate_recruiter_name || job.recruiter_name;
+                const matchesSearch = job.job_title.toLowerCase().includes(searchTerm) ||
+                                    job.location_description.toLowerCase().includes(searchTerm) ||
+                                    employer.toLowerCase().includes(searchTerm) ||
+                                    job.short_description.toLowerCase().includes(searchTerm) ||
+                                    sectors.some(s => s.toLowerCase().includes(searchTerm)) ||
+                                    (job.grade && job.grade.toLowerCase().includes(searchTerm));
+                if (!matchesSearch) return false;
+            }
+
+            for (const [category, selectedValues] of Object.entries(activeFilters)) {
+                if (selectedValues.length > 0) {
+                    if (category === 'profession') {
+                        const checkedProfessions = selectedValues;
+                        const sectors = job.sector || [];
+                        const employer = job.alternate_recruiter_name || job.recruiter_name;
+                        const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${employer}`.toLowerCase();
+                        const matchesProfession = checkedProfessions.some(profession => {
+                            return searchText.includes(profession.toLowerCase()) ||
+                                   sectors.some(s => s.toLowerCase() === profession.toLowerCase());
+                        });
+                        if (!matchesProfession) return false;
+                    } else if (category === 'location') {
+                        const checkedLocations = selectedValues;
+                        const jobLocation = job.location_description || '';
+                        const normalizedJobLocation = normalizeLocation(jobLocation);
+                        const matchesLocation = checkedLocations.some(location => {
+                            const normalizedSearch = normalizeLocation(location);
+                            if (normalizedSearch === normalizedJobLocation) return true;
+                            return normalizedJobLocation.includes(normalizedSearch);
+                        });
+                        if (!matchesLocation) return false;
+                    } else if (category === 'grade') {
+                        if (!job.grade || !selectedValues.includes(job.grade)) {
+                            return false;
+                        }
+                    } else if (category === 'published') {
+                        if (!job.published) return false;
+
+                        const jobDays = parseDaysFromPublished(job.published);
+                        if (!jobDays) return false;
+
+                        const matchesPublished = selectedValues.some(selectedCategory => {
+                            switch(selectedCategory) {
+                                case "A week ago":
+                                    return jobDays <= 7;
+                                case "Two weeks ago":
+                                    return jobDays <= 14;
+                                case "Three weeks ago":
+                                    return jobDays <= 21;
+                                case "A month ago":
+                                    return jobDays <= 30;
+                                case "Two months ago":
+                                    return jobDays <= 60;
+                                case "Three months ago":
+                                    return jobDays <= 90;
+                                case "Older than 3 months":
+                                    return jobDays > 90;
+                                default:
+                                    return false;
+                            }
+                        });
+
+                        if (!matchesPublished) return false;
+                    }
+                }
+            }
+
+            return true;
+        });
+
+        currentPage = 1;
+
+        renderJobsList();
+        updatePagination();
+        updateJobCount();
+    }
+
+    function generateDynamicKeywords() {
+        const keywordSet = new Set();
+        const maxKeywords = 6;
+
+        const activeJobs = filterActiveJobs(allJobsData);
+
+        const professions = [];
+        const grades = [];
+
+        activeJobs.forEach(job => {
+            if (job.sector && Array.isArray(job.sector)) {
+                job.sector.forEach(s => {
+                    if (!professions.includes(s)) {
+                        professions.push(s);
+                    }
+                });
+            }
+            if (job.grade && !grades.includes(job.grade)) {
+                grades.push(job.grade);
+            }
+        });
+
+        const shuffleArray = (array) => {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        };
+
+        const shuffledProfessions = shuffleArray(professions);
+        const shuffledGrades = shuffleArray(grades);
+
+        for (let i = 0; i < Math.min(3, shuffledProfessions.length); i++) {
+            keywordSet.add(shuffledProfessions[i]);
+        }
+
+        for (let i = 0; i < Math.min(3, shuffledGrades.length); i++) {
+            keywordSet.add(shuffledGrades[i]);
+        }
+
+        keywords = Array.from(keywordSet).slice(0, maxKeywords);
+    }
+
+    function initApp() {
+        filteredJobs = filterActiveJobs(allJobsData);
+
+        calculateFilterCounts();
+        generateDynamicKeywords();
+        renderKeywords();
+        renderFilters();
+        renderJobsList();
+        updatePagination();
+        updateJobCount();
+        updateCategoryButtons();
+        addEventListeners();
+    }
+
+    function updateJobCount() {
+        const jobCountDisplay = document.getElementById('jobCountDisplay');
+        const count = filteredJobs.length;
+        jobCountDisplay.textContent = `Found ${count} job${count !== 1 ? 's' : ''}`;
+    }
+
+    function renderKeywords() {
+        const keywordsList = document.getElementById('keywordsList');
+        keywordsList.innerHTML = keywords.map(keyword =>
+            `<span class="keyword-tag" onclick="selectKeyword('${keyword}')">${keyword}</span>`
+        ).join('');
+    }
+
+    function getCurrentPageJobs() {
+        const startIndex = (currentPage - 1) * jobsPerPage;
+        const endIndex = startIndex + jobsPerPage;
+        return filteredJobs.slice(startIndex, endIndex);
+    }
+
+    function updatePagination() {
+        const totalJobs = filteredJobs.length;
+        const totalPages = Math.ceil(totalJobs / jobsPerPage);
+        const startJob = totalJobs > 0 ? (currentPage - 1) * jobsPerPage + 1 : 0;
+        const endJob = Math.min(currentPage * jobsPerPage, totalJobs);
+
+        document.getElementById('jobRangeStart').textContent = startJob;
+        document.getElementById('jobRangeEnd').textContent = endJob;
+        document.getElementById('totalJobsCount').textContent = totalJobs;
+
+        const pageNumbersContainer = document.getElementById('pageNumbers');
+        let startPage = Math.max(1, currentPage - 3);
+        let endPage = Math.min(totalPages, startPage + 6);
+
+        if (endPage - startPage < 6) {
+            startPage = Math.max(1, endPage - 6);
+        }
+
+        let pageNumbersHTML = '';
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbersHTML += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+        }
+        pageNumbersContainer.innerHTML = pageNumbersHTML;
+
+        document.getElementById('firstBtn').disabled = currentPage === 1;
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+        document.getElementById('lastBtn').disabled = currentPage === totalPages || totalPages === 0;
+    }
+
+    // FIXED renderJobsList function
+    function renderJobsList() {
+        const jobsList = document.getElementById('jobsList');
+        const pageJobs = getCurrentPageJobs();
+
+        if (pageJobs.length === 0) {
+            jobsList.innerHTML = '<div class="no-jobs-message">No jobs found matching your criteria.</div>';
+            return;
+        }
+
+        jobsList.innerHTML = pageJobs.map(job => {
+            const employer = job.alternate_recruiter_name || job.recruiter_name || 'Unknown Employer';
+            return `
+                <div class="job-card">
+                    <div class="job-header">${job.job_title}</div>
+                    <div class="job-body">
+                        ${job.logo_url ? `<img src="${job.logo_url}" alt="${employer} Logo" class="nhs-logo">` : ''}
+                        <div class="job-details">
+                            <ul>
+                                <li><strong>Location:</strong> ${job.location_description}</li>
+                                <li><strong>Salary:</strong> ${job.salary || 'Competitive'}</li>
+                                <li><strong>Employer:</strong> ${employer}</li>
+                            </ul>
+                        </div>
+                        <div class="job-description">${job.short_description}</div>
+                        <button class="apply-btn" onclick="applyToJob(${job.id})">View Details on BMJ Careers</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function addEventListeners() {
+        const keywordSearch = document.getElementById('keywordSearch');
+        keywordSearch.addEventListener('input', function() {
+            clearTimeout(this.searchTimeout);
+            this.searchTimeout = setTimeout(() => {
+                applyFilters();
+                scrollToTop();
+            }, 300);
+        });
+
+        keywordSearch.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                clearTimeout(this.searchTimeout);
+                applyFilters();
+                scrollToTop();
+            }
+        });
+
+        window.addEventListener('scroll', handleScroll);
+    }
+
+    // Make initApp globally accessible for API integration
+    window.initApp = initApp;
+
+    // Initialize the app when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        // Only initialize if we already have data
+        if (window.allJobsData && window.allJobsData.length > 0) {
+            initApp();
+        }
+        // Otherwise, the API integration will call initApp when data is loaded
+    });
+
+    // Listen for data updates from the API
+    window.addEventListener('jobsDataUpdated', function() {
+        initApp();
+    });
+</script>
+</body>
+</html>
