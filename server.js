@@ -28,6 +28,13 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
+fetch('https://bmj-careers-widget.onrender.com')
+  .then(response => response.json())
+  .then(data => {
+    document.getElementById('output').textContent = data.message;
+  })
+  .catch(error => console.error('Error fetching data:', error));
+
 // Serve static files from public folder (for CSS)
 app.use(express.static('public'));
 
