@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Console - BMJ Careers</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e9ecef 100%);
+            min-height: 100vh;
+        }
+
+        .admin-header {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .header-user {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            text-align: right;
+        }
+
+        .user-name {
+            font-weight: 600;
+        }
+
+        .user-email {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .admin-nav {
+            background: white;
+            padding: 0 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-item {
+            padding: 1rem 0;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            color: #0066cc;
+        }
+
+        .nav-item.active {
+            color: #0066cc;
+            border-bottom-color: #0066cc;
+        }
+
+        .admin-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .client-table {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .table-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1d1d1b;
+        }
+
+        .table-content {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f9fafb;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover td {
+            background: #f9fafb;
+        }
+
+        .client-name {
+            font-weight: 600;
+            color: #0066cc;
+            cursor: pointer;
+        }
+
+        .client-name:hover {
+            text-decoration: underline;
+        }
+
+        .metric-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .metric-badge.loads {
+            background: #e6f2ff;
+            color: #0066cc;
+        }
+
+        .metric-badge.clicks {
+            background: #fff4e6;
+            color: #cc6600;
+        }
+
+        .metric-badge.api {
+            background: #e6ffe6;
+            color: #006600;
+        }
+
+        .generate-key-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .generate-key-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        }
+
+        .api-key-display {
+            background: #f3f4f6;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.875rem;
+            margin: 1rem 0;
+            word-break: break-all;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0066cc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .json-viewer {
+            background: #1d1d1b;
+            color: #e6e6e6;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .health-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .status-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status-icon.ok {
+            background: #10b981;
+        }
+
+        .status-icon.partial {
+            background: #f59e0b;
+        }
+
+        .status-icon.error {
+            background: #ef4444;
+        }
+
+        .status-title {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+
+        .status-details {
+            color: #6b7280;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        .modal-close:hover {
+            color: #1d1d1b;
+        }
+    </style>
+</head>
+<body>
+<div class="admin-header">
+    <div class="header-content">
+        <h1 class="header-title">BMJ Careers Admin Console</h1>
+        <div class="header-user">
+            <div class="user-info">
+                <div class="user-name" id="userName">Loading...</div>
+                <div class="user-email" id="userEmail">Loading...</div>
+            </div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+</div>
+
+<nav class="admin-nav">
+    <div class="nav-content">
+        <div class="nav-item active" onclick="showSection('dashboard')">Dashboard</div>
+        <div class="nav-item" onclick="showSection('health')">Health</div>
+        <div class="nav-item" onclick="showSection('jobs')">Jobs Data</div>
+        <div class="nav-item" onclick="showSection('api-clients')">API Clients</div>
+    </div>
+</nav>
+
+<div class="admin-container">
+    <!-- Dashboard Section -->
+    <div id="dashboard" class="section active">
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Clients</div>
+                <div class="stat-value" id="totalClients">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Today</div>
+                <div class="stat-value" id="activeToday">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Loads Today</div>
+                <div class="stat-value" id="loadsToday">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Clicks Today</div>
+                <div class="stat-value" id="clicksToday">0</div>
+            </div>
+        </div>
+
+        <div class="client-table">
+            <div class="table-header">
+                <h2 class="table-title">Client Usage Overview</h2>
+            </div>
+            <div class="table-content">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>First Seen</th>
+                        <th>Last Seen</th>
+                        <th>Today</th>
+                        <th>Last 7 Days</th>
+                        <th>Last 30 Days</th>
+                        <th>Total</th>
+                    </tr>
+                    </thead>
+                    <tbody id="clientTableBody">
+                    <tr>
+                        <td colspan="7" class="loading">
+                            <div class="spinner"></div>
+                            <div>Loading client data...</div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health Section -->
+    <div id="health" class="section">
+        <h2 style="margin-bottom: 1.5rem;">System Health Status</h2>
+        <div class="health-status" id="healthStatus">
+            <div class="loading">
+                <div class="spinner"></div>
+                <div>Loading health status...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jobs Data Section -->
+    <div id="jobs" class="section">
+        <h2 style="margin-bottom: 1.5rem;">Jobs Data (JSON)</h2>
+        <div class="json-viewer" id="jobsData">
+            <div class="loading">Loading jobs data...</div>
+        </div>
+    </div>
+
+    <!-- API Clients Section -->
+    <div id="api-clients" class="section">
+        <h2 style="margin-bottom: 1.5rem;">API Client Management</h2>
+        <button class="generate-key-btn" onclick="showGenerateKeyModal()">Generate New API Key</button>
+
+        <div class="client-table" style="margin-top: 2rem;">
+            <div class="table-header">
+                <h3 class="table-title">Active API Keys</h3>
+            </div>
+            <div class="table-content">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Client Name</th>
+                        <th>API Key</th>
+                        <th>Created</th>
+                        <th>Total Usage</th>
+                        <th>Last Used</th>
+                    </tr>
+                    </thead>
+                    <tbody id="apiKeysTableBody">
+                    <tr>
+                        <td colspan="5" class="empty-state">No API keys generated yet</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate API Key Modal -->
+<div id="generateKeyModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeGenerateKeyModal()">&times;</button>
+        <h2 style="margin-bottom: 1.5rem;">Generate API Key</h2>
+
+        <form id="generateKeyForm">
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="form-label">Client ID</label>
+                <input type="text" id="clientId" class="form-input" required placeholder="e.g., client-website.com">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label class="form-label">Client Name</label>
+                <input type="text" id="clientName" class="form-input" required placeholder="e.g., Client Website">
+            </div>
+
+            <button type="submit" class="submit-btn">Generate Key</button>
+        </form>
+
+        <div id="generatedKeyDisplay" style="display: none; margin-top: 1.5rem;">
+            <p style="font-weight: 600; margin-bottom: 0.5rem;">Generated API Key:</p>
+            <div class="api-key-display" id="apiKeyDisplay"></div>
+            <p style="color: #6b7280; font-size: 0.875rem; margin-top: 0.5rem;">
+                ⚠️ Copy this key now. It won't be shown again!
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Check authentication
+    const sessionToken = localStorage.getItem('sessionToken');
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+
+    if (!sessionToken || !userInfo.email) {
+        window.location.href = '/login';
+    }
+
+    // Set user info
+    document.getElementById('userName').textContent = userInfo.username || 'Admin';
+    document.getElementById('userEmail').textContent = userInfo.email || '';
+
+    // Logout function
+    function logout() {
+        fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: {
+                'x-session-token': sessionToken
+            }
+        });
+
+        localStorage.removeItem('sessionToken');
+        localStorage.removeItem('userInfo');
+        window.location.href = '/login';
+    }
+
+    // Section navigation
+    function showSection(sectionId) {
+        // Update nav
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        // Update sections
+        document.querySelectorAll('.section').forEach(section => {
+            section.classList.remove('active');
+        });
+        document.getElementById(sectionId).classList.add('active');
+
+        // Load section data
+        if (sectionId === 'dashboard') {
+            loadDashboard();
+        } else if (sectionId === 'health') {
+            loadHealth();
+        } else if (sectionId === 'jobs') {
+            loadJobs();
+        } else if (sectionId === 'api-clients') {
+            loadApiClients();
+        }
+    }
+
+    // Load dashboard data
+    async function loadDashboard() {
+        try {
+            const response = await fetch('/api/admin/dashboard', {
+                headers: {
+                    'x-session-token': sessionToken
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                throw new Error('Failed to load dashboard');
+            }
+
+            const data = await response.json();
+
+            // Update stats
+            document.getElementById('totalClients').textContent = data.data.summary.totalClients;
+            document.getElementById('activeToday').textContent = data.data.summary.activeClientsToday;
+            document.getElementById('loadsToday').textContent = data.data.summary.totalLoadsToday;
+            document.getElementById('clicksToday').textContent = data.data.summary.totalClicksToday;
+
+            // Update client table
+            const tbody = document.getElementById('clientTableBody');
+            if (data.data.clients.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No client data yet</td></tr>';
+            } else {
+                tbody.innerHTML = data.data.clients.map(client => `
+                    <tr>
+                        <td>
+                            <div class="client-name" onclick="viewClientDetails('${client.clientId}')">
+                                ${client.name}
+                            </div>
+                            <div style="font-size: 0.75rem; color: #6b7280;">${client.domain}</div>
+                        </td>
+                        <td>${new Date(client.firstSeen).toLocaleDateString()}</td>
+                        <td>${new Date(client.lastSeen).toLocaleDateString()}</td>
+                        <td>
+                            <span class="metric-badge loads">${client.todayMetrics.loads} loads</span>
+                            <span class="metric-badge clicks">${client.todayMetrics.clicks} clicks</span>
+                        </td>
+                        <td>
+                            <span class="metric-badge loads">${client.last7Days.loads} loads</span>
+                            <span class="metric-badge clicks">${client.last7Days.clicks} clicks</span>
+                        </td>
+                        <td>
+                            <span class="metric-badge loads">${client.last30Days.loads} loads</span>
+                            <span class="metric-badge clicks">${client.last30Days.clicks} clicks</span>
+                        </td>
+                        <td>
+                            <span class="metric-badge loads">${client.totalMetrics.loads} loads</span>
+                            <span class="metric-badge clicks">${client.totalMetrics.clicks} clicks</span>
+                            <span class="metric-badge api">${client.totalMetrics.apiCalls} API</span>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading dashboard:', error);
+            document.getElementById('clientTableBody').innerHTML =
+                '<tr><td colspan="7" class="empty-state">Error loading data</td></tr>';
+        }
+    }
+
+    // Load health status
+    async function loadHealth() {
+        try {
+            const response = await fetch('/health');
+            const data = await response.json();
+
+            const healthStatus = document.getElementById('healthStatus');
+            healthStatus.innerHTML = `
+                <div class="status-card">
+                    <div class="status-header">
+                        <div class="status-icon ${data.status.toLowerCase()}">${data.status === 'OK' ? '✓' : data.status === 'PARTIAL' ? '!' : '✗'}</div>
+                        <div class="status-title">Overall Status</div>
+                    </div>
+                    <div class="status-details">
+                        Status: ${data.status}<br>
+                        Server Time: ${new Date(data.serverTime).toLocaleString()}<br>
+                        Uptime: ${Math.floor(data.uptime / 3600)} hours
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <div class="status-header">
+                        <div class="status-icon ${data.dynamoDB.connected ? 'ok' : 'error'}">${data.dynamoDB.connected ? '✓' : '✗'}</div>
+                        <div class="status-title">DynamoDB</div>
+                    </div>
+                    <div class="status-details">
+                        Connected: ${data.dynamoDB.connected ? 'Yes' : 'No'}<br>
+                        Table: ${data.dynamoDB.tableName}<br>
+                        Region: ${data.dynamoDB.region}<br>
+                        Profile: ${data.dynamoDB.profile}<br>
+                        ${data.dynamoDB.lastError ? `Error: ${data.dynamoDB.lastError}` : ''}
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <div class="status-header">
+                        <div class="status-icon ok">✓</div>
+                        <div class="status-title">Jobs Cache</div>
+                    </div>
+                    <div class="status-details">
+                        Jobs Count: ${data.cache.jobs_count}<br>
+                        Source: ${data.cache.source || 'N/A'}<br>
+                        Age: ${data.cache.age_seconds ? `${Math.floor(data.cache.age_seconds / 60)} minutes` : 'N/A'}<br>
+                        Last Fetch: ${data.cache.last_fetch ? new Date(data.cache.last_fetch).toLocaleString() : 'Never'}
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <div class="status-header">
+                        <div class="status-icon ok">✓</div>
+                        <div class="status-title">API Stats</div>
+                    </div>
+                    <div class="status-details" id="apiStatsDetails">
+                        Loading...
+                    </div>
+                </div>
+            `;
+
+            // Load API stats
+            const statsResponse = await fetch('/api/stats');
+            const statsData = await statsResponse.json();
+
+            document.getElementById('apiStatsDetails').innerHTML = `
+                Total API Calls: ${statsData.data.summary.total_api_calls}<br>
+                Calls Today: ${statsData.data.summary.calls_today}<br>
+                Calls This Hour: ${statsData.data.summary.calls_this_hour}<br>
+                Memory Usage: ${Math.round(statsData.data.server_info.memory_usage.heapUsed / 1024 / 1024)} MB
+            `;
+        } catch (error) {
+            console.error('Error loading health:', error);
+            document.getElementById('healthStatus').innerHTML =
+                '<div class="empty-state">Error loading health status</div>';
+        }
+    }
+
+    // Load jobs data
+    async function loadJobs() {
+        try {
+            const response = await fetch('/api/jobs');
+            const data = await response.json();
+
+            document.getElementById('jobsData').textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+            console.error('Error loading jobs:', error);
+            document.getElementById('jobsData').textContent = 'Error loading jobs data';
+        }
+    }
+
+    // Load API clients
+    async function loadApiClients() {
+        try {
+            const response = await fetch('/api/admin/dashboard', {
+                headers: {
+                    'x-session-token': sessionToken
+                }
+            });
+
+            const data = await response.json();
+
+            const tbody = document.getElementById('apiKeysTableBody');
+            if (data.data.publicApiKeys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No API keys generated yet</td></tr>';
+            } else {
+                tbody.innerHTML = data.data.publicApiKeys.map(key => `
+                    <tr>
+                        <td>${key.clientName}</td>
+                        <td><code>${key.apiKey}</code></td>
+                        <td>${new Date(key.createdAt).toLocaleDateString()}</td>
+                        <td>${key.totalUsage}</td>
+                        <td>${key.lastUsed ? new Date(key.lastUsed).toLocaleString() : 'Never'}</td>
+                    </tr>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading API clients:', error);
+        }
+    }
+
+    // View client details
+    function viewClientDetails(clientId) {
+        // You can implement a detailed view modal here
+        console.log('View details for client:', clientId);
+    }
+
+    // Generate API key modal
+    function showGenerateKeyModal() {
+        document.getElementById('generateKeyModal').style.display = 'flex';
+    }
+
+    function closeGenerateKeyModal() {
+        document.getElementById('generateKeyModal').style.display = 'none';
+        document.getElementById('generateKeyForm').reset();
+        document.getElementById('generatedKeyDisplay').style.display = 'none';
+    }
+
+    document.getElementById('generateKeyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const clientId = document.getElementById('clientId').value;
+        const clientName = document.getElementById('clientName').value;
+
+        try {
+            const response = await fetch('/api/admin/generate-api-key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-session-token': sessionToken
+                },
+                body: JSON.stringify({ clientId, clientName })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('apiKeyDisplay').textContent = data.apiKey;
+                document.getElementById('generatedKeyDisplay').style.display = 'block';
+
+                // Reload API clients
+                loadApiClients();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+        }
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('generateKeyModal').addEventListener('click', (e) => {
+        if (e.target.id === 'generateKeyModal') {
+            closeGenerateKeyModal();
+        }
+    });
+
+    // Load initial dashboard
+    loadDashboard();
+</script>
+</body>
+</html>
