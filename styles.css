@@ -65,7 +65,7 @@ body {
     font-weight: 400;
 }
 
-/* Category buttons container - single line */
+/* Category buttons container - multi-line wrapping */
 .category-buttons-wrapper {
     margin-bottom: 2.5rem;
     animation: fadeInUp 0.8s ease-out;
@@ -76,29 +76,10 @@ body {
     display: flex;
     gap: 1rem;
     padding-bottom: 0.5rem;
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e0 transparent;
     justify-content: space-between;
     align-items: center;
     width: 100%;
-}
-
-.category-buttons::-webkit-scrollbar {
-    height: 6px;
-}
-
-.category-buttons::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 3px;
-}
-
-.category-buttons::-webkit-scrollbar-thumb {
-    background: #cbd5e0;
-    border-radius: 3px;
-}
-
-.category-buttons::-webkit-scrollbar-thumb:hover {
-    background: #a0aec0;
+    flex-wrap: wrap;
 }
 
 @keyframes fadeInUp {
@@ -143,7 +124,8 @@ body {
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     white-space: nowrap;
     position: relative;
-    flex: 1;
+    flex: 1 1 calc(14.28% - 1rem);
+    min-width: 120px;
     animation: fadeInUp 0.8s ease-out backwards;
     overflow: hidden;
 }
@@ -225,15 +207,13 @@ body {
     }
 }
 
-/* Modern sidebar with React-like design */
+/* Modern sidebar with React-like design - removed sticky positioning */
 .sidebar {
     background: #ffffff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     overflow: hidden;
     height: fit-content;
-    position: sticky;
-    top: 2rem;
     transition: all 0.3s ease;
     animation: slideInFromLeft 0.8s ease-out;
     border: 1px solid rgba(0, 102, 204, 0.1);
@@ -418,6 +398,7 @@ body {
     overflow-y: auto;
     transition: max-height 0.3s ease;
     padding: 0 0.5rem;
+    overflow-x: hidden;
 }
 
 .filter-options.collapsed {
@@ -447,16 +428,20 @@ body {
     height: 1.125rem;
     cursor: pointer;
     appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     border: 2px solid #d1d5db;
     border-radius: 4px;
     position: relative;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    background-color: #ffffff !important;
 }
 
 .filter-checkbox:checked {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
-    border-color: #0066cc;
+    background-color: #0066cc !important;
+    background-image: none !important;
+    border-color: #0066cc !important;
 }
 
 .filter-checkbox:checked::after {
@@ -492,6 +477,7 @@ body {
     flex: 1;
     cursor: pointer;
     color: #1d1d1b;
+    word-break: break-word;
 }
 
 .filter-count {
@@ -502,6 +488,7 @@ body {
     border-radius: 12px;
     font-weight: 500;
     margin-left: 0.5rem;
+    flex-shrink: 0;
 }
 
 /* Enhanced profession filters */
@@ -537,16 +524,26 @@ body {
     height: 1.125rem;
     cursor: pointer;
     appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     border: 2px solid #d1d5db;
     border-radius: 4px;
     position: relative;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    background-color: #ffffff !important;
 }
 
 .profession-parent-checkbox:checked {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
-    border-color: #0066cc;
+    background-color: #0066cc !important;
+    background-image: none !important;
+    border-color: #0066cc !important;
+}
+
+.profession-parent-checkbox.indeterminate {
+    background-color: #0066cc !important;
+    background-image: none !important;
+    border-color: #0066cc !important;
 }
 
 .profession-parent-checkbox:hover {
@@ -567,7 +564,7 @@ body {
 }
 
 .profession-parent-checkbox.indeterminate {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    background-color: #0066cc;
     border-color: #0066cc;
 }
 
@@ -582,12 +579,22 @@ body {
     font-weight: bold;
 }
 
+.profession-parent-label {
+    flex: 1;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #1d1d1b;
+    word-break: break-word;
+    padding-right: 0.5rem;
+}
+
 .profession-parent-arrow {
     margin-left: auto;
     transition: transform 0.3s ease;
     font-size: 0.75rem;
     color: #0066cc;
     margin-right: 0.5rem;
+    flex-shrink: 0;
 }
 
 .profession-parent-arrow.collapsed {
@@ -597,6 +604,7 @@ body {
 .profession-subcategories {
     max-height: 300px;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0;
     transition: max-height 0.3s ease;
     background: transparent;
@@ -625,22 +633,27 @@ body {
     transform: translateX(4px);
 }
 
+/* Profession sub checkboxes */
 .profession-sub-checkbox {
     margin-right: 0.75rem;
     width: 1rem;
     height: 1rem;
     cursor: pointer;
     appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     border: 2px solid #d1d5db;
     border-radius: 3px;
     position: relative;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    background-color: #ffffff !important;
 }
 
 .profession-sub-checkbox:checked {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
-    border-color: #0066cc;
+    background-color: #0066cc !important;
+    background-image: none !important;
+    border-color: #0066cc !important;
 }
 
 .profession-sub-checkbox:hover {
@@ -665,6 +678,7 @@ body {
     cursor: pointer;
     font-size: 0.8125rem;
     color: #1d1d1b;
+    word-break: break-word;
 }
 
 /* Enhanced main content with React-like design */
@@ -792,6 +806,7 @@ body {
     font-size: 0.9375rem;
     color: #1d1d1b;
     line-height: 1.7;
+    padding-right: 120px;
 }
 
 .job-details ul {
@@ -826,6 +841,91 @@ body {
 .job-details strong {
     color: #1d1d1b;
     font-weight: 600;
+}
+
+.location-text {
+    word-wrap: break-word;
+    display: inline-block;
+    max-width: calc(100% - 80px);
+}
+
+.location-checkbox {
+    margin-right: 0.75rem;
+    width: 1.125rem;
+    height: 1.125rem;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 2px solid #d1d5db;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    background-color: #ffffff !important;
+}
+
+.location-checkbox:checked {
+    background-color: #0066cc !important;
+    background-image: none !important;
+    border-color: #0066cc !important;
+}
+
+.location-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+    animation: checkmark 0.3s ease-out;
+}
+
+.location-checkbox:hover {
+    border-color: #0066cc;
+    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
+}
+
+/* Location sub checkboxes */
+.location-sub-checkbox {
+    margin-right: 0.75rem;
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 2px solid #d1d5db;
+    border-radius: 3px;
+    position: relative;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    background-color: #ffffff !important;
+}
+
+.location-sub-checkbox:checked {
+    background-color: #0066cc !important;
+    background-image: none !important;
+    border-color: #0066cc !important;
+}
+
+.location-sub-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.625rem;
+    font-weight: bold;
+    animation: checkmark 0.3s ease-out;
+}
+
+.location-sub-checkbox:hover {
+    border-color: #0066cc;
+    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
 }
 
 .job-description {
@@ -1077,9 +1177,8 @@ body {
         gap: 1.5rem;
     }
 
-    .category-buttons {
-        overflow-x: auto;
-        justify-content: flex-start;
+    .category-btn {
+        flex: 1 1 calc(25% - 1rem);
     }
 }
 
@@ -1092,12 +1191,7 @@ body {
     .category-btn {
         padding: 0.75rem 1.25rem;
         font-size: 0.875rem;
-        flex: 0 0 auto;
-    }
-
-    .category-buttons {
-        overflow-x: auto;
-        justify-content: flex-start;
+        flex: 1 1 calc(33.33% - 1rem);
     }
 }
 
@@ -1112,7 +1206,6 @@ body {
     }
 
     .sidebar {
-        position: static;
         width: 100%;
         max-width: 100%;
         margin: 0 auto;
@@ -1131,14 +1224,24 @@ body {
 
     .category-buttons {
         gap: 0.75rem;
-        overflow-x: auto;
-        justify-content: flex-start;
     }
 
     .category-btn {
         padding: 0.625rem 1rem;
         font-size: 0.8125rem;
-        flex: 0 0 auto;
+        flex: 1 1 calc(50% - 0.75rem);
+    }
+
+    .category-btn:last-child {
+        flex: 1 1 100%;
+    }
+
+    .job-details {
+        padding-right: 0;
+    }
+
+    .location-text {
+        max-width: 100%;
     }
 }
 
@@ -1163,6 +1266,11 @@ body {
         padding: 0.5rem 0.875rem;
         font-size: 0.75rem;
         gap: 0.5rem;
+        flex: 1 1 calc(50% - 0.5rem);
+    }
+
+    .category-btn:last-child {
+        flex: 1 1 100%;
     }
 
     .category-btn .emoji {
@@ -1437,4 +1545,143 @@ body {
 /* Ensure notifications appear above modal/overlays */
 .job-notification {
     z-index: 2147483647 !important; /* Maximum z-index */
+}
+
+input[type="checkbox"] {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-image: none !important;
+    background: transparent !important;
+}
+
+/* Base checkbox styling */
+input[type="checkbox"].filter-checkbox,
+input[type="checkbox"].profession-parent-checkbox,
+input[type="checkbox"].profession-sub-checkbox,
+input[type="checkbox"].location-checkbox,
+input[type="checkbox"].location-sub-checkbox {
+    width: 1.125rem;
+    height: 1.125rem;
+    border: 2px solid #d1d5db;
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+}
+
+/* Smaller sub-checkboxes */
+input[type="checkbox"].profession-sub-checkbox,
+input[type="checkbox"].location-sub-checkbox {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 3px;
+}
+
+/* CHECKED STATE - Multiple approaches to ensure it works */
+input[type="checkbox"]:checked.filter-checkbox,
+input[type="checkbox"]:checked.profession-parent-checkbox,
+input[type="checkbox"]:checked.profession-sub-checkbox,
+input[type="checkbox"]:checked.location-checkbox,
+input[type="checkbox"]:checked.location-sub-checkbox {
+    background: #0066cc !important;
+    background-color: #0066cc !important;
+    background-image: none !important;
+    border-color: #0066cc !important;
+}
+
+/* Alternative approach using pseudo-element for the blue fill */
+input[type="checkbox"]:checked::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #0066cc !important;
+    border-radius: 2px;
+    z-index: 1;
+}
+
+/* Checkmark on top of the blue background */
+input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ffffff !important;
+    font-size: 0.75rem;
+    font-weight: bold;
+    line-height: 1;
+    z-index: 2;
+}
+
+/* Smaller checkmark for sub-checkboxes */
+input[type="checkbox"].profession-sub-checkbox:checked::after,
+input[type="checkbox"].location-sub-checkbox:checked::after {
+    font-size: 0.625rem;
+}
+
+/* Indeterminate state for parent checkboxes */
+input[type="checkbox"].profession-parent-checkbox.indeterminate,
+input[type="checkbox"].location-checkbox.indeterminate {
+    background: #0066cc !important;
+    background-color: #0066cc !important;
+    border-color: #0066cc !important;
+}
+
+input[type="checkbox"].profession-parent-checkbox.indeterminate::before,
+input[type="checkbox"].location-checkbox.indeterminate::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #0066cc !important;
+    border-radius: 2px;
+    z-index: 1;
+}
+
+input[type="checkbox"].profession-parent-checkbox.indeterminate::after,
+input[type="checkbox"].location-checkbox.indeterminate::after {
+    content: '−';
+    color: #ffffff !important;
+    font-size: 0.875rem;
+    z-index: 2;
+}
+
+/* Hover effects */
+input[type="checkbox"]:not(:checked):hover {
+    border-color: #0066cc;
+    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
+}
+
+/* Focus effects */
+input[type="checkbox"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.2);
+}
+
+/* OVERRIDE ANY GRADIENT BACKGROUNDS */
+.filter-checkbox,
+.filter-checkbox:checked,
+.profession-parent-checkbox,
+.profession-parent-checkbox:checked,
+.profession-sub-checkbox,
+.profession-sub-checkbox:checked,
+.location-checkbox,
+.location-checkbox:checked,
+.location-sub-checkbox,
+.location-sub-checkbox:checked {
+    background-image: none !important;
+}
+
+/* Extra specificity to override any conflicting styles */
+#filtersContainer input[type="checkbox"]:checked {
+    background: #0066cc !important;
+    background-color: #0066cc !important;
 }
