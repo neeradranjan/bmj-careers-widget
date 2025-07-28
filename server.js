@@ -182,6 +182,12 @@ function getClientFromRequest(req) {
   const utm_campaign = req.query.utm_campaign || 'default';
   const referer = req.headers.referer || 'unknown';
 
+  // Check if request is from iframe
+  const isIframe = req.headers['sec-fetch-dest'] === 'iframe' ||
+                   req.headers['x-frame-options'] ||
+                   req.query.iframe === 'true' ||
+                   utm_medium === 'iframe';
+
   // Generate client ID from UTM source or referer
   let clientId = utm_source;
   if (clientId === 'direct' && referer !== 'unknown') {
@@ -196,9 +202,10 @@ function getClientFromRequest(req) {
   return {
     clientId,
     utm_source,
-    utm_medium,
+    utm_medium: isIframe ? 'iframe' : utm_medium,
     utm_campaign,
-    referer
+    referer,
+    isIframe
   };
 }
 
@@ -894,6 +901,475 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
+
+app.get('/api/admin/api-key/:clientId', async (req, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const { clientId } = req.params;
+
+    // Find the API key for this client
+    const apiKey = Object.entries(publicApiKeys).find(([key, data]) =>
+      data.clientId === clientId
+    );
+
+    if (apiKey) {
+      res.json({
+        success: true,
+        apiKey: apiKey[0],
+        clientData: apiKey[1]
+      });
+    } else {
+      res.status(404).json({ error: 'API key not found for this client' });
+    }
+  } catch (error) {
+    console.error('Error getting API key:', error);
+    res.status(500).json({ error: 'Failed to get API key' });
+  }
+});
+
+// 4. Update the generate API key endpoint to support regeneration
+app.post('/api/admin/generate-api-key', async (req, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const { clientId, clientName, regenerate } = req.body;
+
+    if (!clientId || !clientName) {
+      return res.status(400).json({ error: 'Client ID and name are required' });
+    }
+
+    // If regenerating, remove old key
+    if (regenerate) {
+      const oldKey = Object.entries(publicApiKeys).find(([key, data]) =>
+        data.clientId === clientId
+      );
+
+      if (oldKey) {
+        delete publicApiKeys[oldKey[0]];
+      }
+    }
+
+    const apiKey = `bmj_${generateToken(24)}`;
+
+    publicApiKeys[apiKey] = {
+      clientId,
+      clientName,
+      createdAt: new Date().toISOString(),
+      usage: {
+        total: 0,
+        daily: {},
+        lastUsed: null
+      }
+    };
+
+    // Persist to DynamoDB if available
+    if (dynamoDBConnectionStatus.isConnected) {
+      const params = {
+        TableName: TABLE_NAME,
+        Item: {
+          id: `API_KEY_${clientId}`,
+          type: 'api_key',
+          apiKey: apiKey,
+          clientId: clientId,
+          clientName: clientName,
+          createdAt: new Date().toISOString()
+        }
+      };
+
+      dynamodb.send(new PutCommand(params)).catch(err => {
+        console.error('Failed to persist API key:', err.message);
+      });
+    }
+
+    res.json({
+      success: true,
+      apiKey,
+      message: regenerate ? 'API key regenerated successfully' : 'API key generated successfully'
+    });
+  } catch (error) {
+    console.error('Generate API key error:', error);
+    res.status(500).json({ error: 'Failed to generate API key' });
+  }
+});
+
+// 5. Add billing calculation endpoint
+app.post('/api/admin/calculate-billing', async (req, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const { clientId, costPerLoad, costPerClick, costPerAPI, period, currency } = req.body;
+
+    const client = clientTracking[clientId];
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    let loads = 0, clicks = 0, apiCalls = 0;
+    let periodText = '';
+
+    const today = new Date().toISOString().split('T')[0];
+
+    switch (period) {
+      case 'today':
+        const todayMetrics = client.metrics.daily[today] || { loads: 0, clicks: 0, apiCalls: 0 };
+        loads = todayMetrics.loads;
+        clicks = todayMetrics.clicks;
+        apiCalls = todayMetrics.apiCalls;
+        periodText = 'Today';
+        break;
+
+      case 'week':
+        // Calculate last 7 days
+        for (let i = 0; i < 7; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateKey = date.toISOString().split('T')[0];
+          if (client.metrics.daily[dateKey]) {
+            loads += client.metrics.daily[dateKey].loads || 0;
+            clicks += client.metrics.daily[dateKey].clicks || 0;
+            apiCalls += client.metrics.daily[dateKey].apiCalls || 0;
+          }
+        }
+        periodText = 'This Week';
+        break;
+
+      case 'month':
+        // Calculate last 30 days
+        for (let i = 0; i < 30; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateKey = date.toISOString().split('T')[0];
+          if (client.metrics.daily[dateKey]) {
+            loads += client.metrics.daily[dateKey].loads || 0;
+            clicks += client.metrics.daily[dateKey].clicks || 0;
+            apiCalls += client.metrics.daily[dateKey].apiCalls || 0;
+          }
+        }
+        periodText = 'This Month';
+        break;
+
+      case 'all':
+        loads = client.metrics.totalLoads;
+        clicks = client.metrics.totalClicks;
+        apiCalls = client.metrics.totalApiCalls;
+        periodText = 'All Time';
+        break;
+    }
+
+    const total = (loads * costPerLoad) + (clicks * costPerClick) + (apiCalls * costPerAPI);
+
+    res.json({
+      success: true,
+      billing: {
+        total,
+        currency,
+        period: periodText,
+        breakdown: {
+          loads: { count: loads, cost: loads * costPerLoad },
+          clicks: { count: clicks, cost: clicks * costPerClick },
+          apiCalls: { count: apiCalls, cost: apiCalls * costPerAPI }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Billing calculation error:', error);
+    res.status(500).json({ error: 'Failed to calculate billing' });
+  }
+});
+
+// 6. Add real-time activity endpoint
+app.get('/api/admin/activity/recent', async (req, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const now = new Date();
+    const recentActivities = {
+      loads: [],
+      clicks: [],
+      apiCalls: []
+    };
+
+    // Get activities from last 10 minutes
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+
+    // In production, you would store these in a time-series database
+    // For now, we'll generate mock data based on current metrics
+    Object.entries(clientTracking).forEach(([clientId, client]) => {
+      const lastSeen = new Date(client.lastSeen);
+
+      if (lastSeen > tenMinutesAgo) {
+        const timeDiff = Math.floor((now - lastSeen) / 1000 / 60); // minutes ago
+
+        if (client.metrics.daily[now.toISOString().split('T')[0]]) {
+          const todayMetrics = client.metrics.daily[now.toISOString().split('T')[0]];
+
+          if (todayMetrics.loads > 0) {
+            recentActivities.loads.push({
+              client: client.name,
+              action: client.utm_medium === 'iframe' ? 'Loaded widget (iFrame)' : 'Loaded widget',
+              time: timeDiff === 0 ? 'Just now' : `${timeDiff} min ago`,
+              timestamp: lastSeen
+            });
+          }
+
+          if (todayMetrics.clicks > 0) {
+            recentActivities.clicks.push({
+              client: client.name,
+              action: 'Clicked on job listing',
+              time: timeDiff === 0 ? 'Just now' : `${timeDiff} min ago`,
+              timestamp: lastSeen
+            });
+          }
+
+          if (todayMetrics.apiCalls > 0) {
+            recentActivities.apiCalls.push({
+              client: client.name,
+              action: 'API call',
+              time: timeDiff === 0 ? 'Just now' : `${timeDiff} min ago`,
+              timestamp: lastSeen
+            });
+          }
+        }
+      }
+    });
+
+    // Sort by timestamp
+    recentActivities.loads.sort((a, b) => b.timestamp - a.timestamp);
+    recentActivities.clicks.sort((a, b) => b.timestamp - a.timestamp);
+    recentActivities.apiCalls.sort((a, b) => b.timestamp - a.timestamp);
+
+    res.json({
+      success: true,
+      activities: recentActivities
+    });
+  } catch (error) {
+    console.error('Activity endpoint error:', error);
+    res.status(500).json({ error: 'Failed to get recent activity' });
+  }
+});
+
+// 7. Add analytics data endpoint
+app.get('/api/admin/analytics', async (req, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Calculate analytics data
+    const analytics = {
+      clientDistribution: {
+        widget: 0,
+        iframe: 0,
+        api: 0
+      },
+      revenueByType: {
+        widget: 0,
+        iframe: 0,
+        api: 0
+      },
+      trends: {
+        daily: {},
+        weekly: {}
+      }
+    };
+
+    // Process client data
+    Object.values(clientTracking).forEach(client => {
+      const type = client.utm_medium === 'iframe' ? 'iframe' :
+                   client.utm_medium === 'api' ? 'api' : 'widget';
+
+      analytics.clientDistribution[type]++;
+
+      // Calculate revenue (example rates)
+      const revenue = (client.metrics.totalLoads * 0.10) +
+                     (client.metrics.totalClicks * 0.50) +
+                     (client.metrics.totalApiCalls * 0.05);
+
+      analytics.revenueByType[type] += revenue;
+    });
+
+    res.json({
+      success: true,
+      analytics
+    });
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(500).json({ error: 'Failed to get analytics data' });
+  }
+});
+
+app.get('/api/admin/dashboard', async (req, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Calculate summary statistics
+    const today = new Date().toISOString().split('T')[0];
+    const last7Days = [];
+    const last30Days = [];
+
+    for (let i = 0; i < 30; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateKey = date.toISOString().split('T')[0];
+
+      if (i < 7) last7Days.push(dateKey);
+      last30Days.push(dateKey);
+    }
+
+    // Aggregate client metrics with revenue calculations
+    const clientSummary = Object.entries(clientTracking).map(([clientId, data]) => {
+      const last7DaysMetrics = { loads: 0, clicks: 0, apiCalls: 0 };
+      const last30DaysMetrics = { loads: 0, clicks: 0, apiCalls: 0 };
+
+      last7Days.forEach(date => {
+        if (data.metrics.daily[date]) {
+          last7DaysMetrics.loads += data.metrics.daily[date].loads;
+          last7DaysMetrics.clicks += data.metrics.daily[date].clicks;
+          last7DaysMetrics.apiCalls += data.metrics.daily[date].apiCalls;
+        }
+      });
+
+      last30Days.forEach(date => {
+        if (data.metrics.daily[date]) {
+          last30DaysMetrics.loads += data.metrics.daily[date].loads;
+          last30DaysMetrics.clicks += data.metrics.daily[date].clicks;
+          last30DaysMetrics.apiCalls += data.metrics.daily[date].apiCalls;
+        }
+      });
+
+      return {
+        clientId,
+        name: data.name,
+        domain: data.domain,
+        utm_source: data.utm_source,
+        utm_medium: data.utm_medium,
+        utm_campaign: data.utm_campaign,
+        firstSeen: data.firstSeen,
+        lastSeen: data.lastSeen,
+        metrics: data.metrics, // Include full metrics for detailed view
+        totalMetrics: {
+          loads: data.metrics.totalLoads,
+          clicks: data.metrics.totalClicks,
+          apiCalls: data.metrics.totalApiCalls
+        },
+        last7Days: last7DaysMetrics,
+        last30Days: last30DaysMetrics,
+        todayMetrics: data.metrics.daily[today] || { loads: 0, clicks: 0, apiCalls: 0 }
+      };
+    });
+
+    // Sort by total usage
+    clientSummary.sort((a, b) =>
+      (b.totalMetrics.loads + b.totalMetrics.clicks + b.totalMetrics.apiCalls) -
+      (a.totalMetrics.loads + a.totalMetrics.clicks + a.totalMetrics.apiCalls)
+    );
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          totalClients: Object.keys(clientTracking).length,
+          activeClientsToday: clientSummary.filter(c => c.todayMetrics.loads > 0).length,
+          totalLoadsToday: clientSummary.reduce((sum, c) => sum + c.todayMetrics.loads, 0),
+          totalClicksToday: clientSummary.reduce((sum, c) => sum + c.todayMetrics.clicks, 0),
+          totalApiCallsToday: clientSummary.reduce((sum, c) => sum + c.todayMetrics.apiCalls, 0)
+        },
+        clients: clientSummary,
+        publicApiKeys: Object.entries(publicApiKeys).map(([key, data]) => ({
+          apiKey: key.substring(0, 8) + '...',
+          fullKey: key, // Include full key for admin use
+          clientId: data.clientId,
+          clientName: data.clientName,
+          createdAt: data.createdAt,
+          totalUsage: data.usage.total || 0,
+          lastUsed: data.usage.lastUsed || null
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    res.status(500).json({ error: 'Failed to load dashboard data' });
+  }
+});
+
+// 9. Load tracking data from DynamoDB on server start
+async function loadClientTracking() {
+  if (!dynamoDBConnectionStatus.isConnected) {
+    console.log('DynamoDB not available, starting with empty tracking data');
+    return;
+  }
+
+  try {
+    const params = {
+      TableName: TABLE_NAME,
+      FilterExpression: '#type = :type',
+      ExpressionAttributeNames: {
+        '#type': 'type'
+      },
+      ExpressionAttributeValues: {
+        ':type': 'client_tracking'
+      }
+    };
+
+    const command = new ScanCommand(params);
+    const result = await dynamodb.send(command);
+
+    if (result.Items) {
+      result.Items.forEach(item => {
+        const clientId = item.id.replace('CLIENT_TRACKING_', '');
+        clientTracking[clientId] = item.clientData;
+      });
+      console.log(`Loaded tracking data for ${result.Items.length} clients`);
+    }
+  } catch (error) {
+    console.log('No existing client tracking data found, starting fresh');
+  }
+}
+
+// Update the initializeServer function to load tracking data:
+async function initializeServer() {
+  console.log('\n========== INITIALIZING SERVER ==========');
+
+  try {
+    // Test DynamoDB connection
+    const dbConnected = await testDynamoDBConnection();
+
+    if (dbConnected) {
+      console.log('✓ Connected to DynamoDB successfully');
+
+      // Load API stats
+      await loadAPIStats();
+
+      // Load client tracking data
+      await loadClientTracking();
+    } else {
+      console.log('✗ Could not connect to DynamoDB, will use XML feed fallback');
+    }
+
+    // Pre-load jobs data
+    console.log('\nPre-loading jobs data...');
+    const result = await loadJobsWithCaching(true);
+    console.log(`✓ Pre-loaded ${result.jobs.length} jobs from ${result.source}`);
+
+    console.log('\n========== SERVER READY ==========\n');
+  } catch (error) {
+    console.error('Server initialization error:', error);
+    console.log('\n========== SERVER STARTED WITH ERRORS ==========\n');
+  }
+}
+
+
 // Main page with UTM tracking
 app.get('/', (req, res) => {
   // Track page load
@@ -1133,27 +1609,27 @@ app.get('/', (req, res) => {
     console.log('Starting BMJ Careers API integration with tracking...');
 
     // Track click events
-    window.applyToJob = function(jobId) {
-        // Track the click
-        fetch('/api/track/click', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                jobId: jobId,
-                jobTitle: 'Job ' + jobId
-            })
-        }).catch(err => console.error('Click tracking failed:', err));
+   window.applyToJob = function(jobId) {
+       // Track the click
+       fetch('/api/track/click', {
+           method: 'POST',
+           headers: {
+               'Content-Type': 'application/json'
+           },
+           body: JSON.stringify({
+               jobId: jobId,
+               jobTitle: 'Job ' + jobId
+           })
+       }).catch(err => console.error('Click tracking failed:', err));
 
-        // Get job details
-        const job = window.allJobsData.find(j => j.id === jobId);
-        if (job && job.job_url) {
-            window.open(job.job_url, '_blank');
-        } else {
-            window.open('https://www.bmj.com/careers/job/' + jobId, '_blank');
-        }
-    };
+       // Get job details
+       const job = window.allJobsData.find(j => j.id === jobId);
+       if (job && job.job_url) {
+           window.open(job.job_url, '_blank', 'noopener,noreferrer');
+       } else {
+           window.open('https://www.bmj.com/careers/job/' + jobId, '_blank', 'noopener,noreferrer');
+       }
+   };
 
     // Show/hide loading overlay
     function showLoading() {
