@@ -2247,5 +2247,535 @@ window.applyToJob = function(jobId) {
         initApp();
     });
 </script>
+<!-- Cross-Origin Style Communication Script -->
+<script>
+    (function() {
+        'use strict';
+
+        // Widget configuration
+        const WIDGET_CONFIG = {
+            widgetId: 'bmj-careers-widget',
+            version: '1.0.0'
+        };
+
+        // Detect if running in iframe
+        const isInIframe = window.self !== window.top;
+
+        // Security: Configure allowed origins (update for production)
+        const ALLOWED_ORIGINS = '*'; // Change to ['https://client1.com', 'https://client2.com'] in production
+
+        // Performance: Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Apply iframe-specific styles immediately
+        if (isInIframe) {
+            const iframeStyles = document.createElement('style');
+            iframeStyles.id = 'bmj-iframe-styles';
+            iframeStyles.textContent = `
+                /* Remove ONLY the main page scrollbar for iframe mode */
+                html, body {
+                    overflow: visible !important;
+                    height: auto !important;
+                    min-height: 100% !important;
+                }
+
+                .main-wrapper {
+                    min-height: auto !important;
+                    height: auto !important;
+                }
+
+                /* Ensure sidebar doesn't stick in iframe mode */
+                .sidebar {
+                    position: relative !important;
+                    top: auto !important;
+                }
+            `;
+            document.head.appendChild(iframeStyles);
+            document.body.classList.add('bmj-iframe-mode');
+        }
+
+        // Optimized height calculation
+        let lastHeight = 0;
+        function getDocumentHeight() {
+            const body = document.body;
+            const html = document.documentElement;
+            return Math.max(
+                body.scrollHeight,
+                body.offsetHeight,
+                html.clientHeight,
+                html.scrollHeight,
+                html.offsetHeight
+            );
+        }
+
+        // Send height updates to parent
+        const sendHeightUpdate = debounce(function() {
+            if (!isInIframe) return;
+
+            const height = getDocumentHeight();
+            if (height !== lastHeight) {
+                lastHeight = height;
+                window.parent.postMessage({
+                    type: 'bmj-careers-height-update',
+                    widgetId: WIDGET_CONFIG.widgetId,
+                    height: height
+                }, '*');
+            }
+        }, 100);
+
+        // Handle scroll detection for scroll-to-top button
+        if (!isInIframe) {
+            // Normal mode - use window scroll
+            const handleScroll = debounce(function() {
+                const scrollToTopBtn = document.getElementById('scrollToTop');
+                if (scrollToTopBtn) {
+                    if (window.pageYOffset > 300) {
+                        scrollToTopBtn.classList.add('show');
+                    } else {
+                        scrollToTopBtn.classList.remove('show');
+                    }
+                }
+            }, 50);
+
+            window.addEventListener('scroll', handleScroll, { passive: true });
+        } else {
+            // Iframe mode - button visibility handled by existing handleScroll in index.html
+            // But we need to ensure scroll-to-top works properly
+            window.addEventListener('load', function() {
+                const scrollToTopBtn = document.getElementById('scrollToTop');
+                if (scrollToTopBtn) {
+                    // Override the existing onclick to work in iframe
+                    scrollToTopBtn.onclick = function(e) {
+                        e.preventDefault();
+
+                        // Try multiple methods to ensure scrolling works
+                        try {
+                            // Method 1: Scroll parent's iframe
+                            window.parent.postMessage({
+                                type: 'bmj-careers-scroll-to-top',
+                                widgetId: WIDGET_CONFIG.widgetId
+                            }, '*');
+                        } catch (e) {}
+
+                        // Method 2: Scroll own window
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                        // Method 3: Scroll document element
+                        document.documentElement.scrollTop = 0;
+                        document.body.scrollTop = 0;
+
+                        return false;
+                    };
+                }
+            });
+        }
+
+        // Security: Validate message origin
+        function isAllowedOrigin(origin) {
+            if (ALLOWED_ORIGINS === '*') return true;
+            return ALLOWED_ORIGINS.includes(origin);
+        }
+
+        // Optimized message handler
+        window.addEventListener('message', function(event) {
+            // Security check
+            if (!isAllowedOrigin(event.origin)) {
+                console.warn('Rejected message from unauthorized origin:', event.origin);
+                return;
+            }
+
+            if (!event.data || typeof event.data !== 'object') return;
+
+            switch (event.data.type) {
+                case 'bmj-careers-styles':
+                    applyCustomStyles(event.data.styles);
+                    break;
+                case 'bmj-careers-command':
+                    handleCommand(event.data.command, event.data.data);
+                    break;
+            }
+        });
+
+        // Optimized style application
+        const applyCustomStyles = (function() {
+            let styleElement = null;
+
+            return function(styles) {
+                if (!styles || typeof styles !== 'object') return;
+
+                // Create or reuse style element
+                if (!styleElement) {
+                    styleElement = document.createElement('style');
+                    styleElement.id = 'bmj-custom-styles';
+                    document.head.appendChild(styleElement);
+                }
+
+                // Build CSS efficiently
+                const cssRules = [];
+
+                // Primary color
+                if (styles.primaryColor) {
+                    cssRules.push(`
+                        .job-header,
+                        .category-btn.active,
+                        .category-btn:hover,
+                        .pagination-btn.active,
+                        .scroll-to-top,
+                        .scroll-to-top:hover {
+                            background: ${styles.primaryColor} !important;
+                            background-color: ${styles.primaryColor} !important;
+                        }
+
+                        .job-title,
+                        .search-title,
+                        .filters-title,
+                        .jobs-title,
+                        .job-count-main,
+                        .category-btn,
+                        .pagination-btn,
+                        .filter-arrow,
+                        .profession-parent-arrow {
+                            color: ${styles.primaryColor} !important;
+                            -webkit-text-fill-color: ${styles.primaryColor} !important;
+                        }
+
+                        .filter-checkbox:checked,
+                        .profession-parent-checkbox:checked,
+                        .profession-sub-checkbox:checked,
+                        .location-checkbox:checked,
+                        .location-sub-checkbox:checked,
+                        input[type="checkbox"]:checked,
+                        input[type="checkbox"]:checked::before {
+                            background: ${styles.primaryColor} !important;
+                            background-color: ${styles.primaryColor} !important;
+                            border-color: ${styles.primaryColor} !important;
+                        }
+
+                        .search-input:focus,
+                        .keyword-tag:hover {
+                            border-color: ${styles.primaryColor} !important;
+                            box-shadow: 0 0 0 4px ${styles.primaryColor}20 !important;
+                        }
+
+                        input[type="checkbox"]:not(:checked):hover {
+                            border-color: ${styles.primaryColor} !important;
+                            box-shadow: 0 0 0 4px ${styles.primaryColor}20 !important;
+                        }
+
+                        .job-details li::before {
+                            color: ${styles.primaryColor} !important;
+                        }
+                    `);
+                }
+
+                // Secondary color
+                if (styles.secondaryColor) {
+                    cssRules.push(`
+                        .apply-btn {
+                            background: ${styles.secondaryColor} !important;
+                            background-color: ${styles.secondaryColor} !important;
+                            box-shadow: 0 4px 12px ${styles.secondaryColor}40 !important;
+                        }
+
+                        .apply-btn:hover {
+                            background: ${styles.secondaryColorHover || styles.secondaryColor} !important;
+                            background-color: ${styles.secondaryColorHover || styles.secondaryColor} !important;
+                            filter: brightness(1.1);
+                            box-shadow: 0 6px 20px ${styles.secondaryColor}50 !important;
+                        }
+                    `);
+                }
+
+                // Text color
+                if (styles.textColor) {
+                    cssRules.push(`
+                        body,
+                        .job-details,
+                        .job-details li,
+                        .job-details strong,
+                        .filter-label,
+                        .profession-parent-label,
+                        .profession-sub-label,
+                        .location-text,
+                        .filter-header,
+                        .job-description,
+                        .pagination-info,
+                        .job-count-subtitle,
+                        .no-jobs-message {
+                            color: ${styles.textColor} !important;
+                        }
+                    `);
+                }
+
+                // Background colors
+                if (styles.backgroundColor) {
+                    cssRules.push(`
+                        body {
+                            background: ${styles.backgroundColor} !important;
+                        }
+                    `);
+                }
+
+                if (styles.cardBackgroundColor) {
+                    cssRules.push(`
+                        .sidebar,
+                        .main-content,
+                        .job-card,
+                        .search-section,
+                        .filters-section,
+                        .job-body,
+                        .pagination-section,
+                        .filter-checkbox:not(:checked),
+                        .profession-parent-checkbox:not(:checked),
+                        .profession-sub-checkbox:not(:checked),
+                        .location-checkbox:not(:checked),
+                        .location-sub-checkbox:not(:checked),
+                        input[type="checkbox"]:not(:checked) {
+                            background-color: ${styles.cardBackgroundColor} !important;
+                            background: ${styles.cardBackgroundColor} !important;
+                        }
+                    `);
+                }
+
+                // Keyword tags
+                if (styles.keywordBackgroundColor) {
+                    cssRules.push(`
+                        .keyword-tag {
+                            background: ${styles.keywordBackgroundColor} !important;
+                            color: ${styles.keywordTextColor || styles.primaryColor} !important;
+                            border: 1px solid ${styles.keywordBorderColor || 'transparent'} !important;
+                        }
+
+                        .keyword-tag:hover {
+                            background: ${styles.keywordHoverBackgroundColor || styles.primaryColor} !important;
+                            color: ${styles.keywordHoverTextColor || '#FFFFFF'} !important;
+                        }
+                    `);
+                }
+
+                // Borders
+                if (styles.borderColor) {
+                    cssRules.push(`
+                        .sidebar,
+                        .main-content,
+                        .job-card,
+                        .filter-group,
+                        .search-input,
+                        .search-section,
+                        .pagination-section,
+                        .category-btn,
+                        .filter-checkbox:not(:checked),
+                        .profession-parent-checkbox:not(:checked),
+                        .profession-sub-checkbox:not(:checked),
+                        .location-checkbox:not(:checked),
+                        .location-sub-checkbox:not(:checked) {
+                            border-color: ${styles.borderColor} !important;
+                        }
+                    `);
+                }
+
+                // Typography
+                if (styles.fontFamily) {
+                    cssRules.push(`
+                        body,
+                        * {
+                            font-family: ${styles.fontFamily} !important;
+                        }
+                    `);
+                }
+
+                if (styles.baseFontSize) {
+                    cssRules.push(`
+                        body {
+                            font-size: ${styles.baseFontSize} !important;
+                        }
+
+                        .job-details,
+                        .job-description,
+                        .filter-label {
+                            font-size: calc(${styles.baseFontSize} * 0.9375) !important;
+                        }
+
+                        .filter-count,
+                        .keywords-label {
+                            font-size: calc(${styles.baseFontSize} * 0.8125) !important;
+                        }
+                    `);
+                }
+
+                if (styles.headerFontSize) {
+                    cssRules.push(`
+                        .job-header {
+                            font-size: ${styles.headerFontSize} !important;
+                        }
+
+                        .job-count-main {
+                            font-size: calc(${styles.headerFontSize} * 1.5) !important;
+                        }
+
+                        .search-title,
+                        .filters-title {
+                            font-size: calc(${styles.headerFontSize} * 0.75) !important;
+                        }
+                    `);
+                }
+
+                // Shadows
+                if (styles.shadowColor) {
+                    cssRules.push(`
+                        .sidebar,
+                        .main-content,
+                        .job-card {
+                            box-shadow: 0 2px 8px ${styles.shadowColor}10 !important;
+                        }
+
+                        .sidebar:hover,
+                        .main-content:hover {
+                            box-shadow: 0 8px 24px ${styles.shadowColor}20 !important;
+                        }
+
+                        .job-card:hover {
+                            box-shadow: 0 10px 30px ${styles.shadowColor}25 !important;
+                        }
+
+                        .category-btn:hover,
+                        .pagination-btn:hover {
+                            box-shadow: 0 6px 20px ${styles.shadowColor}40 !important;
+                        }
+
+                        .scroll-to-top {
+                            box-shadow: 0 6px 20px ${styles.shadowColor}30 !important;
+                        }
+
+                        .scroll-to-top:hover {
+                            box-shadow: 0 8px 25px ${styles.shadowColor}40 !important;
+                        }
+                    `);
+                }
+
+                // Button text colors
+                if (styles.buttonTextColor) {
+                    cssRules.push(`
+                        .category-btn.active,
+                        .category-btn:hover,
+                        .pagination-btn.active,
+                        .scroll-to-top {
+                            color: ${styles.buttonTextColor} !important;
+                        }
+                    `);
+                }
+
+                if (styles.applyButtonTextColor) {
+                    cssRules.push(`
+                        .apply-btn,
+                        .apply-btn:hover {
+                            color: ${styles.applyButtonTextColor} !important;
+                        }
+                    `);
+                }
+
+                // Hover effects
+                if (styles.hoverScale !== false) {
+                    cssRules.push(`
+                        .category-btn:hover,
+                        .apply-btn:hover,
+                        .keyword-tag:hover {
+                            transform: translateY(-2px) scale(1.02);
+                        }
+                    `);
+                }
+
+                // Apply all styles at once
+                styleElement.textContent = cssRules.join('\n');
+
+                // Send confirmation
+                window.parent.postMessage({
+                    type: 'bmj-careers-styles-applied',
+                    widgetId: WIDGET_CONFIG.widgetId,
+                    stylesApplied: true
+                }, '*');
+            };
+        })();
+
+        // Handle commands
+        function handleCommand(command, data) {
+            switch(command) {
+                case 'refresh':
+                    location.reload();
+                    break;
+                case 'scrollToTop':
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    break;
+            }
+        }
+
+        // Optimized content monitoring for iframe mode
+        if (isInIframe) {
+            // Initial height send
+            setTimeout(sendHeightUpdate, 100);
+
+            // Efficient mutation observer
+            const observer = new MutationObserver(sendHeightUpdate);
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: false,
+                characterData: false
+            });
+
+            // Window resize handler
+            window.addEventListener('resize', sendHeightUpdate, { passive: true });
+
+            // Content loaded handlers
+            window.addEventListener('load', sendHeightUpdate);
+            document.addEventListener('DOMContentLoaded', sendHeightUpdate);
+
+            // Filter/pagination change handler
+            document.addEventListener('click', function(e) {
+                if (e.target.matches('.filter-checkbox, .category-btn, .pagination-btn, .filter-header, .profession-parent-header')) {
+                    setTimeout(sendHeightUpdate, 300);
+                }
+            }, { passive: true });
+        }
+
+        // Send ready message efficiently
+        function sendReadyMessage() {
+            window.parent.postMessage({
+                type: 'bmj-careers-ready',
+                widgetId: WIDGET_CONFIG.widgetId,
+                version: WIDGET_CONFIG.version,
+                isInIframe: isInIframe
+            }, '*');
+
+            console.log('BMJ Careers Widget initialized and ready');
+
+            if (isInIframe) {
+                sendHeightUpdate();
+            }
+        }
+
+        // Send ready on load
+        if (document.readyState === 'complete') {
+            sendReadyMessage();
+        } else {
+            window.addEventListener('load', sendReadyMessage);
+            // Backup ready message
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(sendReadyMessage, 500);
+            });
+        }
+    })();
+</script>
+<!-- End Cross-Origin Style Communication Script -->
 </body>
 </html>
