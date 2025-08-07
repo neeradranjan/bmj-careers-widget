@@ -232,7 +232,6 @@ body {
 
 .sidebar:hover {
     box-shadow: 0 8px 24px rgba(0, 102, 204, 0.12);
-    transform: translateY(-2px);
 }
 
 .search-section {
@@ -267,6 +266,47 @@ body {
     border-color: #0066cc;
     box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
     background: #ffffff;
+}
+
+/* Search input wrapper and clear button */
+.search-input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem 2.5rem 0.75rem 1rem; /* Add right padding for button */
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    transition: all 0.3s ease;
+    background: #ffffff;
+}
+
+.clear-keyword-btn {
+    position: absolute;
+    right: 2px;
+    top: 2px;
+    bottom: 2px;
+    width: 36px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #000000;
+    font-size: 24px;
+    font-weight: bold;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 6px 6px 0;
+    transition: all 0.2s ease;
+}
+
+.clear-keyword-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #0066cc;
 }
 
 .keywords-section {
@@ -697,7 +737,6 @@ body {
 
 .main-content:hover {
     box-shadow: 0 8px 24px rgba(0, 102, 204, 0.12);
-    transform: translateY(-2px);
 }
 
 @keyframes slideInFromRight {
@@ -1547,141 +1586,95 @@ body {
     z-index: 2147483647 !important; /* Maximum z-index */
 }
 
-input[type="checkbox"] {
+input[type="checkbox"]:checked {
+    background-image: none !important;
+}
+
+/* Force all checkboxes to show solid colors */
+/* Universal checkbox styling - single source of truth */
+input[type="checkbox"],
+.filter-checkbox,
+.profession-parent-checkbox,
+.profession-sub-checkbox,
+.location-checkbox,
+.location-sub-checkbox {
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
     appearance: none !important;
-    background-image: none !important;
-    background: transparent !important;
-}
-
-/* Base checkbox styling */
-input[type="checkbox"].filter-checkbox,
-input[type="checkbox"].profession-parent-checkbox,
-input[type="checkbox"].profession-sub-checkbox,
-input[type="checkbox"].location-checkbox,
-input[type="checkbox"].location-sub-checkbox {
     width: 1.125rem;
     height: 1.125rem;
     border: 2px solid #d1d5db;
     border-radius: 4px;
-    position: relative;
+    background-color: #ffffff;
     cursor: pointer;
+    position: relative;
     transition: all 0.2s ease;
-    background-color: #ffffff !important;
-    background: #ffffff !important;
+    flex-shrink: 0;
 }
 
-/* Smaller sub-checkboxes */
-input[type="checkbox"].profession-sub-checkbox,
-input[type="checkbox"].location-sub-checkbox {
-    width: 1rem;
-    height: 1rem;
-    border-radius: 3px;
-}
-
-/* CHECKED STATE - Multiple approaches to ensure it works */
-input[type="checkbox"]:checked.filter-checkbox,
-input[type="checkbox"]:checked.profession-parent-checkbox,
-input[type="checkbox"]:checked.profession-sub-checkbox,
-input[type="checkbox"]:checked.location-checkbox,
-input[type="checkbox"]:checked.location-sub-checkbox {
-    background: #0066cc !important;
+/* Checked state */
+input[type="checkbox"]:checked,
+.filter-checkbox:checked,
+.profession-parent-checkbox:checked,
+.profession-sub-checkbox:checked,
+.location-checkbox:checked,
+.location-sub-checkbox:checked {
     background-color: #0066cc !important;
-    background-image: none !important;
     border-color: #0066cc !important;
 }
 
-/* Alternative approach using pseudo-element for the blue fill */
-input[type="checkbox"]:checked::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #0066cc !important;
-    border-radius: 2px;
-    z-index: 1;
-}
-
-/* Checkmark on top of the blue background */
-input[type="checkbox"]:checked::after {
+/* Checkmark for checked state */
+input[type="checkbox"]:checked::after,
+.filter-checkbox:checked::after,
+.profession-parent-checkbox:checked::after,
+.profession-sub-checkbox:checked::after,
+.location-checkbox:checked::after,
+.location-sub-checkbox:checked::after {
     content: '✓';
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: #ffffff !important;
+    color: white;
     font-size: 0.75rem;
     font-weight: bold;
-    line-height: 1;
-    z-index: 2;
-}
-
-/* Smaller checkmark for sub-checkboxes */
-input[type="checkbox"].profession-sub-checkbox:checked::after,
-input[type="checkbox"].location-sub-checkbox:checked::after {
-    font-size: 0.625rem;
+    display: block;
 }
 
 /* Indeterminate state for parent checkboxes */
-input[type="checkbox"].profession-parent-checkbox.indeterminate,
-input[type="checkbox"].location-checkbox.indeterminate {
-    background: #0066cc !important;
+.profession-parent-checkbox.indeterminate,
+.location-checkbox.indeterminate {
     background-color: #0066cc !important;
     border-color: #0066cc !important;
 }
 
-input[type="checkbox"].profession-parent-checkbox.indeterminate::before,
-input[type="checkbox"].location-checkbox.indeterminate::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #0066cc !important;
-    border-radius: 2px;
-    z-index: 1;
-}
-
-input[type="checkbox"].profession-parent-checkbox.indeterminate::after,
-input[type="checkbox"].location-checkbox.indeterminate::after {
+.profession-parent-checkbox.indeterminate::after,
+.location-checkbox.indeterminate::after {
     content: '−';
-    color: #ffffff !important;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
     font-size: 0.875rem;
-    z-index: 2;
+    font-weight: bold;
+    display: block;
 }
 
-/* Hover effects */
-input[type="checkbox"]:not(:checked):hover {
+/* Hover state */
+input[type="checkbox"]:hover {
     border-color: #0066cc;
     box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
 }
 
-/* Focus effects */
-input[type="checkbox"]:focus {
-    outline: none;
-    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.2);
-}
-
-/* OVERRIDE ANY GRADIENT BACKGROUNDS */
-.filter-checkbox,
-.filter-checkbox:checked,
-.profession-parent-checkbox,
-.profession-parent-checkbox:checked,
+/* Smaller checkboxes for subcategories */
 .profession-sub-checkbox,
-.profession-sub-checkbox:checked,
-.location-checkbox,
-.location-checkbox:checked,
-.location-sub-checkbox,
-.location-sub-checkbox:checked {
-    background-image: none !important;
+.location-sub-checkbox {
+    width: 1rem;
+    height: 1rem;
 }
 
-/* Extra specificity to override any conflicting styles */
-#filtersContainer input[type="checkbox"]:checked {
-    background: #0066cc !important;
-    background-color: #0066cc !important;
+.profession-sub-checkbox:checked::after,
+.location-sub-checkbox:checked::after {
+    font-size: 0.625rem;
 }
