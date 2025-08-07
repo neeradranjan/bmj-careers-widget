@@ -64,6 +64,25 @@ console.log(`AWS Profile: ${AWS_PROFILE}`);
 console.log(`AWS Region: ${AWS_REGION}`);
 console.log(`DynamoDB Table: ${TABLE_NAME}`);
 
+// AWS COGNITO CONFIGURATION
+const USE_COGNITO = process.env.USE_COGNITO === 'true';
+const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
+const COGNITO_CLIENT_ID = process.env.COGNITO_CLIENT_ID;
+const COGNITO_DOMAIN = process.env.COGNITO_DOMAIN;
+const COGNITO_REDIRECT_URI = process.env.COGNITO_REDIRECT_URI || 'http://localhost:3000/auth/callback';
+
+// Add AWS Cognito SDK imports at the top
+const { CognitoIdentityProviderClient, InitiateAuthCommand, GetUserCommand } = require('@aws-sdk/client-cognito-identity-provider');
+
+// Initialize Cognito client if configured
+let cognitoClient = null;
+if (USE_COGNITO) {
+  cognitoClient = new CognitoIdentityProviderClient({
+    region: AWS_REGION,
+    credentials: fromIni({ profile: AWS_PROFILE })
+  });
+}
+
 // BMJ Careers XML Feed URL
 const BMJ_XML_FEED_URL = 'https://www.bmj.com/careers/feeds/CompactJobBoard.xml';
 
@@ -182,54 +201,203 @@ function getClientFromRequest(req) {
   const utm_campaign = req.query.utm_campaign || 'default';
   const referer = req.headers.referer || 'unknown';
 
-  // Check if request is from iframe
+  // Generate a unique session ID for each page load
+  const sessionId = req.headers['x-session-id'] ||
+                   req.query.session_id ||
+                   `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Better iframe detection
   const isIframe = req.headers['sec-fetch-dest'] === 'iframe' ||
-                   req.headers['x-frame-options'] ||
+                   req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-site'] === 'cross-site' ||
                    req.query.iframe === 'true' ||
-                   utm_medium === 'iframe';
+                   utm_medium === 'iframe' ||
+                   (referer !== 'unknown' && referer !== req.headers.host);
 
   // Generate client ID from UTM source or referer
   let clientId = utm_source;
+  let clientName = utm_source;
+
   if (clientId === 'direct' && referer !== 'unknown') {
     try {
       const url = new URL(referer);
       clientId = url.hostname;
+      clientName = url.hostname;
     } catch (e) {
       clientId = 'unknown';
+      clientName = 'Unknown';
     }
   }
 
+  // Create unique client ID for each session
+  const uniqueClientId = `${clientId}_${sessionId}`;
+
   return {
-    clientId,
-    utm_source,
+    clientId: uniqueClientId,
+    baseClientId: clientId,
+    clientName: clientName,
+    clientDomain: referer,
+    sessionId,
+    utm_source: clientId !== 'direct' ? clientId : (isIframe ? 'iframe_' + clientName : clientId),
     utm_medium: isIframe ? 'iframe' : utm_medium,
     utm_campaign,
     referer,
-    isIframe
+    isIframe,
+    userAgent: req.headers['user-agent'] || 'Unknown',
+    ipAddress: req.ip || req.connection.remoteAddress || 'Unknown'
   };
 }
 
+// Add these functions to persist tracking data
+async function saveTrackingData() {
+    if (!dynamoDBConnectionStatus.isConnected) {
+        // Save to local file as backup
+        const fs = require('fs').promises;
+        try {
+            await fs.writeFile('tracking-data.json', JSON.stringify({
+                clientTracking,
+                utmTracking,
+                apiStats,
+                publicApiKeys,
+                lastSaved: new Date().toISOString()
+            }, null, 2));
+            console.log('Tracking data saved to local file');
+        } catch (error) {
+            console.error('Error saving tracking data:', error);
+        }
+        return;
+    }
+
+    try {
+        // Save to DynamoDB
+        const params = {
+            TableName: TABLE_NAME,
+            Item: {
+                id: 'TRACKING_DATA',
+                type: 'tracking_aggregate',
+                clientTracking,
+                utmTracking,
+                apiStats,
+                publicApiKeys,
+                lastUpdated: new Date().toISOString()
+            }
+        };
+
+        await dynamodb.send(new PutCommand(params));
+        console.log('Tracking data saved to DynamoDB');
+    } catch (error) {
+        console.error('Error saving tracking data to DynamoDB:', error);
+    }
+}
+
+async function loadTrackingData() {
+    // Try DynamoDB first
+    if (dynamoDBConnectionStatus.isConnected) {
+        try {
+            const params = {
+                TableName: TABLE_NAME,
+                Key: { id: 'TRACKING_DATA' }
+            };
+
+            const result = await dynamodb.send(new GetCommand(params));
+            if (result.Item) {
+                clientTracking = result.Item.clientTracking || {};
+                utmTracking = result.Item.utmTracking || {};
+                apiStats = result.Item.apiStats || { totalCalls: 0, dailyCalls: {}, hourlyCalls: {}, endpoints: {} };
+                publicApiKeys = result.Item.publicApiKeys || {};
+                console.log('Tracking data loaded from DynamoDB');
+                return;
+            }
+        } catch (error) {
+            console.error('Error loading from DynamoDB:', error);
+        }
+    }
+
+    // Try local file as fallback
+    const fs = require('fs').promises;
+    try {
+        const data = await fs.readFile('tracking-data.json', 'utf8');
+        const parsed = JSON.parse(data);
+        clientTracking = parsed.clientTracking || {};
+        utmTracking = parsed.utmTracking || {};
+        apiStats = parsed.apiStats || { totalCalls: 0, dailyCalls: {}, hourlyCalls: {}, endpoints: {} };
+        publicApiKeys = parsed.publicApiKeys || {};
+        console.log('Tracking data loaded from local file');
+    } catch (error) {
+        console.log('No existing tracking data found, starting fresh');
+    }
+}
+
+// Update initializeServer to load tracking data
+async function initializeServer() {
+    console.log('\n========== INITIALIZING SERVER ==========');
+
+    try {
+        // Test DynamoDB connection
+        const dbConnected = await testDynamoDBConnection();
+
+        if (dbConnected) {
+            console.log('✓ Connected to DynamoDB successfully');
+        }
+
+        // Load persisted tracking data
+        await loadTrackingData();
+
+        // Save tracking data every 5 minutes
+        setInterval(saveTrackingData, 5 * 60 * 1000);
+
+        // Pre-load jobs data
+        console.log('\nPre-loading jobs data...');
+        const result = await loadJobsWithCaching(true);
+        console.log(`✓ Pre-loaded ${result.jobs.length} jobs from ${result.source}`);
+
+        console.log('\n========== SERVER READY ==========\n');
+    } catch (error) {
+        console.error('Server initialization error:', error);
+        console.log('\n========== SERVER STARTED WITH ERRORS ==========\n');
+    }
+}
+
+// Save on shutdown
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM signal received: saving data and closing HTTP server');
+    await saveTrackingData();
+    server.close(() => {
+        console.log('HTTP server closed');
+    });
+});
+
+process.on('SIGINT', async () => {
+    console.log('SIGINT signal received: saving data and closing HTTP server');
+    await saveTrackingData();
+    process.exit(0);
+});
+
+
 // Track client usage
 function trackClientUsage(clientInfo, action, metadata = {}) {
-  const { clientId, utm_source, utm_medium, utm_campaign, referer } = clientInfo;
+  const { clientId, baseClientId, sessionId, utm_source, utm_medium, utm_campaign, referer } = clientInfo;
   const now = new Date();
   const dateKey = now.toISOString().split('T')[0];
   const hourKey = `${dateKey}-${now.getHours()}`;
 
-  // Initialize client if not exists
+  // Initialize client session if not exists
   if (!clientTracking[clientId]) {
     clientTracking[clientId] = {
-      name: clientId,
+      name: baseClientId,
+      sessionId: sessionId,
       domain: referer,
       utm_source,
       utm_medium,
       utm_campaign,
       firstSeen: now.toISOString(),
       lastSeen: now.toISOString(),
+      userAgent: metadata.userAgent || 'Unknown',
+      ipAddress: metadata.ipAddress || 'Unknown',
       metrics: {
         totalLoads: 0,
         totalClicks: 0,
         totalApiCalls: 0,
+        totalTime: 0,
         daily: {},
         hourly: {}
       }
@@ -244,7 +412,8 @@ function trackClientUsage(clientInfo, action, metadata = {}) {
     clientTracking[clientId].metrics.daily[dateKey] = {
       loads: 0,
       clicks: 0,
-      apiCalls: 0
+      apiCalls: 0,
+      time: 0
     };
   }
 
@@ -252,7 +421,8 @@ function trackClientUsage(clientInfo, action, metadata = {}) {
     clientTracking[clientId].metrics.hourly[hourKey] = {
       loads: 0,
       clicks: 0,
-      apiCalls: 0
+      apiCalls: 0,
+      time: 0
     };
   }
 
@@ -273,6 +443,12 @@ function trackClientUsage(clientInfo, action, metadata = {}) {
       clientTracking[clientId].metrics.daily[dateKey].apiCalls++;
       clientTracking[clientId].metrics.hourly[hourKey].apiCalls++;
       break;
+    case 'time':
+      const timeSpent = metadata.timeSpent || 0;
+      clientTracking[clientId].metrics.totalTime += timeSpent;
+      clientTracking[clientId].metrics.daily[dateKey].time += timeSpent;
+      clientTracking[clientId].metrics.hourly[hourKey].time += timeSpent;
+      break;
   }
 
   // Store in UTM tracking for easier daily aggregation
@@ -285,21 +461,23 @@ function trackClientUsage(clientInfo, action, metadata = {}) {
       loads: 0,
       clicks: 0,
       apiCalls: 0,
+      time: 0,
       utm_source,
       utm_medium,
-      utm_campaign
+      utm_campaign,
+      sessionId
     };
   }
 
-  utmTracking[dateKey][clientId][action === 'load' ? 'loads' : action === 'click' ? 'clicks' : 'apiCalls']++;
+  utmTracking[dateKey][clientId][action === 'load' ? 'loads' : action === 'click' ? 'clicks' : action === 'api' ? 'apiCalls' : 'time'] += action === 'time' ? (metadata.timeSpent || 0) : 1;
 
   // Persist to DynamoDB if available (fire and forget)
   if (dynamoDBConnectionStatus.isConnected) {
     const trackingParams = {
       TableName: TABLE_NAME,
       Item: {
-        id: `CLIENT_TRACKING_${clientId}`,
-        type: 'client_tracking',
+        id: `CLIENT_SESSION_${clientId}`,
+        type: 'client_session',
         clientData: clientTracking[clientId],
         lastUpdated: now.toISOString()
       }
@@ -310,6 +488,7 @@ function trackClientUsage(clientInfo, action, metadata = {}) {
     });
   }
 }
+
 
 // XML Parser configuration
 const xmlParser = new xml2js.Parser({
@@ -898,6 +1077,30 @@ app.get('/reset-password', (req, res) => {
 });
 
 app.get('/admin', (req, res) => {
+  // Check if Cognito is configured
+  if (USE_COGNITO && COGNITO_DOMAIN && COGNITO_CLIENT_ID) {
+    // Check for Cognito code in query params (coming back from Cognito)
+    if (req.query.code) {
+      // User is coming back from Cognito with auth code
+      // In production, you would exchange this code for tokens
+      // For now, just serve the admin page
+      res.sendFile(path.join(__dirname, 'admin.html'));
+    } else {
+      // Redirect to Cognito hosted UI
+      const cognitoUrl = `https://${COGNITO_DOMAIN}.auth.${AWS_REGION}.amazoncognito.com/login?client_id=${COGNITO_CLIENT_ID}&response_type=code&scope=email+openid+profile&redirect_uri=${encodeURIComponent(COGNITO_REDIRECT_URI)}`;
+      res.redirect(cognitoUrl);
+    }
+  } else {
+    // Fallback to file-based admin page
+    res.sendFile(path.join(__dirname, 'admin.html'));
+  }
+});
+
+app.get('/admin-dashboard', async (req, res) => {
+  if (!isAuthenticated(req)) {
+    return res.redirect('/login?redirect=/admin');
+  }
+
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
@@ -927,6 +1130,118 @@ app.get('/api/admin/api-key/:clientId', async (req, res) => {
   } catch (error) {
     console.error('Error getting API key:', error);
     res.status(500).json({ error: 'Failed to get API key' });
+  }
+});
+
+// Cognito configuration endpoint
+app.get('/api/auth/cognito-config', (req, res) => {
+  if (USE_COGNITO && COGNITO_DOMAIN && COGNITO_CLIENT_ID) {
+    const hostedUIUrl = `https://${COGNITO_DOMAIN}.auth.${AWS_REGION}.amazoncognito.com/login?client_id=${COGNITO_CLIENT_ID}&response_type=code&scope=email+openid+profile&redirect_uri=${encodeURIComponent(COGNITO_REDIRECT_URI)}`;
+
+    res.json({
+      configured: true,
+      useHostedUI: !!COGNITO_DOMAIN,
+      useDirectAuth: true,
+      hostedUIUrl: hostedUIUrl,
+      clientId: COGNITO_CLIENT_ID
+    });
+  } else {
+    res.json({
+      configured: false,
+      message: 'AWS Cognito is not configured'
+    });
+  }
+});
+
+
+// Handle Cognito callback
+app.get('/api/auth/cognito-callback', async (req, res) => {
+    const { code } = req.query;
+
+    if (!code) {
+        return res.redirect('/login?error=no_code');
+    }
+
+    try {
+        // In production, exchange code for tokens with Cognito
+        // For now, create a session
+        const sessionToken = generateToken();
+        const email = 'cognito.user@bmj.com'; // In production, get from Cognito tokens
+
+        userSessions[sessionToken] = {
+            email,
+            username: 'Cognito User',
+            role: 'admin',
+            createdAt: new Date().toISOString(),
+            authMethod: 'cognito'
+        };
+
+        // Redirect to admin with session
+        res.redirect(`/admin?session=${sessionToken}`);
+    } catch (error) {
+        console.error('Cognito callback error:', error);
+        res.redirect('/login?error=cognito_error');
+    }
+});
+
+// Direct Cognito authentication endpoint
+app.post('/api/auth/cognito-login', async (req, res) => {
+  if (!USE_COGNITO || !cognitoClient) {
+    return res.status(503).json({ error: 'Cognito authentication not configured' });
+  }
+
+  try {
+    const { username, password } = req.body;
+
+    const authParams = {
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      ClientId: COGNITO_CLIENT_ID,
+      AuthParameters: {
+        USERNAME: username,
+        PASSWORD: password
+      }
+    };
+
+    const authCommand = new InitiateAuthCommand(authParams);
+    const authResult = await cognitoClient.send(authCommand);
+
+    if (authResult.AuthenticationResult) {
+      // Get user details
+      const getUserCommand = new GetUserCommand({
+        AccessToken: authResult.AuthenticationResult.AccessToken
+      });
+      const userResult = await cognitoClient.send(getUserCommand);
+
+      // Extract email from attributes
+      const emailAttr = userResult.UserAttributes.find(attr => attr.Name === 'email');
+      const email = emailAttr ? emailAttr.Value : `${username}@cognito.local`;
+
+      // Create session
+      const sessionToken = generateToken();
+      userSessions[sessionToken] = {
+        email,
+        username: username,
+        role: 'admin',
+        createdAt: new Date().toISOString(),
+        authMethod: 'cognito',
+        cognitoTokens: authResult.AuthenticationResult
+      };
+
+      res.json({
+        success: true,
+        sessionToken,
+        user: {
+          username,
+          email,
+          role: 'admin'
+        }
+      });
+    } else {
+      throw new Error('Authentication failed');
+    }
+  } catch (error) {
+    console.error('Cognito login error:', error);
+    res.status(401).json({ error: error.message || 'Invalid credentials' });
   }
 });
 
@@ -1374,6 +1689,15 @@ async function initializeServer() {
 app.get('/', (req, res) => {
   // Track page load
   const clientInfo = getClientFromRequest(req);
+
+  // Skip tracking for localhost if configured
+  if (clientInfo && !clientInfo.isLocalhost) {
+    trackClientUsage(clientInfo, 'load', {
+      userAgent: clientInfo.userAgent,
+      ipAddress: clientInfo.ipAddress
+    });
+  }
+
   trackClientUsage(clientInfo, 'load');
 
   const htmlPath = path.join(__dirname, 'index.html');
@@ -1608,6 +1932,49 @@ app.get('/', (req, res) => {
     // API Integration for BMJ Careers with Click Tracking
     console.log('Starting BMJ Careers API integration with tracking...');
 
+// Generate session ID for this page load
+const sessionId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+// Track time spent on page
+let startTime = Date.now();
+let lastActivityTime = Date.now();
+
+// Send time updates every 30 seconds
+setInterval(() => {
+  const timeSpent = Math.floor((Date.now() - lastActivityTime) / 1000);
+  if (timeSpent > 0) {
+    fetch('/api/track/time', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-session-id': sessionId
+      },
+      body: JSON.stringify({ timeSpent })
+    }).catch(err => console.error('Time tracking failed:', err));
+    lastActivityTime = Date.now();
+  }
+}, 30000);
+
+// Track activity
+document.addEventListener('click', () => {
+  lastActivityTime = Date.now();
+});
+
+document.addEventListener('scroll', () => {
+  lastActivityTime = Date.now();
+});
+
+// Send session ID with all requests
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+  if (args[0] && args[0].startsWith('/')) {
+    if (!args[1]) args[1] = {};
+    if (!args[1].headers) args[1].headers = {};
+    args[1].headers['x-session-id'] = sessionId;
+  }
+  return originalFetch.apply(this, args);
+};
+
     // Track click events
    window.applyToJob = function(jobId) {
        // Track the click
@@ -1689,9 +2056,38 @@ app.get('/', (req, res) => {
         }, 300);
     };
 
-    // OPTIMIZED: Function to load jobs from API
+    // OPTIMIZED: Function to load jobs from API with browser caching
     function loadJobsFromAPI(showNotifications = false) {
         console.log('Loading jobs from API...');
+
+        // Check sessionStorage for cached data first
+        const cachedData = sessionStorage.getItem('bmj_jobs_cache');
+        const cacheTimestamp = sessionStorage.getItem('bmj_jobs_cache_timestamp');
+
+        if (cachedData && cacheTimestamp) {
+            try {
+                const parsedCache = JSON.parse(cachedData);
+                console.log('Using browser cached data, cached at:', new Date(parseInt(cacheTimestamp)));
+
+                // Update the global allJobsData
+                window.allJobsData = parsedCache;
+                allJobsData = parsedCache;
+
+                // Initialize the app
+                if (typeof initApp === 'function') {
+                    console.log('Initializing app with cached data...');
+                    initApp();
+                }
+
+                // Don't show loading spinner or fetch from server
+                return;
+            } catch (e) {
+                console.error('Error parsing cached data:', e);
+                // Clear invalid cache
+                sessionStorage.removeItem('bmj_jobs_cache');
+                sessionStorage.removeItem('bmj_jobs_cache_timestamp');
+            }
+        }
 
         // Show loading only if no jobs are already loaded
         if (!window.allJobsData || window.allJobsData.length === 0) {
@@ -1711,6 +2107,15 @@ app.get('/', (req, res) => {
 
                 if (data.jobs && Array.isArray(data.jobs)) {
                     console.log('Received ' + data.jobs.length + ' jobs');
+
+                    // Store in sessionStorage for browser caching
+                    try {
+                        sessionStorage.setItem('bmj_jobs_cache', JSON.stringify(data.jobs));
+                        sessionStorage.setItem('bmj_jobs_cache_timestamp', Date.now().toString());
+                        console.log('Stored jobs in browser cache');
+                    } catch (e) {
+                        console.warn('Could not cache jobs in sessionStorage:', e);
+                    }
 
                     // Show notifications if enabled and there are new/updated jobs
                     if (showNotifications && !data.fromCache) {
@@ -1762,6 +2167,11 @@ app.get('/', (req, res) => {
     // Expose functions for debugging
     window.loadJobsFromAPI = loadJobsFromAPI;
     window.refreshJobs = function() {
+        // Clear browser cache on manual refresh
+        sessionStorage.removeItem('bmj_jobs_cache');
+        sessionStorage.removeItem('bmj_jobs_cache_timestamp');
+        console.log('Cleared browser cache for refresh');
+
         showLoading();
         fetch('/api/jobs/refresh', { method: 'POST' })
             .then(res => res.json())
@@ -1801,6 +2211,21 @@ app.post('/api/track/click', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error tracking click:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Time tracking endpoint
+app.post('/api/track/time', async (req, res) => {
+  try {
+    const clientInfo = getClientFromRequest(req);
+    const { timeSpent } = req.body;
+
+    trackClientUsage(clientInfo, 'time', { timeSpent });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error tracking time:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -2612,6 +3037,11 @@ const server = app.listen(PORT, async () => {
   console.log(`  - Allowed emails: ${ALLOWED_ADMIN_EMAILS.join(', ')}`);
   console.log(`  - Default admin: admin@bmj.com / admin123 (change in production!)`);
   console.log(`${'='.repeat(80)}\n`);
+  console.log(`  - Authentication: ${USE_COGNITO ? 'AWS Cognito' : 'Local (Fallback)'}`);
+  if (USE_COGNITO) {
+    console.log(`  - Cognito Domain: ${COGNITO_DOMAIN || 'Not configured'}`);
+    console.log(`  - Cognito Client ID: ${COGNITO_CLIENT_ID ? 'Configured' : 'Not configured'}`);
+  }
 
   // Initialize server after it starts listening
   await initializeServer();
@@ -2620,13 +3050,6 @@ const server = app.listen(PORT, async () => {
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-  });
-});
-
-process.on('SIGINT', () => {
-  console.log('\nSIGINT signal received: closing HTTP server');
   server.close(() => {
     console.log('HTTP server closed');
   });
