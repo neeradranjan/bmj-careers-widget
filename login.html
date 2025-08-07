@@ -4,44 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - BMJ Careers Admin</title>
-    <link rel="stylesheet" href="/styles.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e9ecef 100%);
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            padding: 2rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
         }
 
-        .auth-container {
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        .login-container {
+            background: white;
             padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
             width: 100%;
             max-width: 400px;
-            animation: fadeInUp 0.6s ease-out;
+            animation: slideIn 0.3s ease-out;
         }
 
-        .auth-header {
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
             text-align: center;
             margin-bottom: 2rem;
         }
 
-        .auth-title {
-            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
+        .login-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #0066cc 0%, #004c99 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+}
 
-        .auth-subtitle {
+        .login-subtitle {
             color: #6b7280;
-            font-size: 1rem;
+            font-size: 0.875rem;
         }
 
         .form-group {
@@ -52,7 +68,7 @@
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 600;
-            color: #1d1d1b;
+            color: #374151;
             font-size: 0.875rem;
         }
 
@@ -66,61 +82,40 @@
         }
 
         .form-input:focus {
-            outline: none;
-            border-color: #0066cc;
-            box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
-        }
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
+}
 
-        .submit-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
-            color: white;
-            padding: 0.875rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 1rem;
-        }
+        .login-btn {
+    width: 100%;
+    padding: 0.875rem;
+    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
 
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 102, 204, 0.25);
-        }
+.login-btn:hover {
+    background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 102, 204, 0.25);
+}
 
-        .submit-btn:disabled {
-            opacity: 0.6;
+        .login-btn:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
-        }
-
-        .auth-links {
-            text-align: center;
-            margin-top: 1.5rem;
-        }
-
-        .auth-link {
-            color: #6b7280;
-            font-size: 0.875rem;
-            margin: 0.5rem 0;
-        }
-
-        .auth-link a {
-            color: #0066cc;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .auth-link a:hover {
-            text-decoration: underline;
         }
 
         .error-message {
-            background: #fee;
-            color: #c00;
-            padding: 0.75rem 1rem;
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #dc2626;
+            padding: 0.75rem;
             border-radius: 6px;
             font-size: 0.875rem;
             margin-bottom: 1rem;
@@ -128,59 +123,161 @@
         }
 
         .success-message {
-            background: #e6ffe6;
-            color: #060;
-            padding: 0.75rem 1rem;
+            background: #d1fae5;
+            border: 1px solid #6ee7b7;
+            color: #065f46;
+            padding: 0.75rem;
             border-radius: 6px;
             font-size: 0.875rem;
             margin-bottom: 1rem;
             display: none;
         }
 
-        .forgot-password-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
+        .divider {
+    display: flex;
+    align-items: center;
+    margin: 1.5rem 0;
+}
 
-        .modal-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            max-width: 400px;
-            width: 90%;
-            position: relative;
-            animation: fadeInUp 0.3s ease-out;
-        }
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
+}
 
-        .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #6b7280;
-        }
+.divider-text {
+    padding: 0 1rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
 
-        .modal-close:hover {
-            color: #1d1d1b;
-        }
+.cognito-btn {
+    width: 100%;
+    padding: 0.875rem;
+    background: linear-gradient(135deg, #ff9900 0%, #ff6600 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cognito-btn:hover {
+    background: linear-gradient(135deg, #ff6600 0%, #ff3300 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 102, 0, 0.25);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    max-width: 400px;
+    width: 90%;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ff9900 0%, #ff6600 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #6b7280;
+}
     </style>
 </head>
 <body>
-<div class="auth-container">
-    <div class="auth-header">
-        <h1 class="auth-title">BMJ Careers Admin</h1>
-        <p class="auth-subtitle">Login to your account</p>
+<div class="login-container">
+    <div class="login-header">
+        <h1 class="login-title">BMJ Careers Admin</h1>
+        <p class="login-subtitle">Please login to continue</p>
+        <!-- Cognito Modal -->
+        <div class="modal" id="cognitoModal">
+            <div class="modal-content" style="position: relative;">
+                <button class="modal-close" onclick="closeModal()">×</button>
+                <div class="modal-header">
+                    <h2 class="modal-title">AWS Cognito Login</h2>
+                    <p class="login-subtitle">Enter your Cognito credentials</p>
+                </div>
+
+                <form id="cognitoLoginForm">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="cognitoUsername" class="form-input" required placeholder="Enter Cognito username">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="cognitoPassword" class="form-input" required placeholder="Enter Cognito password">
+                    </div>
+
+                    <button type="submit" class="login-btn" id="cognitoLoginBtn">
+                        Login with Cognito
+                    </button>
+                </form>
+
+                <div class="divider">
+                    <div class="divider-text">OR</div>
+                </div>
+
+                <button type="button" class="btn-secondary" id="cognitoHostedUIBtn" style="width: 100%; padding: 0.875rem; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer;">
+                    Use Cognito Hosted UI
+                </button>
+            </div>
+        </div>
     </div>
 
     <div id="errorMessage" class="error-message"></div>
@@ -189,77 +286,54 @@
     <form id="loginForm">
         <div class="form-group">
             <label class="form-label">Email</label>
-            <input type="email" id="email" class="form-input" required placeholder="Enter email">
+            <input type="email" id="email" class="form-input" required placeholder="admin@bmj.com">
         </div>
 
         <div class="form-group">
             <label class="form-label">Password</label>
-            <input type="password" id="password" class="form-input" required placeholder="Enter password">
+            <input type="password" id="password" class="form-input" required placeholder="Enter your password">
         </div>
 
-        <button type="submit" class="submit-btn" id="submitBtn">Login</button>
+        <button type="submit" class="login-btn" id="loginBtn">
+            Login to Admin Console
+        </button>
+        <div class="divider">
+            <div class="divider-text">OR</div>
+        </div>
+        <button type="button" class="cognito-btn" onclick="checkCognitoConfig()">
+            <svg width="20" height="20" viewBox="0 0 256 256" style="margin-right: 0.5rem;">
+                <path fill="white" d="M127.5 0C57.2 0 0 57.2 0 127.5S57.2 255 127.5 255 255 197.8 255 127.5 197.8 0 127.5 0zm-17.1 127.5l-42.8 74.1c-1.4 2.4-4.8 1.1-4.4-1.7l15.9-91.3-42.8-74.1c-1.4-2.4 1-5.3 3.6-4.3l85.6 34.8v62.5zm17.1 92.5V35l85.6 34.8c2.6 1.1 2.6 4.8 0 5.9L145 110.5v110z"/>
+            </svg>
+            Login with AWS Cognito
+        </button>
     </form>
-
-    <div class="auth-links">
-        <div class="auth-link">
-            <a href="#" id="forgotPasswordLink">Forgot password?</a>
-        </div>
-        <div class="auth-link">
-            Don't have an account? <a href="/register">Register here</a>
-        </div>
-    </div>
-</div>
-
-<!-- Forgot Password Modal -->
-<div id="forgotPasswordModal" class="forgot-password-modal">
-    <div class="modal-content">
-        <button class="modal-close" onclick="closeForgotModal()">&times;</button>
-        <h2 class="auth-title" style="font-size: 1.5rem; margin-bottom: 1rem;">Reset Password</h2>
-        <p style="color: #6b7280; margin-bottom: 1.5rem;">Enter your email to receive a password reset link</p>
-
-        <div id="forgotErrorMessage" class="error-message"></div>
-        <div id="forgotSuccessMessage" class="success-message"></div>
-
-        <form id="forgotForm">
-            <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" id="forgotEmail" class="form-input" required placeholder="Enter your email">
-            </div>
-
-            <button type="submit" class="submit-btn" id="forgotSubmitBtn">Send Reset Link</button>
-        </form>
-    </div>
 </div>
 
 <script>
-    const form = document.getElementById('loginForm');
-    const errorMsg = document.getElementById('errorMessage');
-    const successMsg = document.getElementById('successMessage');
-    const submitBtn = document.getElementById('submitBtn');
+    // Clear any existing session
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('userInfo');
 
-    const forgotModal = document.getElementById('forgotPasswordModal');
-    const forgotLink = document.getElementById('forgotPasswordLink');
-    const forgotForm = document.getElementById('forgotForm');
-    const forgotErrorMsg = document.getElementById('forgotErrorMessage');
-    const forgotSuccessMsg = document.getElementById('forgotSuccessMessage');
-    const forgotSubmitBtn = document.getElementById('forgotSubmitBtn');
+    // Get redirect URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectUrl = urlParams.get('redirect') || '/admin-dashboard';
 
-    // Check if already logged in
-    const existingToken = localStorage.getItem('sessionToken');
-    if (existingToken) {
-        window.location.href = '/admin';
-    }
-
-    form.addEventListener('submit', async (e) => {
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-
-        errorMsg.style.display = 'none';
-        successMsg.style.display = 'none';
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Logging in...';
 
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+
+        // Reset messages
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+
+        // Disable button
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Logging in...';
 
         try {
             const response = await fetch('/api/auth/login', {
@@ -272,93 +346,154 @@
 
             const data = await response.json();
 
-            if (response.ok) {
-                successMsg.textContent = 'Login successful! Redirecting...';
-                successMsg.style.display = 'block';
-
-                // Store session token
+            if (response.ok && data.success) {
+                // Store session
                 localStorage.setItem('sessionToken', data.sessionToken);
                 localStorage.setItem('userInfo', JSON.stringify(data.user));
 
-                // Redirect to admin console
+                // Show success
+                successMessage.textContent = 'Login successful! Redirecting...';
+                successMessage.style.display = 'block';
+
+                // Redirect
                 setTimeout(() => {
-                    window.location.href = '/admin';
-                }, 1000);
+                    window.location.href = redirectUrl;
+                }, 500);
             } else {
-                errorMsg.textContent = data.error || 'Login failed';
-                errorMsg.style.display = 'block';
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Login';
+                throw new Error(data.error || 'Login failed');
             }
         } catch (error) {
-            errorMsg.textContent = 'Network error. Please try again.';
-            errorMsg.style.display = 'block';
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Login';
+            errorMessage.textContent = error.message;
+            errorMessage.style.display = 'block';
+
+            // Re-enable button
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Login to Admin Console';
         }
     });
 
-    // Forgot password functionality
-    forgotLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        forgotModal.style.display = 'flex';
-    });
+    // Check Cognito configuration
+async function checkCognitoConfig() {
+    try {
+        const response = await fetch('/api/auth/cognito-config');
+        const config = await response.json();
 
-    function closeForgotModal() {
-        forgotModal.style.display = 'none';
-        forgotErrorMsg.style.display = 'none';
-        forgotSuccessMsg.style.display = 'none';
-        forgotForm.reset();
+        if (config.configured) {
+            if (config.useDirectAuth) {
+                // Show modal for direct authentication
+                document.getElementById('cognitoModal').classList.add('active');
+
+                // Setup hosted UI button if available
+                if (config.hostedUIUrl) {
+                    document.getElementById('cognitoHostedUIBtn').onclick = () => {
+                        window.location.href = config.hostedUIUrl;
+                    };
+                } else {
+                    document.getElementById('cognitoHostedUIBtn').style.display = 'none';
+                }
+            } else if (config.hostedUIUrl) {
+                // Redirect to hosted UI directly
+                window.location.href = config.hostedUIUrl;
+            }
+        } else {
+            errorMessage.textContent = 'AWS Cognito is not configured. Please use standard login.';
+            errorMessage.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error checking Cognito config:', error);
+        errorMessage.textContent = 'Failed to check Cognito configuration';
+        errorMessage.style.display = 'block';
     }
+}
 
-    forgotForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+// Close modal
+function closeModal() {
+    document.getElementById('cognitoModal').classList.remove('active');
+    document.getElementById('cognitoUsername').value = '';
+    document.getElementById('cognitoPassword').value = '';
+}
 
-        forgotErrorMsg.style.display = 'none';
-        forgotSuccessMsg.style.display = 'none';
-        forgotSubmitBtn.disabled = true;
-        forgotSubmitBtn.textContent = 'Sending...';
+// Cognito login form submission
+document.getElementById('cognitoLoginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-        const email = document.getElementById('forgotEmail').value;
+    const username = document.getElementById('cognitoUsername').value;
+    const password = document.getElementById('cognitoPassword').value;
+    const cognitoLoginBtn = document.getElementById('cognitoLoginBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
 
-        try {
-            const response = await fetch('/api/auth/forgot-password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email })
+    // Reset messages
+    errorMessage.style.display = 'none';
+    successMessage.style.display = 'none';
+
+    // Disable button
+    cognitoLoginBtn.disabled = true;
+    cognitoLoginBtn.textContent = 'Authenticating with Cognito...';
+
+    try {
+        const response = await fetch('/api/auth/cognito-login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            // Store session
+            localStorage.setItem('sessionToken', data.sessionToken);
+            localStorage.setItem('userInfo', JSON.stringify(data.user));
+
+            // Show success
+            successMessage.textContent = 'Cognito login successful! Redirecting...';
+            successMessage.style.display = 'block';
+
+            // Redirect
+            setTimeout(() => {
+                window.location.href = redirectUrl;
+            }, 500);
+        } else {
+            throw new Error(data.error || 'Cognito authentication failed');
+        }
+    } catch (error) {
+        errorMessage.textContent = error.message;
+        errorMessage.style.display = 'block';
+
+        // Re-enable button
+        cognitoLoginBtn.disabled = false;
+        cognitoLoginBtn.textContent = 'Login with Cognito';
+    }
+});
+
+// Check for Cognito callback
+window.addEventListener('load', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('code')) {
+        // Handle Cognito callback
+        successMessage.textContent = 'Processing Cognito authentication...';
+        successMessage.style.display = 'block';
+
+        // The server should handle the code exchange
+        fetch('/api/auth/cognito-callback' + window.location.search)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    localStorage.setItem('sessionToken', data.sessionToken);
+                    localStorage.setItem('userInfo', JSON.stringify(data.user));
+                    window.location.href = '/admin-dashboard';
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(error => {
+                errorMessage.textContent = 'Cognito authentication failed: ' + error.message;
+                errorMessage.style.display = 'block';
             });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                forgotSuccessMsg.textContent = 'Password reset link sent to your email!';
-                forgotSuccessMsg.style.display = 'block';
-
-                setTimeout(() => {
-                    closeForgotModal();
-                }, 3000);
-            } else {
-                forgotErrorMsg.textContent = data.error || 'Failed to send reset link';
-                forgotErrorMsg.style.display = 'block';
-                forgotSubmitBtn.disabled = false;
-                forgotSubmitBtn.textContent = 'Send Reset Link';
-            }
-        } catch (error) {
-            forgotErrorMsg.textContent = 'Network error. Please try again.';
-            forgotErrorMsg.style.display = 'block';
-            forgotSubmitBtn.disabled = false;
-            forgotSubmitBtn.textContent = 'Send Reset Link';
-        }
-    });
-
-    // Close modal when clicking outside
-    forgotModal.addEventListener('click', (e) => {
-        if (e.target === forgotModal) {
-            closeForgotModal();
-        }
-    });
+    }
+});
 </script>
 </body>
 </html>
