@@ -1618,6 +1618,435 @@ app.get('/api/admin/dashboard', async (req, res) => {
   }
 });
 
+// Add these new endpoints to your server.js file
+
+// Enhanced tracking endpoint for beacon API (for reliable tracking on page unload)
+app.post('/api/track/beacon', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const data = JSON.parse(req.body.toString());
+
+    // Extract tracking data
+    const { eventType, sessionId, clientId, clientName, timestamp, data: eventData } = data;
+
+    // Create enhanced client info
+    const clientInfo = {
+      clientId: `${clientId}_${sessionId}`,
+      baseClientId: clientId,
+      clientName: clientName,
+      sessionId: sessionId,
+      utm_source: clientId,
+      utm_medium: 'embedded-widget',
+      utm_campaign: 'enhanced-tracking',
+      referer: eventData.pageUrl || 'unknown',
+      isIframe: true,
+      userAgent: eventData.userAgent || req.headers['user-agent'],
+      ipAddress: req.ip || req.connection.remoteAddress
+    };
+
+    // Track based on event type
+    switch (eventType) {
+      case 'page_view':
+        trackClientUsage(clientInfo, 'load', {
+          url: eventData.url,
+          referrer: eventData.referrer,
+          title: eventData.title
+        });
+        break;
+
+      case 'heartbeat':
+        trackClientUsage(clientInfo, 'time', {
+          timeSpent: eventData.timeOnPage || 0,
+          scrollDepth: eventData.scrollDepth,
+          interactionCount: eventData.interactionCount
+        });
+        break;
+
+      case 'page_unload':
+        trackClientUsage(clientInfo, 'session_end', {
+          totalTime: eventData.timeOnPage,
+          scrollDepth: eventData.scrollDepth,
+          interactionCount: eventData.interactionCount
+        });
+        break;
+
+      case 'click':
+      case 'interaction':
+        trackClientUsage(clientInfo, 'interaction', eventData);
+        break;
+
+      case 'scroll':
+        // Store scroll depth in client tracking
+        if (clientTracking[clientInfo.clientId]) {
+          clientTracking[clientInfo.clientId].maxScrollDepth = Math.max(
+            clientTracking[clientInfo.clientId].maxScrollDepth || 0,
+            eventData.depth || 0
+          );
+        }
+        break;
+
+      case 'search':
+        // Track searches
+        if (clientTracking[clientInfo.clientId]) {
+          if (!clientTracking[clientInfo.clientId].searches) {
+            clientTracking[clientInfo.clientId].searches = [];
+          }
+          clientTracking[clientInfo.clientId].searches.push({
+            term: eventData.searchTerm,
+            timestamp: timestamp
+          });
+        }
+        break;
+
+      case 'filter_change':
+        // Track filter usage
+        if (clientTracking[clientInfo.clientId]) {
+          if (!clientTracking[clientInfo.clientId].filterUsage) {
+            clientTracking[clientInfo.clientId].filterUsage = {};
+          }
+          const filterKey = `${eventData.filterType}_${eventData.filterValue}`;
+          clientTracking[clientInfo.clientId].filterUsage[filterKey] =
+            (clientTracking[clientInfo.clientId].filterUsage[filterKey] || 0) + 1;
+        }
+        break;
+
+      case 'job_application':
+        // Track job clicks with details
+        trackClientUsage(clientInfo, 'click', {
+          jobId: eventData.jobId,
+          jobTitle: eventData.jobTitle,
+          employer: eventData.employer,
+          type: 'job_application'
+        });
+        break;
+
+      case 'widget_event':
+        // Generic widget events
+        trackClientUsage(clientInfo, 'custom_event', eventData);
+        break;
+    }
+
+    // Store additional metadata
+    if (clientTracking[clientInfo.clientId]) {
+      // Store user information if provided
+      if (eventData.userId || eventData.userEmail) {
+        clientTracking[clientInfo.clientId].userInfo = {
+          userId: eventData.userId,
+          userEmail: eventData.userEmail,
+          userDepartment: eventData.userDepartment
+        };
+      }
+
+      // Store device information
+      clientTracking[clientInfo.clientId].deviceInfo = {
+        screenResolution: eventData.screenResolution,
+        viewportSize: eventData.viewportSize,
+        language: eventData.language
+      };
+
+      // Store metadata
+      clientTracking[clientInfo.clientId].metadata = eventData.metadata || {};
+    }
+
+    res.status(204).send(); // No content response for beacon
+  } catch (error) {
+    console.error('Beacon tracking error:', error);
+    res.status(204).send(); // Still return 204 to not break beacon
+  }
+});
+
+// Enhanced admin dashboard endpoint with detailed tracking data
+app.get('/api/admin/dashboard/enhanced', async (req, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Enhanced client summary with all tracking data
+    const enhancedClientSummary = Object.entries(clientTracking).map(([clientId, data]) => {
+      // Calculate engagement score
+      const engagementScore = calculateEngagementScore(data);
+
+      // Get unique users count
+      const uniqueUsers = new Set();
+      if (data.userInfo?.userId) {
+        uniqueUsers.add(data.userInfo.userId);
+      }
+
+      return {
+        clientId,
+        name: data.name,
+        domain: data.domain,
+        sessionId: data.sessionId,
+
+        // Basic metrics
+        metrics: data.metrics,
+
+        // Enhanced tracking data
+        engagementScore,
+        maxScrollDepth: data.maxScrollDepth || 0,
+        searches: data.searches || [],
+        filterUsage: data.filterUsage || {},
+
+        // User information
+        userInfo: data.userInfo || {},
+        uniqueUsers: uniqueUsers.size,
+
+        // Device information
+        deviceInfo: data.deviceInfo || {},
+
+        // Session information
+        firstSeen: data.firstSeen,
+        lastSeen: data.lastSeen,
+        sessionDuration: calculateSessionDuration(data),
+
+        // Interaction metrics
+        interactionRate: calculateInteractionRate(data),
+        conversionRate: calculateConversionRate(data),
+
+        // Custom metadata
+        metadata: data.metadata || {}
+      };
+    });
+
+    // Sort by engagement score
+    enhancedClientSummary.sort((a, b) => b.engagementScore - a.engagementScore);
+
+    // Calculate aggregate statistics
+    const aggregateStats = {
+      totalSessions: enhancedClientSummary.length,
+      totalUniqueClients: new Set(enhancedClientSummary.map(c => c.name)).size,
+      averageEngagement: enhancedClientSummary.reduce((sum, c) => sum + c.engagementScore, 0) / enhancedClientSummary.length || 0,
+      averageScrollDepth: enhancedClientSummary.reduce((sum, c) => sum + c.maxScrollDepth, 0) / enhancedClientSummary.length || 0,
+      totalSearches: enhancedClientSummary.reduce((sum, c) => sum + (c.searches?.length || 0), 0),
+
+      // Popular filters
+      popularFilters: aggregateFilterUsage(enhancedClientSummary),
+
+      // Popular search terms
+      popularSearchTerms: aggregateSearchTerms(enhancedClientSummary),
+
+      // Device breakdown
+      deviceBreakdown: aggregateDeviceInfo(enhancedClientSummary),
+
+      // Time-based patterns
+      hourlyActivity: aggregateHourlyActivity(),
+      dailyActivity: aggregateDailyActivity()
+    };
+
+    res.json({
+      success: true,
+      data: {
+        clients: enhancedClientSummary,
+        aggregateStats,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Enhanced dashboard error:', error);
+    res.status(500).json({ error: 'Failed to load enhanced dashboard data' });
+  }
+});
+
+// Helper functions for enhanced tracking
+
+function calculateEngagementScore(clientData) {
+  let score = 0;
+
+  // Base score from page views
+  score += (clientData.metrics?.totalLoads || 0) * 1;
+
+  // Clicks are worth more
+  score += (clientData.metrics?.totalClicks || 0) * 5;
+
+  // API calls indicate integration
+  score += (clientData.metrics?.totalApiCalls || 0) * 2;
+
+  // Time spent (in minutes)
+  score += Math.min((clientData.metrics?.totalTime || 0) / 60, 100);
+
+  // Scroll depth
+  score += (clientData.maxScrollDepth || 0) * 0.5;
+
+  // Searches indicate active usage
+  score += (clientData.searches?.length || 0) * 3;
+
+  // Filter usage
+  score += Object.keys(clientData.filterUsage || {}).length * 2;
+
+  return Math.round(score);
+}
+
+function calculateSessionDuration(clientData) {
+  if (!clientData.firstSeen || !clientData.lastSeen) return 0;
+  const duration = new Date(clientData.lastSeen) - new Date(clientData.firstSeen);
+  return Math.round(duration / 1000 / 60); // Return in minutes
+}
+
+function calculateInteractionRate(clientData) {
+  const totalViews = clientData.metrics?.totalLoads || 1;
+  const totalInteractions = (clientData.metrics?.totalClicks || 0) +
+                           (clientData.searches?.length || 0) +
+                           Object.keys(clientData.filterUsage || {}).length;
+  return Math.round((totalInteractions / totalViews) * 100);
+}
+
+function calculateConversionRate(clientData) {
+  const totalViews = clientData.metrics?.totalLoads || 1;
+  const totalClicks = clientData.metrics?.totalClicks || 0;
+  return Math.round((totalClicks / totalViews) * 100);
+}
+
+function aggregateFilterUsage(clients) {
+  const filterUsage = {};
+  clients.forEach(client => {
+    Object.entries(client.filterUsage || {}).forEach(([filter, count]) => {
+      filterUsage[filter] = (filterUsage[filter] || 0) + count;
+    });
+  });
+
+  // Sort and return top 10
+  return Object.entries(filterUsage)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([filter, count]) => ({ filter, count }));
+}
+
+function aggregateSearchTerms(clients) {
+  const searchTerms = {};
+  clients.forEach(client => {
+    (client.searches || []).forEach(search => {
+      const term = search.term?.toLowerCase();
+      if (term) {
+        searchTerms[term] = (searchTerms[term] || 0) + 1;
+      }
+    });
+  });
+
+  // Sort and return top 10
+  return Object.entries(searchTerms)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([term, count]) => ({ term, count }));
+}
+
+function aggregateDeviceInfo(clients) {
+  const devices = {
+    desktop: 0,
+    mobile: 0,
+    tablet: 0,
+    unknown: 0
+  };
+
+  clients.forEach(client => {
+    const viewport = client.deviceInfo?.viewportSize;
+    if (viewport) {
+      const width = parseInt(viewport.split('x')[0]);
+      if (width < 768) devices.mobile++;
+      else if (width < 1024) devices.tablet++;
+      else devices.desktop++;
+    } else {
+      devices.unknown++;
+    }
+  });
+
+  return devices;
+}
+
+function aggregateHourlyActivity() {
+  const hourly = {};
+  Object.values(clientTracking).forEach(client => {
+    Object.entries(client.metrics?.hourly || {}).forEach(([hourKey, data]) => {
+      const hour = hourKey.split('-').pop();
+      if (!hourly[hour]) {
+        hourly[hour] = { loads: 0, clicks: 0, sessions: 0 };
+      }
+      hourly[hour].loads += data.loads || 0;
+      hourly[hour].clicks += data.clicks || 0;
+      hourly[hour].sessions++;
+    });
+  });
+  return hourly;
+}
+
+function aggregateDailyActivity() {
+  const daily = {};
+  Object.values(clientTracking).forEach(client => {
+    Object.entries(client.metrics?.daily || {}).forEach(([date, data]) => {
+      if (!daily[date]) {
+        daily[date] = { loads: 0, clicks: 0, sessions: 0 };
+      }
+      daily[date].loads += data.loads || 0;
+      daily[date].clicks += data.clicks || 0;
+      daily[date].sessions++;
+    });
+  });
+  return daily;
+}
+
+// Export tracking data endpoint for analytics
+app.get('/api/admin/export/tracking/:clientId', async (req, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const { clientId } = req.params;
+    const { format = 'json' } = req.query;
+
+    const clientData = clientTracking[clientId];
+    if (!clientData) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    // Prepare export data
+    const exportData = {
+      clientId,
+      exportDate: new Date().toISOString(),
+      data: clientData,
+      summary: {
+        engagementScore: calculateEngagementScore(clientData),
+        sessionDuration: calculateSessionDuration(clientData),
+        interactionRate: calculateInteractionRate(clientData),
+        conversionRate: calculateConversionRate(clientData)
+      }
+    };
+
+    if (format === 'csv') {
+      // Convert to CSV format
+      const csv = convertToCSV(exportData);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${clientId}_tracking_${Date.now()}.csv"`);
+      res.send(csv);
+    } else {
+      // Send as JSON
+      res.json(exportData);
+    }
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ error: 'Failed to export tracking data' });
+  }
+});
+
+function convertToCSV(data) {
+  // Simple CSV conversion for tracking data
+  const rows = [];
+  rows.push(['Metric', 'Value']);
+  rows.push(['Client ID', data.clientId]);
+  rows.push(['Export Date', data.exportDate]);
+  rows.push(['Engagement Score', data.summary.engagementScore]);
+  rows.push(['Session Duration (minutes)', data.summary.sessionDuration]);
+  rows.push(['Interaction Rate (%)', data.summary.interactionRate]);
+  rows.push(['Conversion Rate (%)', data.summary.conversionRate]);
+  rows.push(['Total Page Views', data.data.metrics?.totalLoads || 0]);
+  rows.push(['Total Clicks', data.data.metrics?.totalClicks || 0]);
+  rows.push(['Max Scroll Depth', data.data.maxScrollDepth || 0]);
+  rows.push(['Total Searches', data.data.searches?.length || 0]);
+
+  return rows.map(row => row.join(',')).join('\n');
+}
+
 // 9. Load tracking data from DynamoDB on server start
 async function loadClientTracking() {
   if (!dynamoDBConnectionStatus.isConnected) {
