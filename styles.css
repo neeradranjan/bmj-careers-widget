@@ -176,6 +176,19 @@ body {
     transform: translateY(0);
 }
 
+/* Remove default active state from All Jobs button */
+.category-btn#btn-all {
+    background: #ffffff;
+    color: #0066cc;
+    border-color: #e5e7eb;
+}
+
+.category-btn#btn-all.active {
+    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    color: white;
+    border-color: #0066cc;
+}
+
 .category-btn .emoji {
     font-size: 1.125rem;
     width: 1.25rem;
@@ -845,7 +858,7 @@ body {
     font-size: 0.9375rem;
     color: #1d1d1b;
     line-height: 1.7;
-    padding-right: 120px;
+    padding-right: 130px; /* Increased to ensure space for logo */
 }
 
 .job-details ul {
@@ -860,6 +873,10 @@ body {
     position: relative;
     opacity: 0;
     animation: slideInFromLeft 0.5s ease-out forwards;
+    word-wrap: break-word; /* Ensure text wraps */
+    overflow-wrap: break-word; /* Modern property for text wrapping */
+    display: block; /* Ensure block display for proper wrapping */
+    padding-right: 10px; /* Add some right padding */
 }
 
 .job-details li:nth-child(1) { animation-delay: 0.1s; }
@@ -1284,6 +1301,43 @@ body {
     }
 }
 
+/* Mobile responsive changes for job cards */
+@media (max-width: 768px) {
+    .job-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .nhs-logo {
+        position: static;
+        width: 120px; /* Increased from 100px */
+        max-height: 60px; /* Increased from 50px */
+        margin: 0 auto 1.5rem auto;
+        display: block;
+        transform: scale(1.15); /* Additional 15% increase */
+    }
+
+    .job-details {
+        padding-right: 0;
+        width: 100%;
+    }
+
+    .job-details ul {
+        width: 100%;
+    }
+
+    .job-description {
+        width: 100%;
+    }
+
+    .apply-btn {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
 @media (max-width: 600px) {
     .main-wrapper {
         padding: 0.75rem;
@@ -1336,18 +1390,30 @@ body {
 
     .job-body {
         padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 
     .nhs-logo {
-        width: 70px;
-        max-height: 35px;
-        top: 1rem;
-        right: 1rem;
+        position: static;
+        width: 100px; /* Increased from 70px */
+        max-height: 50px; /* Increased from 35px */
+        margin: 0 auto 1.5rem auto;
+        display: block;
+        transform: scale(1.2); /* Additional 20% increase */
+    }
+
+    .job-details {
+        padding-right: 0;
+        width: 100%;
     }
 
     .apply-btn {
         padding: 0.625rem 1.5rem;
         font-size: 0.8125rem;
+        width: 100%;
+        max-width: 280px;
     }
 
     .pagination-controls {
@@ -1677,4 +1743,337 @@ input[type="checkbox"]:hover {
 .profession-sub-checkbox:checked::after,
 .location-sub-checkbox:checked::after {
     font-size: 0.625rem;
+}
+
+/* ADD these CSS rules to fix responsive logo centering */
+/* The breakpoint should trigger when window is resized to 50% on laptop */
+
+/* For screens smaller than 1024px (including 50% of typical laptop screen) */
+@media (max-width: 1024px) {
+    .job-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .nhs-logo {
+        position: static !important;
+        width: 120px !important;
+        max-height: 60px !important;
+        margin: 0 auto 1.5rem auto !important;
+        display: block !important;
+        transform: scale(1.2) !important;
+        top: auto !important;
+        right: auto !important;
+        opacity: 1 !important;
+        filter: none !important;
+    }
+
+    .job-details {
+        padding-right: 0 !important;
+        width: 100%;
+    }
+
+    .job-details ul {
+        width: 100%;
+    }
+
+    .job-details li {
+        max-width: 100%;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    .job-description {
+        width: 100%;
+    }
+
+    .apply-btn {
+        width: 100%;
+        max-width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+/* Keep existing mobile breakpoints but update them */
+@media (max-width: 768px) {
+    .job-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .nhs-logo {
+        position: static !important;
+        width: 130px !important;
+        max-height: 65px !important;
+        margin: 0 auto 1.5rem auto !important;
+        display: block !important;
+        transform: scale(1.25) !important;
+        top: auto !important;
+        right: auto !important;
+    }
+
+    .job-details {
+        padding-right: 0 !important;
+        width: 100%;
+    }
+
+    .job-description {
+        width: 100%;
+    }
+
+    .apply-btn {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 600px) {
+    .job-body {
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .nhs-logo {
+        position: static !important;
+        width: 110px !important;
+        max-height: 55px !important;
+        margin: 0 auto 1.5rem auto !important;
+        display: block !important;
+        transform: scale(1.3) !important;
+        top: auto !important;
+        right: auto !important;
+    }
+
+    .job-details {
+        padding-right: 0 !important;
+        width: 100%;
+    }
+
+    .apply-btn {
+        padding: 0.625rem 1.5rem;
+        font-size: 0.8125rem;
+        width: 100%;
+        max-width: 280px;
+    }
+}
+
+/* Alternative approach using container query if needed */
+@container (max-width: 700px) {
+    .job-body {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .nhs-logo {
+        position: static !important;
+        margin: 0 auto 1.5rem auto !important;
+        transform: scale(1.25) !important;
+    }
+}
+
+/* Fix for when widget is in smaller container */
+.main-content {
+    container-type: inline-size;
+}
+
+/* Also ensure the All Jobs button styling is correct */
+.category-btn#btn-all {
+    background: #ffffff !important;
+    color: #0066cc !important;
+    border-color: #e5e7eb !important;
+}
+
+.category-btn#btn-all.active {
+    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
+    color: white !important;
+    border-color: #0066cc !important;
+    box-shadow: 0 4px 16px rgba(0, 102, 204, 0.3) !important;
+}
+
+.category-btn#btn-all:hover {
+    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
+    color: #ffffff !important;
+    border-color: #0066cc !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 102, 204, 0.25);
+}
+
+/* ===============================================
+   RESPONSIVE CSS FIXES FOR LOGO CENTERING
+   ===============================================
+   Add these styles to your CSS section
+   These will trigger at 50% of standard laptop screen (around 960-1024px)
+*/
+
+/* Remove the default absolute positioning at smaller screens */
+@media (max-width: 1024px) {
+    .job-card .job-body {
+        padding: 1.5rem;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: left;
+    }
+
+    .job-card .nhs-logo {
+        position: static !important;
+        width: 110px !important;
+        height: auto !important;
+        max-height: 55px !important;
+        margin: 0 auto 1.25rem auto !important;
+        display: block !important;
+        opacity: 1 !important;
+        filter: none !important;
+        order: -1 !important; /* Ensures logo appears first */
+        transform: scale(1.2) !important; /* 20% increase */
+    }
+
+    .job-card .job-details {
+        padding-right: 0 !important;
+        width: 100% !important;
+        order: 1 !important;
+    }
+
+    .job-card .job-details ul {
+        width: 100% !important;
+        padding-left: 1.25rem !important;
+    }
+
+    .job-card .job-details li {
+        max-width: 100% !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        padding-right: 10px !important;
+    }
+
+    .job-card .job-description {
+        width: 100% !important;
+        order: 2 !important;
+    }
+
+    .job-card .apply-btn {
+        width: auto !important;
+        min-width: 200px !important;
+        max-width: 300px !important;
+        margin: 1.25rem auto 0 auto !important;
+        display: block !important;
+        order: 3 !important;
+    }
+}
+
+/* Tablet screens */
+@media (max-width: 768px) {
+    .job-card .nhs-logo {
+        width: 120px !important;
+        max-height: 60px !important;
+        transform: scale(1.25) !important; /* 25% increase */
+        margin-bottom: 1.5rem !important;
+    }
+}
+
+/* Mobile screens */
+@media (max-width: 600px) {
+    .job-card .nhs-logo {
+        width: 100px !important;
+        max-height: 50px !important;
+        transform: scale(1.3) !important; /* 30% increase */
+    }
+
+    .job-card .apply-btn {
+        width: 100% !important;
+        max-width: 280px !important;
+    }
+}
+
+/* Small mobile screens */
+@media (max-width: 480px) {
+    .job-card .nhs-logo {
+        width: 90px !important;
+        max-height: 45px !important;
+        transform: scale(1.35) !important; /* 35% increase */
+    }
+}
+
+/* ===============================================
+   ALL JOBS BUTTON SPECIFIC STYLING
+   =============================================== */
+
+/* Ensure All Jobs button is white by default */
+.category-btn#btn-all {
+    background: #ffffff !important;
+    color: #0066cc !important;
+    border: 2px solid #e5e7eb !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+}
+
+/* Only when active class is present, make it blue */
+.category-btn#btn-all.active {
+    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
+    color: white !important;
+    border-color: #0066cc !important;
+    box-shadow: 0 4px 16px rgba(0, 102, 204, 0.3) !important;
+}
+
+/* Hover state for All Jobs when not active */
+.category-btn#btn-all:not(.active):hover {
+    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
+    color: #ffffff !important;
+    border-color: #0066cc !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 102, 204, 0.25) !important;
+}
+
+/* Hover state for All Jobs when active */
+.category-btn#btn-all.active:hover {
+    background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 102, 204, 0.35) !important;
+}
+
+/* ===============================================
+   FIX FOR TEXT WRAPPING IN JOB DETAILS
+   =============================================== */
+
+.job-details {
+    font-size: 0.9375rem;
+    color: #1d1d1b;
+    line-height: 1.7;
+    padding-right: 140px; /* Extra space for logo on desktop */
+}
+
+.job-details li {
+    margin-bottom: 0.625rem;
+    padding-left: 1.25rem;
+    position: relative;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    display: block !important;
+    max-width: calc(100% - 10px) !important;
+    padding-right: 10px !important;
+}
+
+/* Ensure strong tags don't break layout */
+.job-details li strong {
+    display: inline;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Responsive adjustment for job details */
+@media (max-width: 1024px) {
+    .job-details {
+        padding-right: 0 !important;
+    }
+
+    .job-details li {
+        max-width: 100% !important;
+    }
 }
