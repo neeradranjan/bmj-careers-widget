@@ -1499,6 +1499,704 @@
         display: block;
     }
 }
+
+        #enhanced-analytics {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Enhanced Stats Cards */
+#enhanced-analytics .stat-card {
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+#enhanced-analytics .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary);
+}
+
+#enhanced-analytics .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+#enhanced-analytics .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+#enhanced-analytics .stat-icon.primary {
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--primary);
+}
+
+#enhanced-analytics .stat-icon.success {
+    background: rgba(72, 187, 120, 0.1);
+    color: var(--secondary);
+}
+
+#enhanced-analytics .stat-icon.warning {
+    background: rgba(237, 137, 54, 0.1);
+    color: var(--warning);
+}
+
+#enhanced-analytics .stat-icon.info {
+    background: rgba(66, 153, 225, 0.1);
+    color: var(--info);
+}
+
+#enhanced-analytics .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+#enhanced-analytics .stat-label {
+    color: var(--gray);
+    font-size: 0.875rem;
+}
+
+/* Enhanced Client Search */
+#enhancedClientSearch {
+    padding: 0.625rem 0.875rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: var(--transition);
+}
+
+#enhancedClientSearch:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Enhanced Clients Table */
+#enhancedClientsTable {
+    width: 100%;
+}
+
+#enhancedClientsTable tr {
+    transition: var(--transition);
+}
+
+#enhancedClientsTable tr:hover {
+    background: var(--light);
+}
+
+#enhancedClientsTable td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.875rem;
+}
+
+#enhancedClientsTable .client-identifier {
+    font-size: 0.625rem;
+    color: var(--gray);
+    font-family: monospace;
+    margin-top: 0.25rem;
+}
+
+#enhancedClientsTable .stat-value {
+    font-size: 1.25rem !important;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+#enhancedClientsTable .stat-change {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+#enhancedClientsTable .stat-change.positive {
+    background: rgba(72, 187, 120, 0.1);
+    color: var(--secondary);
+}
+
+/* Popular Filters and Searches Grid */
+#enhanced-analytics .card + div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+@media (max-width: 1024px) {
+    #enhanced-analytics .card + div {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Popular Items Lists */
+#popularFilters,
+#popularSearches {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#popularFilters .usage-metric,
+#popularSearches .usage-metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e2e8f0;
+    transition: var(--transition);
+}
+
+#popularFilters .usage-metric:last-child,
+#popularSearches .usage-metric:last-child {
+    border-bottom: none;
+}
+
+#popularFilters .usage-metric:hover,
+#popularSearches .usage-metric:hover {
+    background: var(--light);
+    margin: 0 -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+#popularFilters .metric-label,
+#popularSearches .metric-label {
+    color: var(--dark);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+#popularFilters .metric-value,
+#popularSearches .metric-value {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 0.875rem;
+}
+
+/* Device Chart Container */
+#enhanced-analytics .chart-container {
+    position: relative;
+    height: 300px;
+    margin-top: 1rem;
+}
+
+/* Activity Heatmap */
+.heatmap-container {
+    padding: 1rem 0;
+}
+
+#activityHeatmap {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 4px;
+    margin-bottom: 1rem;
+}
+
+#activityHeatmap .heatmap-cell {
+    aspect-ratio: 1;
+    background: var(--light);
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#activityHeatmap .heatmap-cell:hover {
+    transform: scale(1.1);
+    z-index: 10;
+}
+
+#activityHeatmap .heatmap-cell.low {
+    background: rgba(102, 126, 234, 0.2);
+}
+
+#activityHeatmap .heatmap-cell.medium {
+    background: rgba(102, 126, 234, 0.5);
+}
+
+#activityHeatmap .heatmap-cell.high {
+    background: rgba(102, 126, 234, 0.8);
+}
+
+#activityHeatmap .heatmap-cell.peak {
+    background: var(--primary);
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
+}
+
+#activityHeatmap .heatmap-tooltip {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--dark);
+    color: var(--white);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.625rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 1000;
+    line-height: 1.4;
+}
+
+#activityHeatmap .heatmap-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--dark);
+}
+
+#activityHeatmap .heatmap-cell:hover .heatmap-tooltip {
+    opacity: 1;
+}
+
+/* Heatmap Legend */
+.heatmap-container > div:last-child {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.heatmap-container > div:last-child > div {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.heatmap-container > div:last-child > div > div:first-child {
+    width: 20px;
+    height: 20px;
+    border-radius: 2px;
+}
+
+.heatmap-container > div:last-child span {
+    font-size: 0.875rem;
+    color: var(--gray);
+}
+
+/* Enhanced Client Modal */
+#enhancedClientModal .modal-content {
+    max-width: 900px !important;
+}
+
+#enhancedClientModal .client-detail-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+    #enhancedClientModal .client-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+#enhancedClientModal h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+#enhancedClientModal .info-row {
+    display: flex;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+#enhancedClientModal .info-row:last-child {
+    border-bottom: none;
+}
+
+#enhancedClientModal .info-label {
+    font-weight: 500;
+    color: var(--gray);
+    width: 140px;
+    flex-shrink: 0;
+    font-size: 0.875rem;
+}
+
+#enhancedClientModal .info-value {
+    color: var(--dark);
+    font-size: 0.875rem;
+}
+
+#enhancedClientModal .info-value code {
+    background: var(--light);
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.75rem;
+}
+
+#enhancedClientModal .stat-card {
+    background: var(--light);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    text-align: center;
+    transition: var(--transition);
+}
+
+#enhancedClientModal .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+#enhancedClientModal .stat-card .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.25rem;
+}
+
+#enhancedClientModal .stat-card .stat-label {
+    font-size: 0.75rem;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Search History and Filter Usage in Modal */
+#enhancedClientModal .usage-metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.875rem;
+}
+
+#enhancedClientModal .usage-metric:last-child {
+    border-bottom: none;
+}
+
+#enhancedClientModal .usage-metric:hover {
+    background: var(--light);
+}
+
+#enhancedClientModal .usage-metric .metric-label {
+    color: var(--dark);
+    font-weight: 500;
+}
+
+#enhancedClientModal .usage-metric .metric-value {
+    color: var(--gray);
+    font-size: 0.75rem;
+}
+
+/* Empty State for Enhanced Analytics */
+#enhanced-analytics .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--gray);
+    font-size: 0.875rem;
+}
+
+#enhanced-analytics .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+/* Loading State for Enhanced Analytics */
+#enhanced-analytics .loading-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    height: 20px;
+    border-radius: 4px;
+    margin: 0.5rem 0;
+}
+
+/* Export Button Styles */
+#enhancedClientsTable .btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+#enhancedClientsTable .btn.btn-secondary {
+    background: var(--light);
+    color: var(--dark);
+    border: 1px solid #e2e8f0;
+}
+
+#enhancedClientsTable .btn.btn-secondary:hover {
+    background: #e2e8f0;
+}
+
+/* Responsive Design for Enhanced Analytics */
+@media (max-width: 768px) {
+    #enhanced-analytics .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #enhanced-analytics .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #activityHeatmap {
+        grid-template-columns: repeat(12, 1fr);
+    }
+
+    #enhanced-analytics .card + div {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .heatmap-container > div:last-child {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    #enhancedClientSearch {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    #enhanced-analytics .stat-value {
+        font-size: 1.5rem;
+    }
+
+    #activityHeatmap {
+        grid-template-columns: repeat(8, 1fr);
+    }
+
+    #enhancedClientModal .modal-content {
+        width: 95%;
+        padding: 1.5rem;
+    }
+
+    #enhancedClientModal .client-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Print Styles for Enhanced Analytics */
+@media print {
+    #enhanced-analytics .btn {
+        display: none;
+    }
+
+    #enhanced-analytics .card {
+        box-shadow: none;
+        border: 1px solid #e2e8f0;
+        page-break-inside: avoid;
+    }
+
+    #activityHeatmap {
+        grid-template-columns: repeat(24, 1fr);
+    }
+}
+
+/* Dark Mode Support (if implemented) */
+@media (prefers-color-scheme: dark) {
+    #enhanced-analytics .card {
+        background: #1a202c;
+        color: #e2e8f0;
+    }
+
+    #enhanced-analytics .stat-card {
+        background: #2d3748;
+    }
+
+    #enhanced-analytics .stat-label {
+        color: #a0aec0;
+    }
+
+    #enhanced-analytics .stat-value {
+        color: #e2e8f0;
+    }
+
+    #activityHeatmap .heatmap-cell {
+        background: #2d3748;
+    }
+
+    #enhancedClientModal .modal-content {
+        background: #1a202c;
+        color: #e2e8f0;
+    }
+}
+
+        #enhanced-analytics .stat-card {
+    background: var(--white) !important;
+    color: var(--dark) !important;
+}
+
+#enhanced-analytics .stat-value {
+    color: var(--dark) !important;
+}
+
+#enhanced-analytics .stat-label {
+    color: var(--gray) !important;
+}
+
+#enhanced-analytics .card {
+    background: var(--white) !important;
+    color: var(--dark) !important;
+}
+
+#enhanced-analytics .card-header {
+    background: var(--white) !important;
+    color: var(--dark) !important;
+}
+
+#enhanced-analytics .card-title {
+    color: var(--dark) !important;
+}
+
+#enhanced-analytics table {
+    background: var(--white) !important;
+    color: var(--dark) !important;
+}
+
+#enhanced-analytics th {
+    background: var(--light) !important;
+    color: var(--gray) !important;
+}
+
+#enhanced-analytics td {
+    background: var(--white) !important;
+    color: var(--dark) !important;
+}
+
+#enhanced-analytics .empty-state {
+    color: var(--gray) !important;
+    background: var(--white) !important;
+}
+
+#enhanced-analytics .usage-metric {
+    background: var(--white) !important;
+}
+
+#enhanced-analytics .usage-metric .metric-label {
+    color: var(--dark) !important;
+}
+
+#enhanced-analytics .usage-metric .metric-value {
+    color: var(--primary) !important;
+    font-weight: 600;
+}
+
+#enhanced-analytics .heatmap-container {
+    background: var(--white) !important;
+}
+
+#enhanced-analytics .form-input {
+    background: var(--white) !important;
+    color: var(--dark) !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+#enhanced-analytics .btn {
+    background: var(--primary) !important;
+    color: var(--white) !important;
+}
+
+#enhanced-analytics .btn:hover {
+    background: var(--primary-dark) !important;
+}
+
+/* Fix for the modal */
+#enhancedClientModal .modal-content {
+    background: var(--white) !important;
+    color: var(--dark) !important;
+}
+
+#enhancedClientModal .info-row {
+    background: var(--white) !important;
+}
+
+#enhancedClientModal .info-label {
+    color: var(--gray) !important;
+}
+
+#enhancedClientModal .info-value {
+    color: var(--dark) !important;
+}
+
+#enhancedClientModal .stat-card {
+    background: var(--light) !important;
+}
+
+#enhancedClientModal .stat-value {
+    color: var(--primary) !important;
+}
+
+#enhancedClientModal .stat-label {
+    color: var(--gray) !important;
+}
+
+/* Fix chart container backgrounds */
+#enhanced-analytics .chart-container {
+    background: var(--white) !important;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+/* Ensure Popular Filters and Searches are readable */
+#popularFilters,
+#popularSearches {
+    background: var(--white) !important;
+    color: var(--dark) !important;
+}
+
+#popularFilters .usage-metric:hover,
+#popularSearches .usage-metric:hover {
+    background: var(--light) !important;
+}
+
+/* Fix heatmap cells */
+#activityHeatmap .heatmap-cell {
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+#activityHeatmap .heatmap-cell.low {
+    background: rgba(102, 126, 234, 0.2) !important;
+}
+
+#activityHeatmap .heatmap-cell.medium {
+    background: rgba(102, 126, 234, 0.5) !important;
+}
+
+#activityHeatmap .heatmap-cell.high {
+    background: rgba(102, 126, 234, 0.8) !important;
+}
+
+#activityHeatmap .heatmap-cell.peak {
+    background: var(--primary) !important;
+}
     </style>
 </head>
 <body>
@@ -1528,9 +2226,9 @@
                 <span class="menu-icon">📈</span>
                 <span>Analytics</span>
             </button>
-            <button class="menu-item" onclick="showSection('revenue')">
-                <span class="menu-icon">💰</span>
-                <span>Revenue</span>
+            <button class="menu-item" onclick="showSection('billing')">
+                <span class="menu-icon">💷</span>
+                <span>Billing</span>
             </button>
             <button class="menu-item" onclick="showSection('api')">
                 <span class="menu-icon">🔑</span>
@@ -1619,10 +2317,10 @@
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon info">💰</div>
-                        <div class="stat-value" id="monthlyRevenue">£0</div>
-                        <div class="stat-label">Monthly Revenue</div>
-                        <div class="stat-change positive">
+                        <div class="stat-icon info">💷</div>
+                        <div class="stat-value" id="monthlyOwed">£0</div>
+                        <div class="stat-label">Monthly Owed</div>
+                        <div class="stat-change negative">
                             <span>↑ 25%</span> vs last month
                         </div>
                     </div>
@@ -1659,6 +2357,148 @@
                     <div class="card-body">
                         <div class="chart-container">
                             <canvas id="usageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Enhanced Analytics Section - NOW AS A SEPARATE SECTION -->
+            <section id="enhanced-analytics" class="section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Enhanced Client Analytics</h2>
+                        <button class="btn btn-primary" onclick="refreshEnhancedAnalytics()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <!-- Engagement Metrics -->
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon primary">📊</div>
+                                <div class="stat-value" id="avgEngagementScore">0</div>
+                                <div class="stat-label">Avg Engagement Score</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon success">📈</div>
+                                <div class="stat-value" id="avgScrollDepth">0%</div>
+                                <div class="stat-label">Avg Scroll Depth</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon warning">🔍</div>
+                                <div class="stat-value" id="totalSearches">0</div>
+                                <div class="stat-label">Total Searches</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon info">👆</div>
+                                <div class="stat-value" id="avgInteractionRate">0%</div>
+                                <div class="stat-label">Avg Interaction Rate</div>
+                            </div>
+                        </div>
+
+                        <!-- Client Engagement Table -->
+                        <div class="card" style="margin-top: 2rem;">
+                            <div class="card-header">
+                                <h3 class="card-title">Client Engagement Details</h3>
+                                <input type="text"
+                                       class="form-input"
+                                       placeholder="Search clients..."
+                                       style="width: 300px; max-width: 100%;"
+                                       id="enhancedClientSearch"
+                                       onkeyup="searchEnhancedClients(this.value)">
+                            </div>
+                            <div class="card-body">
+                                <div class="table-container">
+                                    <table>
+                                        <thead>
+                                        <tr>
+                                            <th>Client</th>
+                                            <th>Session ID</th>
+                                            <th>Engagement Score</th>
+                                            <th>Scroll Depth</th>
+                                            <th>Searches</th>
+                                            <th>Interactions</th>
+                                            <th>Conversion Rate</th>
+                                            <th>Session Duration</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody id="enhancedClientsTable">
+                                        <tr>
+                                            <td colspan="9" class="empty-state">Loading enhanced analytics data...</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Popular Filters and Searches -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Popular Filters</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="popularFilters">
+                                        <div class="empty-state">Loading filter data...</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Popular Search Terms</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="popularSearches">
+                                        <div class="empty-state">Loading search data...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Device Breakdown -->
+                        <div class="card" style="margin-top: 2rem;">
+                            <div class="card-header">
+                                <h3 class="card-title">Device Breakdown</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="deviceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hourly Activity Heatmap -->
+                        <div class="card" style="margin-top: 2rem;">
+                            <div class="card-header">
+                                <h3 class="card-title">Activity Heatmap (24 Hours)</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="heatmap-container">
+                                    <div class="heatmap-grid" id="activityHeatmap">
+                                        <!-- Heatmap will be generated here -->
+                                    </div>
+                                    <div style="margin-top: 1rem; display: flex; align-items: center; gap: 2rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 20px; height: 20px; background: rgba(102, 126, 234, 0.2); border-radius: 2px;"></div>
+                                            <span style="font-size: 0.875rem; color: var(--gray);">Low Activity</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 20px; height: 20px; background: rgba(102, 126, 234, 0.5); border-radius: 2px;"></div>
+                                            <span style="font-size: 0.875rem; color: var(--gray);">Medium Activity</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 20px; height: 20px; background: rgba(102, 126, 234, 0.8); border-radius: 2px;"></div>
+                                            <span style="font-size: 0.875rem; color: var(--gray);">High Activity</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 20px; height: 20px; background: var(--primary); border-radius: 2px;"></div>
+                                            <span style="font-size: 0.875rem; color: var(--gray);">Peak Activity</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1835,68 +2675,98 @@
                 </div>
             </section>
 
-            <!-- Revenue Section -->
-            <section id="revenue" class="section">
+            <!-- Billing Section -->
+            <section id="billing" class="section">
                 <div class="card">
                     <div class="card-header">
-                        <h2 class="card-title">Revenue Calculator</h2>
+                        <h2 class="card-title">Third Party Billing</h2>
                     </div>
                     <div class="card-body">
                         <div class="settings-form">
                             <div class="form-group">
-                                <label class="form-label">Select Client</label>
-                                <select class="form-select" id="revenueClient">
-                                    <option value="">All Clients</option>
+                                <label class="form-label">Select Installation</label>
+                                <select class="form-select" id="billingClient" onchange="loadClientBillingSettings()">
+                                    <option value="">Select a client...</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Billing Period</label>
-                                <select class="form-select" id="revenuePeriod">
-                                    <option value="today">Today</option>
-                                    <option value="week">This Week</option>
-                                    <option value="month" selected>This Month</option>
-                                    <option value="quarter">This Quarter</option>
-                                    <option value="year">This Year</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Pricing Model</label>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
-                                    <div>
-                                        <label class="form-label">Per Page View</label>
-                                        <input type="number" class="form-input" id="costPerView" value="0.02" step="0.01">
-                                    </div>
-                                    <div>
-                                        <label class="form-label">Per Click</label>
-                                        <input type="number" class="form-input" id="costPerClick" value="0.50" step="0.01">
-                                    </div>
-                                    <div>
-                                        <label class="form-label">Per Session</label>
-                                        <input type="number" class="form-input" id="costPerSession" value="0.10" step="0.01">
-                                    </div>
+
+                            <div id="clientBillingSettings" style="display: none;">
+                                <div class="form-group">
+                                    <label class="form-label">Cost Per Click (£)</label>
+                                    <input type="number" class="form-input" id="clientCPC" value="0.50" step="0.01">
+                                    <button class="btn btn-sm btn-secondary" onclick="saveClientCPC()">Save Rate</button>
                                 </div>
                             </div>
-                            <button class="btn btn-primary" onclick="calculateRevenue()">
-                                Calculate Revenue
+
+                            <div class="form-group">
+                                <label class="form-label">Billing Period</label>
+                                <input type="month" class="form-input" id="billingMonth" max="${new Date().toISOString().slice(0, 7)}">
+                            </div>
+
+                            <button class="btn btn-primary" onclick="generateBillingReport()">
+                                Generate Report
                             </button>
                         </div>
 
-                        <div id="revenueResult" style="display: none; margin-top: 2rem;">
-                            <div class="revenue-calculator">
-                                <div class="revenue-amount" id="totalRevenue">£0.00</div>
-                                <div class="revenue-period" id="revenuePeriodText">This Month</div>
-                                <div class="revenue-breakdown">
-                                    <div class="breakdown-item">
-                                        <div class="breakdown-value" id="viewsCount">0</div>
-                                        <div class="breakdown-label">Page Views</div>
+                        <div id="billingReport" style="display: none; margin-top: 2rem;">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title" id="reportTitle">Billing Report</h3>
+                                    <div>
+                                        <button class="btn btn-sm btn-secondary" onclick="exportBillingPDF()">
+                                            📄 Export PDF
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary" onclick="exportBillingCSV()">
+                                            📊 Export CSV
+                                        </button>
                                     </div>
-                                    <div class="breakdown-item">
-                                        <div class="breakdown-value" id="clicksCount">0</div>
-                                        <div class="breakdown-label">Clicks</div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="revenue-calculator" style="background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);">
+                                        <div class="revenue-amount" id="totalOwed">£0.00</div>
+                                        <div class="revenue-period" id="billingPeriodText">Amount Owed</div>
+                                        <div class="revenue-breakdown">
+                                            <div class="breakdown-item">
+                                                <div class="breakdown-value" id="totalClicks">0</div>
+                                                <div class="breakdown-label">Total Clicks</div>
+                                            </div>
+                                            <div class="breakdown-item">
+                                                <div class="breakdown-value" id="cpcRate">£0.00</div>
+                                                <div class="breakdown-label">Rate per Click</div>
+                                            </div>
+                                            <div class="breakdown-item">
+                                                <div class="breakdown-value" id="uniqueJobs">0</div>
+                                                <div class="breakdown-label">Unique Jobs</div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="breakdown-item">
-                                        <div class="breakdown-value" id="sessionsCount">0</div>
-                                        <div class="breakdown-label">Sessions</div>
+
+                                    <div style="margin-top: 2rem;">
+                                        <h4 style="margin-bottom: 1rem;">Click Details by Job</h4>
+                                        <div class="table-container">
+                                            <table>
+                                                <thead>
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>Job Title</th>
+                                                    <th>Job ID</th>
+                                                    <th>Location</th>
+                                                    <th>Clicks</th>
+                                                    <th>Cost</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody id="billingDetailsTable">
+                                                <!-- Details will be loaded here -->
+                                                </tbody>
+                                                <tfoot>
+                                                <tr style="font-weight: 600; background: var(--light);">
+                                                    <td colspan="4">Total</td>
+                                                    <td id="footerTotalClicks">0</td>
+                                                    <td id="footerTotalCost">£0.00</td>
+                                                </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1934,7 +2804,208 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Code Examples Section -->
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-header">
+                        <h2 class="card-title">API Integration Examples</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="api-section">
+                            <h3 style="margin-bottom: 1rem;">Quick Start Guide</h3>
+                            <p style="color: var(--gray); margin-bottom: 1rem;">
+                                Use these code examples to integrate the BMJ Careers API into your application.
+                                Replace <code>YOUR_API_KEY</code> with your actual API key.
+                            </p>
+
+                            <!-- Code Tabs -->
+                            <div class="code-tabs">
+                                <button class="code-tab active" onclick="showCodeExample('javascript')">JavaScript</button>
+                                <button class="code-tab" onclick="showCodeExample('python')">Python</button>
+                                <button class="code-tab" onclick="showCodeExample('curl')">cURL</button>
+                                <button class="code-tab" onclick="showCodeExample('php')">PHP</button>
+                            </div>
+
+                            <!-- JavaScript Example -->
+                            <pre class="code-example active" id="code-javascript"><code>// Fetch jobs using JavaScript
+const API_KEY = 'YOUR_API_KEY';
+const API_URL = '${window.location.origin}/api/v1/jobs';
+
+async function fetchJobs() {
+    try {
+        const response = await fetch(API_URL, {
+            headers: {
+                'X-API-Key': API_KEY
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('API request failed');
+        }
+
+        const data = await response.json();
+        console.log(`Found ${data.data.jobs.length} jobs`);
+
+        // Process jobs
+        data.data.jobs.forEach(job => {
+            console.log(`${job.job_title} - ${job.location_description}`);
+        });
+
+        return data.data.jobs;
+    } catch (error) {
+        console.error('Error fetching jobs:', error);
+    }
+}
+
+// Call the function
+fetchJobs();</code></pre>
+
+                            <!-- Python Example -->
+                            <pre class="code-example" id="code-python" style="display: none;"><code>import requests
+
+# API Configuration
+API_KEY = 'YOUR_API_KEY'
+API_URL = '${window.location.origin}/api/v1/jobs'
+
+def fetch_jobs():
+    """Fetch jobs from BMJ Careers API"""
+
+    headers = {
+        'X-API-Key': API_KEY
+    }
+
+    try:
+        response = requests.get(API_URL, headers=headers)
+        response.raise_for_status()
+
+        data = response.json()
+        jobs = data['data']['jobs']
+
+        print(f"Found {len(jobs)} jobs")
+
+        # Process jobs
+        for job in jobs:
+            print(f"{job['job_title']} - {job['location_description']}")
+
+        return jobs
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching jobs: {e}")
+        return None
+
+# Call the function
+if __name__ == "__main__":
+    jobs = fetch_jobs()</code></pre>
+
+                            <!-- cURL Example -->
+                            <pre class="code-example" id="code-curl" style="display: none;"><code># Fetch jobs using cURL
+curl -X GET "${window.location.origin}/api/v1/jobs" \
+     -H "X-API-Key: YOUR_API_KEY" \
+     -H "Content-Type: application/json"
+
+# Pretty print the JSON response
+curl -X GET "${window.location.origin}/api/v1/jobs" \
+     -H "X-API-Key: YOUR_API_KEY" \
+     -H "Content-Type: application/json" | python -m json.tool
+
+# Save response to file
+curl -X GET "${window.location.origin}/api/v1/jobs" \
+     -H "X-API-Key: YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -o jobs.json</code></pre>
+
+                            <!-- PHP Example -->
+                            <pre class="code-example" id="code-php" style="display: none;"><code>&lt;?php
+// API Configuration
+$apiKey = 'YOUR_API_KEY';
+$apiUrl = '${window.location.origin}/api/v1/jobs';
+
+function fetchJobs($apiUrl, $apiKey) {
+    // Initialize cURL
+    $ch = curl_init();
+
+    // Set cURL options
+    curl_setopt($ch, CURLOPT_URL, $apiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'X-API-Key: ' . $apiKey,
+        'Content-Type: application/json'
+    ));
+
+    // Execute request
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+    // Check for errors
+    if (curl_errno($ch)) {
+        echo 'Error: ' . curl_error($ch);
+        curl_close($ch);
+        return null;
+    }
+
+    curl_close($ch);
+
+    // Parse response
+    if ($httpCode === 200) {
+        $data = json_decode($response, true);
+        $jobs = $data['data']['jobs'];
+
+        echo "Found " . count($jobs) . " jobs\n";
+
+        // Process jobs
+        foreach ($jobs as $job) {
+            echo $job['job_title'] . " - " . $job['location_description'] . "\n";
+        }
+
+        return $jobs;
+    } else {
+        echo "API request failed with status: " . $httpCode;
+        return null;
+    }
+}
+
+// Call the function
+$jobs = fetchJobs($apiUrl, $apiKey);
+?&gt;</code></pre>
+                        </div>
+
+                        <!-- API Response Format -->
+                        <div class="api-section" style="margin-top: 2rem;">
+                            <h3 style="margin-bottom: 1rem;">API Response Format</h3>
+                            <pre class="code-example" style="display: block;"><code>{
+    "success": true,
+    "data": {
+        "jobs": [
+            {
+                "id": 123456,
+                "job_title": "Consultant Cardiologist",
+                "location_description": "London, UK",
+                "salary": "£93,666 - £126,281",
+                "short_description": "Exciting opportunity for experienced consultant...",
+                "job_url": "https://www.bmj.com/careers/job/123456",
+                "sector": ["Cardiology", "Consultant"],
+                "grade": "Consultant",
+                "contract_type": "Permanent",
+                "recruiter_name": "NHS Trust",
+                "published": "Posted 2 days ago",
+                "job_start_date": "2024-01-15",
+                "job_end_date": "2024-02-15"
+            }
+            // ... more jobs
+        ],
+        "total": 150,
+        "timestamp": "2024-01-10T14:30:00Z"
+    },
+    "meta": {
+        "source": "synced",
+        "cached": false
+    }
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
             </section>
+
 
             <!-- Activity Feed Section -->
             <section id="activity" class="section">
@@ -1986,6 +3057,70 @@
 
             <!-- Settings Section -->
             <section id="settings" class="section">
+                <!-- System Health Card -->
+                <div class="card" style="margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <h2 class="card-title">System Health & Status</h2>
+                        <button class="btn btn-primary btn-sm" onclick="checkSystemHealth()">
+                            🔄 Check Status
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon success">🟢</div>
+                                <div class="stat-value" id="systemStatus">Checking...</div>
+                                <div class="stat-label">System Status</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon info">🗄️</div>
+                                <div class="stat-value" id="dynamoStatus">Checking...</div>
+                                <div class="stat-label">DynamoDB Status</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon warning">📡</div>
+                                <div class="stat-value" id="feedSource">Checking...</div>
+                                <div class="stat-label">Data Source</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon primary">⏱️</div>
+                                <div class="stat-value" id="cacheAge">Checking...</div>
+                                <div class="stat-label">Cache Age</div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Status Information -->
+                        <div style="margin-top: 2rem; padding: 1rem; background: var(--light); border-radius: 8px;">
+                            <h4 style="margin-bottom: 1rem;">System Details</h4>
+                            <div class="usage-metric">
+                                <span class="metric-label">API Endpoint:</span>
+                                <span class="metric-value" id="apiEndpoint">${window.location.origin}/api</span>
+                            </div>
+                            <div class="usage-metric">
+                                <span class="metric-label">Jobs Feed URL:</span>
+                                <span class="metric-value" id="feedUrl">Loading...</span>
+                            </div>
+                            <div class="usage-metric">
+                                <span class="metric-label">Total Jobs Cached:</span>
+                                <span class="metric-value" id="totalJobsCached">0</span>
+                            </div>
+                            <div class="usage-metric">
+                                <span class="metric-label">Last Sync Time:</span>
+                                <span class="metric-value" id="lastSyncTime">Never</span>
+                            </div>
+                            <div class="usage-metric">
+                                <span class="metric-label">Server Uptime:</span>
+                                <span class="metric-value" id="serverUptime">Unknown</span>
+                            </div>
+                            <div class="usage-metric">
+                                <span class="metric-label">Memory Usage:</span>
+                                <span class="metric-value" id="memoryUsage">Unknown</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Existing Settings Card -->
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">System Settings</h2>
@@ -1993,13 +3128,6 @@
                     <div class="card-body">
                         <div class="settings-form">
                             <h3 style="margin-bottom: 1rem;">Tracking Settings</h3>
-                            <div class="form-group">
-                                <label class="form-label">
-                                    <input type="checkbox" id="trackLocalhost" checked onchange="saveSettings()">
-                                    Track Localhost Sessions
-                                </label>
-                                <div class="form-help">Enable tracking for localhost development sessions</div>
-                            </div>
                             <div class="form-group">
                                 <label class="form-label">
                                     <input type="checkbox" id="trackInternalIPs" checked onchange="saveSettings()">
@@ -2058,6 +3186,18 @@
     <div class="toast-content">
         <div class="toast-title" id="toastTitle">Success</div>
         <div class="toast-message" id="toastMessage">Operation completed successfully</div>
+    </div>
+</div>
+
+<div class="modal" id="enhancedClientModal">
+    <div class="modal-content" style="max-width: 900px;">
+        <h2 id="enhancedClientModalTitle" style="margin-bottom: 1.5rem;">Client Detailed Analytics</h2>
+        <div id="enhancedClientModalContent">
+            <!-- Enhanced client details will be loaded here -->
+        </div>
+        <button class="btn btn-secondary" onclick="closeModal('enhancedClientModal')" style="margin-top: 1.5rem;">
+            Close
+        </button>
     </div>
 </div>
 
@@ -2149,13 +3289,22 @@
     }
 
     // Initialize on DOM load
-    document.addEventListener('DOMContentLoaded', () => {
-        initializeDynamicEndpoints();
-        loadSettings();
-        initializeCharts();
-        loadDashboard();
-        startRealTimeUpdates();
-    });
+// Initialize on DOM load
+document.addEventListener('DOMContentLoaded', () => {
+    initializeDynamicEndpoints();
+    loadSettings();
+    loadSettingsUI();
+    initializeAllCharts(); // Use the new function
+    loadDashboard();
+    startRealTimeUpdates();
+
+    // Add sidebar overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    overlay.onclick = () => toggleSidebar();
+    document.body.appendChild(overlay);
+});
+
 
     // Initialize charts
     function initializeCharts() {
@@ -2212,105 +3361,314 @@
         });
     }
 
-    // Enhanced load dashboard with iframe tracking
-    async function loadDashboard() {
-        try {
-            const response = await fetch('/api/admin/dashboard', {
-                headers: {
-                    'x-session-token': sessionToken
-                }
-            });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    window.location.href = '/login?redirect=/admin';
-                    return;
-                }
-                throw new Error('Failed to load dashboard');
+// Enhanced load dashboard with iframe tracking
+async function loadDashboard() {
+    try {
+        const response = await fetch('/api/admin/dashboard', {
+            headers: {
+                'x-session-token': sessionToken
             }
+        });
 
-            const data = await response.json();
-            processDashboardData(data.data);
-            updateDashboard();
-            showToast('Dashboard refreshed', 'success');
-
-        } catch (error) {
-            console.error('Dashboard error:', error);
-            showToast('Failed to load dashboard', 'error');
+        if (!response.ok) {
+            if (response.status === 401) {
+                window.location.href = '/login?redirect=/admin';
+                return;
+            }
+            throw new Error('Failed to load dashboard');
         }
+
+        const data = await response.json();
+
+        // Log raw data for debugging
+        console.log('Dashboard API response:', data);
+
+        // Process the data - will filter out localhost
+        processDashboardData(data.data || { clients: [], sessions: [], apiKeys: [] });
+        updateDashboard();
+
+        // Show appropriate message
+        if (state.sessions.length > 0) {
+            showToast(`Dashboard loaded: ${state.clients.length} clients active`, 'success');
+        } else {
+            console.log('No client sessions found - only client_id based sessions are shown');
+        }
+
+    } catch (error) {
+        console.error('Dashboard error:', error);
+        // Initialize with empty data
+        processDashboardData({ clients: [], sessions: [], apiKeys: [] });
+        updateDashboard();
     }
+}
 
-    // Enhanced process dashboard data
-    function processDashboardData(data) {
-        // Process sessions with enhanced tracking info
-        state.sessions = (data.clients || []).map(session => {
-            const isIframe = session.utm_medium === 'iframe';
-            const clientIdentifier = extractClientIdentifier(session);
 
-            return {
-                ...session,
-                clientIdentifier,
-                isIframe,
-                displayName: session.name || clientIdentifier,
-                domain: session.domain || 'Unknown',
-                duration: calculateDuration(session),
-                isActive: isSessionActive(session),
-                revenue: calculateSessionRevenue(session)
+// Enhanced process dashboard data with proper aggregation
+function processDashboardData(data) {
+    console.log('Raw dashboard data received:', data);
+
+    // Handle both old and new data formats
+    const rawSessions = data.clients || data.sessions || [];
+
+    // Create a map to aggregate ALL data by client_id
+    const clientMap = {};
+
+    rawSessions.forEach(session => {
+        // Determine client key
+        let clientKey = null;
+        let clientName = null;
+
+        // Priority 1: Use client_id if available
+        if (session.client_id && session.client_id !== 'unknown') {
+            clientKey = session.client_id;
+            clientName = session.client_name || session.client_id;
+        }
+        // Priority 2: Use utm_source as fallback
+        else if (session.utm_source && session.utm_source !== 'direct' && session.utm_source !== 'localhost') {
+            clientKey = session.utm_source;
+            clientName = session.name || session.utm_source;
+        }
+
+        // Skip if no valid client key
+        if (!clientKey) return;
+
+        // Initialize client entry if doesn't exist
+        if (!clientMap[clientKey]) {
+            clientMap[clientKey] = {
+                clientId: clientKey,
+                clientName: clientName,
+                client_id: clientKey,
+                client_name: clientName,
+                displayName: clientName,
+                domain: (session.domain === 'localhost' || session.domain === '127.0.0.1') ? 'Test Environment' : 'Embedded Widget',
+                isTestEnvironment: session.domain === 'localhost' || session.domain === '127.0.0.1',
+                isIframe: true,
+
+                // Aggregated metrics
+                totalMetrics: {
+                    loads: 0,
+                    clicks: 0,
+                    apiCalls: 0
+                },
+                todayMetrics: {
+                    loads: 0,
+                    clicks: 0,
+                    apiCalls: 0
+                },
+
+                // Timing
+                firstSeen: null,
+                lastSeen: null,
+
+                // Raw sessions for detailed view
+                rawSessions: []
             };
-        });
-
-        // Aggregate unique clients
-        const clientMap = {};
-        state.sessions.forEach(session => {
-            const key = session.clientIdentifier;
-
-            if (!clientMap[key]) {
-                clientMap[key] = {
-                    clientId: key,
-                    name: session.displayName,
-                    domain: session.domain,
-                    isIframe: session.isIframe,
-                    sessions: [],
-                    totalMetrics: {
-                        loads: 0,
-                        clicks: 0,
-                        apiCalls: 0,
-                        revenue: 0
-                    }
-                };
-            }
-
-            clientMap[key].sessions.push(session);
-            clientMap[key].totalMetrics.loads += session.totalMetrics?.loads || 0;
-            clientMap[key].totalMetrics.clicks += session.totalMetrics?.clicks || 0;
-            clientMap[key].totalMetrics.apiCalls += session.totalMetrics?.apiCalls || 0;
-            clientMap[key].totalMetrics.revenue += session.revenue;
-        });
-
-        state.clients = Object.values(clientMap);
-        state.apiKeys = data.publicApiKeys || [];
-    }
-
-    // Extract client identifier from session
-    function extractClientIdentifier(session) {
-        // For iframe embeds, extract domain from referer
-        if (session.utm_medium === 'iframe' && session.domain) {
-            try {
-                const url = new URL(session.domain);
-                return url.hostname;
-            } catch (e) {
-                // Fallback
-            }
         }
 
-        // Use UTM source if available
-        if (session.utm_source && session.utm_source !== 'direct') {
-            return session.utm_source;
+        // Aggregate the metrics - ADD to existing totals
+        const client = clientMap[clientKey];
+
+        // Add loads/page views
+        client.totalMetrics.loads += parseInt(session.loads || session.totalLoads || session.pageViews || session.page_views || 0);
+        client.totalMetrics.clicks += parseInt(session.clicks || session.totalClicks || session.jobClicks || session.job_clicks || 0);
+        client.totalMetrics.apiCalls += parseInt(session.apiCalls || session.totalApiCalls || session.api_calls || 0);
+
+        // Add today's metrics
+        client.todayMetrics.loads += parseInt(session.todayLoads || session.todayPageViews || session.today_loads || 0);
+        client.todayMetrics.clicks += parseInt(session.todayClicks || session.todayJobClicks || session.today_clicks || 0);
+        client.todayMetrics.apiCalls += parseInt(session.todayApiCalls || session.today_api_calls || 0);
+
+        // Update first seen (earliest)
+        const sessionFirstSeen = session.firstSeen || session.createdAt || session.created_at;
+        if (sessionFirstSeen && (!client.firstSeen || new Date(sessionFirstSeen) < new Date(client.firstSeen))) {
+            client.firstSeen = sessionFirstSeen;
         }
 
-        // Use client ID
-        return session.clientId || 'unknown';
+        // Update last seen (latest)
+        const sessionLastSeen = session.lastSeen || session.updatedAt || session.updated_at || new Date().toISOString();
+        if (!client.lastSeen || new Date(sessionLastSeen) > new Date(client.lastSeen)) {
+            client.lastSeen = sessionLastSeen;
+        }
+
+        // Store raw session for reference
+        client.rawSessions.push(session);
+    });
+
+    // Convert client map to arrays for state
+    state.clients = [];
+    state.sessions = [];
+
+    Object.values(clientMap).forEach(client => {
+        // Ensure we have valid timestamps
+        if (!client.firstSeen) client.firstSeen = new Date().toISOString();
+        if (!client.lastSeen) client.lastSeen = new Date().toISOString();
+
+        // Calculate derived values
+        const duration = calculateDuration({
+            firstSeen: client.firstSeen,
+            lastSeen: client.lastSeen
+        });
+
+        const isActive = isSessionActive({ lastSeen: client.lastSeen });
+
+        const revenue = calculateSessionRevenue({
+            totalMetrics: client.totalMetrics
+        });
+
+        // Create the aggregated session object
+        const aggregatedSession = {
+            // Identity
+            clientIdentifier: client.clientId,
+            client_id: client.clientId,
+            client_name: client.clientName,
+            displayName: client.displayName,
+            sessionId: `${client.clientId}_aggregated`,
+
+            // Status
+            domain: client.domain,
+            isIframe: true,
+            isTestEnvironment: client.isTestEnvironment,
+            isActive: isActive,
+
+            // Metrics - ensure these are the aggregated totals
+            totalMetrics: {
+                loads: client.totalMetrics.loads,
+                clicks: client.totalMetrics.clicks,
+                apiCalls: client.totalMetrics.apiCalls
+            },
+            todayMetrics: {
+                loads: client.todayMetrics.loads,
+                clicks: client.todayMetrics.clicks,
+                apiCalls: client.todayMetrics.apiCalls
+            },
+
+            // Timing
+            firstSeen: client.firstSeen,
+            lastSeen: client.lastSeen,
+            duration: duration,
+
+            // Other
+            revenue: revenue,
+            sessionCount: client.rawSessions.length,
+            metrics: { daily: {} }
+        };
+
+        // Add to sessions
+        state.sessions.push(aggregatedSession);
+
+        // Create client object
+        state.clients.push({
+            clientId: client.clientId,
+            name: client.displayName,
+            domain: client.domain,
+            isIframe: true,
+            isTestEnvironment: client.isTestEnvironment,
+            sessions: [aggregatedSession],
+            sessionCount: client.rawSessions.length,
+            totalMetrics: {
+                loads: client.totalMetrics.loads,
+                clicks: client.totalMetrics.clicks,
+                apiCalls: client.totalMetrics.apiCalls,
+                revenue: revenue
+            },
+            rawSessions: client.rawSessions // Keep raw sessions for detailed view
+        });
+    });
+
+    state.apiKeys = data.publicApiKeys || data.apiKeys || [];
+
+    console.log('Final aggregated state:', {
+        clients: state.clients,
+        sessions: state.sessions,
+        clientCount: state.clients.length,
+        sessionCount: state.sessions.length
+    });
+
+    // Log metrics for debugging
+    state.clients.forEach(client => {
+        console.log(`Client: ${client.name} (${client.clientId})`);
+        console.log(`  - Page Views: ${client.totalMetrics.loads}`);
+        console.log(`  - Clicks: ${client.totalMetrics.clicks}`);
+        console.log(`  - Sessions: ${client.sessionCount}`);
+    });
+}
+
+// Add this after the loadDashboard function
+async function debugDashboard() {
+    try {
+        const response = await fetch('/api/admin/dashboard', {
+            headers: {
+                'x-session-token': sessionToken
+            }
+        });
+
+        const data = await response.json();
+        console.log('Raw API Response:', data);
+
+        if (data.data && data.data.clients) {
+            data.data.clients.forEach(client => {
+                console.log('Client data:', {
+                    client_id: client.client_id,
+                    clientId: client.clientId,
+                    utm_source: client.utm_source,
+                    utm_medium: client.utm_medium,
+                    client_name: client.client_name,
+                    domain: client.domain,
+                    clicks: client.clicks || 0,
+                    loads: client.loads || 0
+                });
+            });
+        }
+    } catch (error) {
+        console.error('Debug error:', error);
     }
+}
+
+// When tracking a job click in the widget
+function trackJobClick(jobData) {
+    // Get client_id from URL parameters or configuration
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get('client_id') || urlParams.get('utm_source');
+    const clientName = urlParams.get('client_name');
+
+    // Send tracking data with client info
+    fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            event: 'job_click',
+            client_id: clientId,  // This is crucial
+            client_name: clientName,
+            session_id: sessionId,
+            job_id: jobData.id,
+            timestamp: Date.now()
+        })
+    });
+}
+
+// Extract client identifier from session
+function extractClientIdentifier(session) {
+    // ONLY use client_id - nothing else
+    if (session.client_id && session.client_id !== 'unknown') {
+        return session.client_id;
+    }
+
+    // Check alternative field names
+    if (session.clientId && session.clientId !== 'unknown') {
+        return session.clientId;
+    }
+
+    // Check UTM source as last resort (but not localhost)
+    if (session.utm_source &&
+        session.utm_source !== 'direct' &&
+        session.utm_source !== 'localhost' &&
+        session.utm_source !== '127.0.0.1') {
+        return session.utm_source;
+    }
+
+    // Return null for anything else (will be filtered out)
+    return null;
+}
 
     // Calculate session duration
     function calculateDuration(session) {
@@ -2351,75 +3709,101 @@
     }
 
     // Update dashboard UI
-    function updateDashboard() {
-        // Update stats with enhanced tracking
-        const activeSessions = state.sessions.filter(s => s.isActive).length;
-        const iframeSessions = state.sessions.filter(s => s.isIframe).length;
-        const totalPageViews = state.sessions.reduce((sum, s) => sum + (s.todayMetrics?.loads || 0), 0);
-        const monthlyRevenue = state.sessions.reduce((sum, s) => sum + s.revenue, 0);
+    // Update dashboard UI
+function updateDashboard() {
+    // Update stats with actual data
+    const activeSessions = state.sessions.filter(s => s.isActive).length;
+    const totalPageViews = state.sessions.reduce((sum, s) => sum + (s.todayMetrics?.loads || 0), 0);
 
-        document.getElementById('totalClients').textContent = state.clients.length;
-        document.getElementById('activeSessions').textContent = activeSessions;
-        document.getElementById('totalPageViews').textContent = totalPageViews.toLocaleString();
-        document.getElementById('monthlyRevenue').textContent = `£${monthlyRevenue.toFixed(2)}`;
+    // Calculate monthly owed based on actual clicks
+    const monthlyOwed = state.sessions.reduce((sum, s) => {
+        const clientCPC = clientCPCRates[s.clientIdentifier] || 0.50; // Use stored CPC or default
+        return sum + ((s.totalMetrics?.clicks || 0) * clientCPC);
+    }, 0);
 
-        updateRecentSessions();
-        updateCharts();
+    document.getElementById('totalClients').textContent = state.clients.length;
+    document.getElementById('activeSessions').textContent = activeSessions;
+    document.getElementById('totalPageViews').textContent = totalPageViews.toLocaleString();
+    document.getElementById('monthlyOwed').textContent = `£${monthlyOwed.toFixed(2)}`;
+
+    updateRecentSessions();
+
+    // Only update charts if they exist and have data
+    if (state.charts && state.charts.usage && state.sessions.length > 0) {
+        updateAllCharts();
     }
 
-    // Enhanced update recent sessions with iframe indicators
-    function updateRecentSessions() {
-        const container = document.getElementById('recentSessions');
-        const recentSessions = state.sessions
-            .sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen))
-            .slice(0, 6);
+    // Update all sections if they're visible
+    if (document.getElementById('clientsTable')) {
+        loadClients();
+    }
+    if (document.getElementById('apiKeysTable')) {
+        loadAPIKeys();
+    }
+    if (document.getElementById('billingClient')) {
+        loadBillingSection();
+    }
+}
 
-        if (recentSessions.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">👥</div>
-                    <div class="empty-state-title">No sessions yet</div>
-                    <div class="empty-state-description">Sessions will appear here when clients visit</div>
-                </div>
-            `;
-            return;
-        }
+// Enhanced update recent sessions with iframe indicators
+function updateRecentSessions() {
+    const container = document.getElementById('recentSessions');
+    const recentSessions = state.sessions
+        .sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen))
+        .slice(0, 6);
 
-        container.innerHTML = recentSessions.map(session => `
-            <div class="session-card ${session.isActive ? 'active' : ''}">
-                <div class="session-header">
-                    <div>
-                        <div class="session-client">
-                            ${session.displayName}
-                            ${session.isIframe ? '<span class="tracking-badge iframe-indicator">iFrame</span>' : ''}
+    if (recentSessions.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <div class="empty-state-title">No sessions yet</div>
+                <div class="empty-state-description">Sessions will appear here when clients connect</div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = recentSessions.map(session => `
+        <div class="session-card ${session.isActive ? 'active' : ''}">
+            <div class="session-header">
+                <div>
+                    <div class="session-client">
+                        ${session.displayName}
+                        <span class="tracking-badge">Widget</span>
+                        ${session.isTestEnvironment ? '<span class="tracking-badge iframe-indicator">Test</span>' : ''}
+                    </div>
+                    <div class="client-identifier">${session.clientIdentifier}</div>
+                    ${session.sessionCount > 1 ? `
+                        <div style="font-size: 0.625rem; color: var(--gray); margin-top: 0.25rem;">
+                            ${session.sessionCount} page refreshes
                         </div>
-                        <div class="client-identifier">${session.clientIdentifier}</div>
-                    </div>
-                    <span class="session-badge ${session.isActive ? 'active' : 'ended'}">
-                        ${session.isActive ? '● Active' : '○ Ended'}
-                    </span>
+                    ` : ''}
                 </div>
-                <div class="session-metrics">
-                    <div class="metric-mini">
-                        <div class="metric-mini-value">${session.totalMetrics?.loads || 0}</div>
-                        <div class="metric-mini-label">Views</div>
-                    </div>
-                    <div class="metric-mini">
-                        <div class="metric-mini-value">${session.totalMetrics?.clicks || 0}</div>
-                        <div class="metric-mini-label">Clicks</div>
-                    </div>
-                    <div class="metric-mini">
-                        <div class="metric-mini-value">${session.duration}</div>
-                        <div class="metric-mini-label">Duration</div>
-                    </div>
-                    <div class="metric-mini">
-                        <div class="metric-mini-value">£${session.revenue.toFixed(2)}</div>
-                        <div class="metric-mini-label">Revenue</div>
-                    </div>
+                <span class="session-badge ${session.isActive ? 'active' : 'ended'}">
+                    ${session.isActive ? '● Active' : '○ Ended'}
+                </span>
+            </div>
+            <div class="session-metrics">
+                <div class="metric-mini">
+                    <div class="metric-mini-value">${session.totalMetrics?.loads || 0}</div>
+                    <div class="metric-mini-label">Total Views</div>
+                </div>
+                <div class="metric-mini">
+                    <div class="metric-mini-value">${session.totalMetrics?.clicks || 0}</div>
+                    <div class="metric-mini-label">Total Clicks</div>
+                </div>
+                <div class="metric-mini">
+                    <div class="metric-mini-value">${session.duration}</div>
+                    <div class="metric-mini-label">Total Time</div>
+                </div>
+                <div class="metric-mini">
+                    <div class="metric-mini-value">£${session.revenue.toFixed(2)}</div>
+                    <div class="metric-mini-label">Revenue</div>
                 </div>
             </div>
-        `).join('');
-    }
+        </div>
+    `).join('');
+}
 
     // Update charts with real data
     function updateCharts() {
@@ -2476,56 +3860,93 @@
    }
 
    // Section navigation
-   function showSection(sectionId) {
-       // Update menu
-       document.querySelectorAll('.menu-item').forEach(item => {
-           item.classList.remove('active');
-       });
-       event.target.closest('.menu-item').classList.add('active');
+   // Section navigation - REPLACE the existing showSection function with this
+function showSection(sectionId) {
+    // Update menu
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.remove('active');
+    });
 
-       // Update sections
-       document.querySelectorAll('.section').forEach(section => {
-           section.classList.remove('active');
-       });
-       document.getElementById(sectionId).classList.add('active');
+    // Find and activate the correct menu item based on section ID
+    const menuItems = document.querySelectorAll('.menu-item');
+    menuItems.forEach(item => {
+        const menuText = item.textContent.toLowerCase();
+        const sectionName = sectionId.replace('-', ' ').toLowerCase();
 
-       // Update page title
-       const titles = {
-           dashboard: 'Dashboard',
-           sessions: 'Live Sessions',
-           clients: 'Client Management',
-           analytics: 'Analytics',
-           revenue: 'Revenue Calculator',
-           api: 'API Management',
-           activity: 'Activity Feed',
-           jobsdata: 'Jobs Data API',
-           settings: 'Settings'
-       };
-       document.getElementById('pageTitle').textContent = titles[sectionId];
+        if ((sectionId === 'dashboard' && menuText.includes('dashboard')) ||
+            (sectionId === 'sessions' && menuText.includes('live sessions')) ||
+            (sectionId === 'clients' && menuText.includes('clients')) ||
+            (sectionId === 'analytics' && menuText.includes('analytics') && !menuText.includes('enhanced')) ||
+            (sectionId === 'enhanced-analytics' && menuText.includes('enhanced analytics')) ||
+            (sectionId === 'billing' && menuText.includes('billing')) ||
+            (sectionId === 'api' && menuText.includes('api')) ||
+            (sectionId === 'activity' && menuText.includes('activity')) ||
+            (sectionId === 'jobsdata' && menuText.includes('jobs data')) ||
+            (sectionId === 'settings' && menuText.includes('settings'))) {
+            item.classList.add('active');
+        }
+    });
 
-       // Load section data
-       switch(sectionId) {
-           case 'sessions':
-               loadSessions();
-               break;
-           case 'clients':
-               loadClients();
-               break;
-           case 'api':
-               loadAPIKeys();
-               break;
-           case 'activity':
-               loadActivity();
-               break;
-           case 'revenue':
-               loadRevenueCalculator();
-               break;
-           case 'jobsdata':
-               // Initialize endpoints when section is shown
-               initializeDynamicEndpoints();
-               break;
-       }
-   }
+    // Update sections
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+
+    // Update page title
+const titles = {
+    'dashboard': 'Dashboard',
+    'sessions': 'Live Sessions',
+    'clients': 'Client Management',
+    'analytics': 'Analytics',
+    'enhanced-analytics': 'Enhanced Analytics',
+    'billing': 'Third Party Billing',  // Changed from 'Revenue Calculator'
+    'api': 'API Management',
+    'activity': 'Activity Feed',
+    'jobsdata': 'Jobs Data API',
+    'settings': 'Settings'
+};
+
+    document.getElementById('pageTitle').textContent = titles[sectionId] || 'Dashboard';
+
+    // Load section data
+    switch(sectionId) {
+        case 'sessions':
+            loadSessions();
+            break;
+        case 'clients':
+            loadClients();
+            break;
+        case 'api':
+            loadAPIKeys();
+            break;
+        case 'activity':
+            loadActivity();
+            break;
+        case 'billing':
+            loadBillingSection();
+            break;
+        case 'jobsdata':
+            initializeDynamicEndpoints();
+            break;
+        case 'enhanced-analytics':
+            loadEnhancedAnalytics();
+            break;
+        case 'analytics':
+            // Initialize analytics charts if needed
+            if (!state.charts.sessionDist) {
+                initializeAllCharts();
+            }
+            break;
+        case 'settings':
+            checkSystemHealth();
+            break;
+    }
+}
 
    // Enhanced Jobs Data functions
    async function loadJobsData() {
@@ -2672,105 +4093,115 @@
        });
    }
 
-   // Enhanced load sessions with iframe tracking
-   function loadSessions() {
-       const container = document.getElementById('sessionsContainer');
-       const activeSessions = state.sessions.filter(s => s.isActive);
+   // Load sessions with aggregated data
+function loadSessions() {
+    const container = document.getElementById('sessionsContainer');
+    const activeSessions = state.sessions.filter(s => s.isActive);
 
-       document.getElementById('sessionCount').textContent = `${activeSessions.length} Active`;
+    document.getElementById('sessionCount').textContent = `${activeSessions.length} Active`;
 
-       if (state.sessions.length === 0) {
-           container.innerHTML = `
-               <div class="empty-state">
-                   <div class="empty-state-icon">👥</div>
-                   <div class="empty-state-title">No sessions found</div>
-               </div>
-           `;
-           return;
-       }
+    if (state.sessions.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <div class="empty-state-title">No sessions found</div>
+            </div>
+        `;
+        return;
+    }
 
-       container.innerHTML = state.sessions.map(session => `
-           <div class="session-card ${session.isActive ? 'active' : ''}" style="margin-bottom: 1rem;">
-               <div class="session-header">
-                   <div>
-                       <div class="session-client">
-                           ${session.displayName}
-                           ${session.isIframe ? '<span class="tracking-badge iframe-indicator">iFrame Embed</span>' : ''}
-                       </div>
-                       <div class="client-identifier">Client: ${session.clientIdentifier}</div>
-                       <div style="margin-top: 0.5rem; color: var(--gray); font-size: 0.75rem;">
-                           ${session.domain} | Started: ${new Date(session.firstSeen).toLocaleString()}
-                       </div>
-                   </div>
-                   <span class="session-badge ${session.isActive ? 'active' : 'ended'}">
-                       ${session.isActive ? '● Active' : '○ Ended'}
-                   </span>
-               </div>
-               <div class="session-metrics">
-                   <div class="metric-mini">
-                       <div class="metric-mini-value">${session.totalMetrics?.loads || 0}</div>
-                       <div class="metric-mini-label">Page Views</div>
-                   </div>
-                   <div class="metric-mini">
-                       <div class="metric-mini-value">${session.totalMetrics?.clicks || 0}</div>
-                       <div class="metric-mini-label">Job Clicks</div>
-                   </div>
-                   <div class="metric-mini">
-                       <div class="metric-mini-value">${session.duration}</div>
-                       <div class="metric-mini-label">Duration</div>
-                   </div>
-                   <div class="metric-mini">
-                       <div class="metric-mini-value">£${session.revenue.toFixed(2)}</div>
-                       <div class="metric-mini-label">Revenue</div>
-                   </div>
-               </div>
-               ${session.isIframe ? `
-                   <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
-                       <div class="usage-metric">
-                           <span class="metric-label">Embed Type:</span>
-                           <span class="metric-value">iFrame</span>
-                       </div>
-                       <div class="usage-metric">
-                           <span class="metric-label">Source Domain:</span>
-                           <span class="metric-value">${session.clientIdentifier}</span>
-                       </div>
-                   </div>
-               ` : ''}
-           </div>
-       `).join('');
-   }
+    container.innerHTML = state.sessions.map(session => `
+        <div class="session-card ${session.isActive ? 'active' : ''}" style="margin-bottom: 1rem;">
+            <div class="session-header">
+                <div>
+                    <div class="session-client">
+                        ${session.displayName}
+                        <span class="tracking-badge">Widget</span>
+                        ${session.isTestEnvironment ? '<span class="tracking-badge iframe-indicator">Test</span>' : ''}
+                    </div>
+                    <div class="client-identifier">Client ID: ${session.clientIdentifier}</div>
+                    <div style="margin-top: 0.5rem; color: var(--gray); font-size: 0.75rem;">
+                        Started: ${new Date(session.firstSeen).toLocaleString()} |
+                        Last Active: ${new Date(session.lastSeen).toLocaleString()}
+                    </div>
+                    ${session.sessionCount > 1 ? `
+                        <div style="margin-top: 0.25rem; color: var(--gray); font-size: 0.75rem;">
+                            Total Sessions: ${session.sessionCount}
+                        </div>
+                    ` : ''}
+                </div>
+                <span class="session-badge ${session.isActive ? 'active' : 'ended'}">
+                    ${session.isActive ? '● Active' : '○ Ended'}
+                </span>
+            </div>
+            <div class="session-metrics">
+                <div class="metric-mini">
+                    <div class="metric-mini-value">${session.totalMetrics?.loads || 0}</div>
+                    <div class="metric-mini-label">Total Views</div>
+                </div>
+                <div class="metric-mini">
+                    <div class="metric-mini-value">${session.totalMetrics?.clicks || 0}</div>
+                    <div class="metric-mini-label">Total Clicks</div>
+                </div>
+                <div class="metric-mini">
+                    <div class="metric-mini-value">${session.duration}</div>
+                    <div class="metric-mini-label">Duration</div>
+                </div>
+                <div class="metric-mini">
+                    <div class="metric-mini-value">£${session.revenue.toFixed(2)}</div>
+                    <div class="metric-mini-label">Revenue</div>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                <div class="usage-metric">
+                    <span class="metric-label">Today's Page Views:</span>
+                    <span class="metric-value">${session.todayMetrics?.loads || 0}</span>
+                </div>
+                <div class="usage-metric">
+                    <span class="metric-label">Today's Clicks:</span>
+                    <span class="metric-value">${session.todayMetrics?.clicks || 0}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
 
-   // Enhanced load clients with iframe detection
-   function loadClients() {
-       const tbody = document.getElementById('clientsTable');
 
-       if (state.clients.length === 0) {
-           tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No clients found</td></tr>';
-           return;
-       }
+// Enhanced load clients with iframe detection
+function loadClients() {
+    const tbody = document.getElementById('clientsTable');
 
-       tbody.innerHTML = state.clients.map(client => `
-           <tr>
-               <td>
-                   <div style="font-weight: 600;">
-                       ${client.name}
-                       ${client.isIframe ? '<span class="tracking-badge iframe-indicator">iFrame</span>' : ''}
-                   </div>
-                   <div class="client-identifier">${client.clientId}</div>
-               </td>
-               <td>${client.domain}</td>
-               <td>${client.sessions.length}</td>
-               <td>${client.totalMetrics.loads.toLocaleString()}</td>
-               <td>${client.totalMetrics.clicks.toLocaleString()}</td>
-               <td>£${client.totalMetrics.revenue.toFixed(2)}</td>
-               <td>
-                   <button class="btn btn-sm btn-primary" onclick="viewClientDetails('${client.clientId}')">
-                       View Details
-                   </button>
-               </td>
-           </tr>
-       `).join('');
-   }
+    if (state.clients.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No clients found. Waiting for widget connections...</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = state.clients.map(client => `
+        <tr>
+            <td>
+                <div style="font-weight: 600;">
+                    ${client.name}
+                    <span class="tracking-badge">Widget</span>
+                    ${client.isTestEnvironment ? '<span class="tracking-badge iframe-indicator">Test</span>' : ''}
+                </div>
+                <div class="client-identifier">${client.clientId}</div>
+                <div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.25rem;">
+                    ${client.sessionCount || 1} page refresh${client.sessionCount !== 1 ? 'es' : ''}
+                </div>
+            </td>
+            <td>${client.domain}</td>
+            <td>${client.sessionCount || 1}</td>
+            <td>${client.totalMetrics.loads.toLocaleString()}</td>
+            <td>${client.totalMetrics.clicks.toLocaleString()}</td>
+            <td>£${client.totalMetrics.revenue.toFixed(2)}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="viewClientDetails('${client.clientId}')">
+                    View Details
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
 
    // Load settings
    function loadSettings() {
@@ -2944,7 +4375,6 @@ function initializeAllCharts() {
 function searchClients(query) {
     const filtered = state.clients.filter(client =>
         client.name.toLowerCase().includes(query.toLowerCase()) ||
-        client.domain.toLowerCase().includes(query.toLowerCase()) ||
         client.clientId.toLowerCase().includes(query.toLowerCase())
     );
 
@@ -2959,12 +4389,16 @@ function searchClients(query) {
             <td>
                 <div style="font-weight: 600;">
                     ${client.name}
-                    ${client.isIframe ? '<span class="tracking-badge iframe-indicator">iFrame</span>' : ''}
+                    <span class="tracking-badge">Widget</span>
+                    ${client.isTestEnvironment ? '<span class="tracking-badge iframe-indicator">Test</span>' : ''}
                 </div>
                 <div class="client-identifier">${client.clientId}</div>
+                <div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.25rem;">
+                    ${client.sessionCount || 1} session${client.sessionCount !== 1 ? 's' : ''}
+                </div>
             </td>
             <td>${client.domain}</td>
-            <td>${client.sessions.length}</td>
+            <td>${client.sessionCount || 1}</td>
             <td>${client.totalMetrics.loads.toLocaleString()}</td>
             <td>${client.totalMetrics.clicks.toLocaleString()}</td>
             <td>£${client.totalMetrics.revenue.toFixed(2)}</td>
@@ -2976,6 +4410,7 @@ function searchClients(query) {
         </tr>
     `).join('');
 }
+
 
 // View client details function
 function viewClientDetails(clientId) {
@@ -3288,6 +4723,1518 @@ async function generateAPIKey(clientId, clientName) {
         showToast('Error generating API key', 'error');
     }
 }
+
+    async function exportAllData() {
+    try {
+        const response = await fetch('/api/admin/export', {
+            headers: {
+                'x-session-token': sessionToken
+            }
+    });
+
+       if (response.ok) {
+           const blob = await response.blob();
+           const url = window.URL.createObjectURL(blob);
+           const a = document.createElement('a');
+           a.href = url;
+           a.download = `bmj-careers-export-${new Date().toISOString().split('T')[0]}.json`;
+           document.body.appendChild(a);
+           a.click();
+           window.URL.revokeObjectURL(url);
+           document.body.removeChild(a);
+
+           showToast('Data exported successfully', 'success');
+       } else {
+           throw new Error('Export failed');
+       }
+   } catch (error) {
+       showToast('Failed to export data', 'error');
+   }
+}
+
+// Update the saveSettings function
+function saveSettings() {
+   state.settings = {
+       trackLocalhost: document.getElementById('trackLocalhost').checked,
+       trackInternalIPs: document.getElementById('trackInternalIPs').checked,
+       sessionTimeout: parseInt(document.getElementById('sessionTimeout').value),
+       enableNotifications: document.getElementById('enableNotifications').checked,
+       alertThreshold: parseInt(document.getElementById('alertThreshold').value),
+       dataRetention: parseInt(document.getElementById('dataRetention').value)
+   };
+
+   localStorage.setItem('adminSettings', JSON.stringify(state.settings));
+   showToast('Settings saved', 'success');
+   loadDashboard();
+}
+
+// Load settings into UI
+// In the loadSettingsUI function
+function loadSettingsUI() {
+    if (document.getElementById('trackLocalhost')) {
+        // Default to false for localhost tracking
+        document.getElementById('trackLocalhost').checked = state.settings.trackLocalhost !== undefined ? state.settings.trackLocalhost : false;
+        document.getElementById('trackInternalIPs').checked = state.settings.trackInternalIPs;
+        document.getElementById('sessionTimeout').value = state.settings.sessionTimeout;
+        document.getElementById('enableNotifications').checked = state.settings.enableNotifications;
+        document.getElementById('alertThreshold').value = state.settings.alertThreshold;
+        document.getElementById('dataRetention').value = state.settings.dataRetention;
+    }
+}
+
+// Update charts function enhancement
+function updateAllCharts() {
+   // Call existing updateCharts
+   updateCharts();
+
+   // Update session distribution
+   if (state.charts.sessionDist) {
+       const distribution = calculateSessionDistribution();
+       state.charts.sessionDist.data.datasets[0].data = [
+           distribution.direct,
+           distribution.iframe,
+           distribution.api
+       ];
+       state.charts.sessionDist.update();
+   }
+
+   // Update revenue chart
+   if (state.charts.revenue) {
+       const topClients = state.clients
+           .sort((a, b) => b.totalMetrics.revenue - a.totalMetrics.revenue)
+           .slice(0, 5);
+
+       state.charts.revenue.data.labels = topClients.map(c => c.name);
+       state.charts.revenue.data.datasets[0].data = topClients.map(c => c.totalMetrics.revenue);
+       state.charts.revenue.update();
+   }
+
+   // Update geographic distribution
+   if (state.charts.geo) {
+       const geoData = calculateGeographicDistribution();
+       state.charts.geo.data.labels = Object.keys(geoData);
+       state.charts.geo.data.datasets[0].data = Object.values(geoData);
+       state.charts.geo.update();
+   }
+}
+
+// Calculate session distribution
+function calculateSessionDistribution() {
+   const distribution = { direct: 0, iframe: 0, api: 0 };
+
+   state.sessions.forEach(session => {
+       if (session.utm_medium === 'iframe' || session.isIframe) {
+           distribution.iframe++;
+       } else if (session.utm_medium === 'api') {
+           distribution.api++;
+       } else {
+           distribution.direct++;
+       }
+   });
+
+   return distribution;
+}
+
+// Calculate geographic distribution
+function calculateGeographicDistribution() {
+   const geo = {};
+
+   state.sessions.forEach(session => {
+       // Extract location from domain or use default
+       let location = 'Unknown';
+
+       if (session.domain) {
+           if (session.domain.includes('.uk')) location = 'United Kingdom';
+           else if (session.domain.includes('.com')) location = 'United States';
+           else if (session.domain.includes('.ca')) location = 'Canada';
+           else if (session.domain.includes('.au')) location = 'Australia';
+           else if (session.domain.includes('.in')) location = 'India';
+           else location = 'Other';
+       }
+
+       geo[location] = (geo[location] || 0) + 1;
+   });
+
+   return geo;
+}
+
+// Update usage chart function
+function updateUsageChart(period) {
+   // Update button states
+   event.target.parentElement.querySelectorAll('.btn').forEach(btn => {
+       btn.classList.remove('active');
+   });
+   event.target.classList.add('active');
+
+   // Update chart based on period
+   let days;
+   switch(period) {
+       case '7d':
+           days = getLastNDays(7);
+           break;
+       case '30d':
+           days = getLastNDays(30);
+           break;
+       case '90d':
+           days = getLastNDays(90);
+           break;
+   }
+
+   const usageData = calculateUsageData(days);
+   state.charts.usage.data.labels = days.map(d => formatDate(d));
+   state.charts.usage.data.datasets[0].data = usageData.views;
+   state.charts.usage.data.datasets[1].data = usageData.clicks;
+   state.charts.usage.data.datasets[2].data = usageData.sessions;
+   state.charts.usage.update();
+}
+
+    // Modal functions
+function showGenerateKeyModal() {
+    document.getElementById('generateKeyModal').classList.add('active');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+function submitGenerateKey() {
+    const clientName = document.getElementById('apiClientName').value;
+    const clientId = document.getElementById('apiClientId').value;
+
+    if (clientName && clientId) {
+        generateAPIKey(clientId, clientName);
+        closeModal('generateKeyModal');
+        document.getElementById('generateKeyForm').reset();
+    }
+}
+
+// Enhanced view client details
+function viewClientDetails(clientId) {
+    const client = state.clients.find(c => c.clientId === clientId);
+    if (!client) return;
+
+    const modal = document.getElementById('clientDetailsModal');
+    document.getElementById('clientModalTitle').textContent = client.name;
+
+    const sessionsHtml = client.sessions.map(session => `
+        <div style="padding: 1rem; background: var(--light); border-radius: 8px; margin-bottom: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <strong>Session ${session.sessionId || 'N/A'}</strong>
+                <span class="session-badge ${session.isActive ? 'active' : 'ended'}">
+                    ${session.isActive ? 'Active' : 'Ended'}
+                </span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 0.75rem;">
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--gray);">Duration</div>
+                    <div style="font-weight: 600;">${session.duration}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--gray);">Page Views</div>
+                    <div style="font-weight: 600;">${session.totalMetrics?.loads || 0}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--gray);">Clicks</div>
+                    <div style="font-weight: 600;">${session.totalMetrics?.clicks || 0}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--gray);">Revenue</div>
+                    <div style="font-weight: 600;">£${session.revenue.toFixed(2)}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    document.getElementById('clientModalContent').innerHTML = `
+        <div class="client-detail-grid">
+            <div>
+                <h3 style="margin-bottom: 1rem;">Client Information</h3>
+                <div class="info-row">
+                    <div class="info-label">Client ID</div>
+                    <div class="info-value">${client.clientId}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Domain</div>
+                    <div class="info-value">${client.domain}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Type</div>
+                    <div class="info-value">${client.isIframe ? 'iFrame Embed' : 'Direct Access'}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Total Sessions</div>
+                    <div class="info-value">${client.sessions.length}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Active Sessions</div>
+                    <div class="info-value">${client.sessions.filter(s => s.isActive).length}</div>
+                </div>
+
+                <h3 style="margin: 2rem 0 1rem;">Sessions</h3>
+                ${sessionsHtml || '<div class="empty-state">No sessions found</div>'}
+            </div>
+            <div>
+                <h3 style="margin-bottom: 1rem;">Metrics Summary</h3>
+                <div class="stat-card">
+                    <div class="stat-value">${client.totalMetrics.loads.toLocaleString()}</div>
+                    <div class="stat-label">Total Page Views</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${client.totalMetrics.clicks.toLocaleString()}</div>
+                    <div class="stat-label">Total Clicks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">£${client.totalMetrics.revenue.toFixed(2)}</div>
+                    <div class="stat-label">Total Revenue</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    modal.classList.add('active');
+}
+
+// Complete Enhanced Analytics Functions - Replace all existing enhanced analytics functions with these
+
+let enhancedAnalyticsData = null;
+
+// Load enhanced analytics data
+async function loadEnhancedAnalytics() {
+    console.log('Loading enhanced analytics...');
+
+    try {
+        // First attempt to load from API
+        const response = await fetch('/api/admin/dashboard/enhanced', {
+            headers: {
+                'x-session-token': sessionToken
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.data && data.data.clients && data.data.clients.length > 0) {
+                enhancedAnalyticsData = data.data;
+                updateEnhancedAnalyticsDashboard(data.data);
+                showToast('Enhanced analytics loaded', 'success');
+            } else {
+                // No data from API, generate mock
+                generateMockEnhancedData();
+            }
+        } else {
+            // API failed, generate mock data
+            generateMockEnhancedData();
+        }
+
+    } catch (error) {
+        console.error('Enhanced analytics error:', error);
+        // Generate mock data as fallback
+        generateMockEnhancedData();
+    }
+}
+
+// Generate mock enhanced data
+function generateMockEnhancedData() {
+    console.log('Generating mock enhanced analytics data...');
+
+    // Create sample clients if none exist
+    const sampleClients = state.clients && state.clients.length > 0 ? state.clients : [
+        { clientId: 'nhs-trust-1', name: 'NHS Trust London', domain: 'nhs.uk' },
+        { clientId: 'private-hospital-1', name: 'Private Hospital Group', domain: 'privatehospital.com' },
+        { clientId: 'recruitment-agency-1', name: 'Medical Recruitment Ltd', domain: 'medicalrecruitment.co.uk' },
+        { clientId: 'health-board-1', name: 'Health Board Wales', domain: 'wales.nhs.uk' },
+        { clientId: 'gp-practice-1', name: 'GP Practice Network', domain: 'gppractice.nhs.uk' }
+    ];
+
+    // Create enhanced data
+    const enhancedClients = sampleClients.map((client, index) => ({
+        clientId: client.clientId,
+        sessionId: 'session_' + Math.random().toString(36).substr(2, 9),
+        name: client.name,
+        domain: client.domain,
+        engagementScore: Math.floor(Math.random() * 30) + 70,
+        maxScrollDepth: Math.floor(Math.random() * 30) + 70,
+        searches: [
+            { term: 'cardiology consultant', timestamp: new Date().toISOString() },
+            { term: 'london jobs', timestamp: new Date().toISOString() },
+            { term: 'pediatric nurse', timestamp: new Date().toISOString() }
+        ].slice(0, Math.floor(Math.random() * 3) + 1),
+        interactionRate: Math.floor(Math.random() * 20) + 30,
+        conversionRate: Math.floor(Math.random() * 10) + 5,
+        sessionDuration: Math.floor(Math.random() * 25) + 10,
+        firstSeen: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+        lastSeen: new Date().toISOString(),
+        filterUsage: {
+            location: Math.floor(Math.random() * 15) + 5,
+            specialty: Math.floor(Math.random() * 10) + 3,
+            salary_range: Math.floor(Math.random() * 8) + 2,
+            contract_type: Math.floor(Math.random() * 6) + 1
+        },
+        userInfo: index % 2 === 0 ? {
+            userId: 'user_' + Math.random().toString(36).substr(2, 9),
+            userEmail: `user${index}@${client.domain}`,
+            userDepartment: ['HR', 'Recruitment', 'Medical Staff', 'Admin'][index % 4]
+        } : null,
+        deviceInfo: {
+            screenResolution: ['1920x1080', '1366x768', '2560x1440', '1440x900'][index % 4],
+            viewportSize: ['1920x947', '1366x625', '2560x1297', '1440x757'][index % 4],
+            language: 'en-GB',
+            deviceType: ['desktop', 'mobile', 'tablet'][index % 3]
+        }
+    }));
+
+    const mockData = {
+        clients: enhancedClients,
+        aggregateStats: {
+            averageEngagement: 82,
+            averageScrollDepth: 75,
+            totalSearches: enhancedClients.reduce((sum, c) => sum + c.searches.length, 0),
+            averageInteractionRate: 45,
+            popularFilters: [
+                { filter: 'Location', count: 342 },
+                { filter: 'Specialty', count: 289 },
+                { filter: 'Salary Range', count: 234 },
+                { filter: 'Contract Type', count: 198 },
+                { filter: 'Experience Level', count: 156 },
+                { filter: 'Working Hours', count: 134 },
+                { filter: 'Benefits', count: 98 },
+                { filter: 'Start Date', count: 76 }
+            ],
+            popularSearchTerms: [
+                { term: 'cardiology', count: 156 },
+                { term: 'consultant', count: 134 },
+                { term: 'london', count: 121 },
+                { term: 'nurse', count: 98 },
+                { term: 'GP', count: 87 },
+                { term: 'surgery', count: 76 },
+                { term: 'pediatrics', count: 65 },
+                { term: 'emergency', count: 54 },
+                { term: 'mental health', count: 43 },
+                { term: 'locum', count: 32 }
+            ],
+            deviceBreakdown: {
+                desktop: 65,
+                mobile: 25,
+                tablet: 8,
+                unknown: 2
+            },
+            hourlyActivity: generateHourlyActivity()
+        }
+    };
+
+    enhancedAnalyticsData = mockData;
+    updateEnhancedAnalyticsDashboard(mockData);
+    showToast('Enhanced analytics loaded (sample data)', 'info');
+}
+
+// Generate hourly activity data
+function generateHourlyActivity() {
+    const hourly = {};
+    for (let hour = 0; hour < 24; hour++) {
+        const isPeakHour = hour >= 9 && hour <= 17;
+        const baseActivity = isPeakHour ? 80 : 20;
+        hourly[hour] = {
+            loads: Math.floor(Math.random() * baseActivity) + 20,
+            clicks: Math.floor(Math.random() * (baseActivity / 2)) + 10,
+            sessions: Math.floor(Math.random() * 15) + 5
+        };
+    }
+    return hourly;
+}
+
+// Update enhanced analytics dashboard
+function updateEnhancedAnalyticsDashboard(data) {
+    console.log('Updating enhanced analytics dashboard with data:', data);
+
+    // Update summary stats
+    document.getElementById('avgEngagementScore').textContent =
+        Math.round(data.aggregateStats.averageEngagement || 0);
+    document.getElementById('avgScrollDepth').textContent =
+        Math.round(data.aggregateStats.averageScrollDepth || 0) + '%';
+    document.getElementById('totalSearches').textContent =
+        data.aggregateStats.totalSearches || 0;
+    document.getElementById('avgInteractionRate').textContent =
+        Math.round(data.aggregateStats.averageInteractionRate || 45) + '%';
+
+    // Update clients table
+    updateEnhancedClientsTable(data.clients);
+
+    // Update popular filters
+    updatePopularFilters(data.aggregateStats.popularFilters);
+
+    // Update popular searches
+    updatePopularSearches(data.aggregateStats.popularSearchTerms);
+
+    // Update device chart
+    updateDeviceChart(data.aggregateStats.deviceBreakdown);
+
+    // Update activity heatmap
+    updateActivityHeatmap(data.aggregateStats.hourlyActivity);
+}
+
+// Update enhanced clients table
+function updateEnhancedClientsTable(clients) {
+    const tbody = document.getElementById('enhancedClientsTable');
+
+    if (!clients || clients.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No client data available</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = clients.map(client => `
+        <tr>
+            <td>
+                <div style="font-weight: 600; color: var(--dark);">${client.name}</div>
+                <div style="font-size: 0.75rem; color: var(--gray);">${client.domain || 'Unknown'}</div>
+            </td>
+            <td>
+                <code style="font-size: 0.75rem; background: var(--light); padding: 0.25rem 0.5rem; border-radius: 4px;">
+                    ${client.sessionId.substring(0, 8)}...
+                </code>
+            </td>
+            <td>
+                <span style="font-size: 1.25rem; font-weight: 700; color: var(--primary);">
+                    ${client.engagementScore}
+                </span>
+            </td>
+            <td>${client.maxScrollDepth}%</td>
+            <td>${client.searches?.length || 0}</td>
+            <td>${client.interactionRate}%</td>
+            <td>
+                <span class="${client.conversionRate > 10 ? 'stat-change positive' : 'stat-change'}"
+                      style="display: inline-block; padding: 0.25rem 0.5rem; border-radius: 12px;">
+                    ${client.conversionRate}%
+                </span>
+            </td>
+            <td>${client.sessionDuration} min</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="viewEnhancedClientDetails('${client.clientId}')">
+                    Details
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Update popular filters
+function updatePopularFilters(filters) {
+    const container = document.getElementById('popularFilters');
+
+    if (!filters || filters.length === 0) {
+        container.innerHTML = '<div class="empty-state">No filter data available</div>';
+        return;
+    }
+
+    container.innerHTML = filters.slice(0, 10).map((filter, index) => `
+        <div class="usage-metric" style="padding: 0.75rem 0; border-bottom: 1px solid #e2e8f0;">
+            <span class="metric-label" style="color: var(--dark); font-weight: 500;">
+                ${index + 1}. ${filter.filter}
+            </span>
+            <span class="metric-value" style="color: var(--primary); font-weight: 600;">
+                ${filter.count} uses
+            </span>
+        </div>
+    `).join('');
+}
+
+// Update popular searches
+function updatePopularSearches(searches) {
+    const container = document.getElementById('popularSearches');
+
+    if (!searches || searches.length === 0) {
+        container.innerHTML = '<div class="empty-state">No search data available</div>';
+        return;
+    }
+
+    container.innerHTML = searches.slice(0, 10).map((search, index) => `
+        <div class="usage-metric" style="padding: 0.75rem 0; border-bottom: 1px solid #e2e8f0;">
+            <span class="metric-label" style="color: var(--dark); font-weight: 500;">
+                ${index + 1}. ${search.term}
+            </span>
+            <span class="metric-value" style="color: var(--primary); font-weight: 600;">
+                ${search.count} searches
+            </span>
+        </div>
+    `).join('');
+}
+
+// Update device chart
+function updateDeviceChart(deviceData) {
+    const ctx = document.getElementById('deviceChart');
+    if (!ctx) return;
+
+    // Destroy existing chart if it exists
+    if (state.charts.device) {
+        state.charts.device.destroy();
+    }
+
+    state.charts.device = new Chart(ctx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Desktop', 'Mobile', 'Tablet', 'Unknown'],
+            datasets: [{
+                data: [
+                    deviceData?.desktop || 65,
+                    deviceData?.mobile || 25,
+                    deviceData?.tablet || 8,
+                    deviceData?.unknown || 2
+                ],
+                backgroundColor: ['#0066cc', '#48bb78', '#FFC000', '#718096'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update activity heatmap
+function updateActivityHeatmap(hourlyData) {
+    const container = document.getElementById('activityHeatmap');
+
+    if (!hourlyData) {
+        hourlyData = generateHourlyActivity();
+    }
+
+    // Find max activity for scaling
+    let maxActivity = 0;
+    Object.values(hourlyData).forEach(data => {
+        const total = (data.loads || 0) + (data.clicks || 0);
+        maxActivity = Math.max(maxActivity, total);
+    });
+
+    // Generate 24 hour cells
+    let html = '';
+    for (let hour = 0; hour < 24; hour++) {
+        const data = hourlyData[hour] || { loads: 0, clicks: 0, sessions: 0 };
+        const activity = data.loads + data.clicks;
+        const intensity = maxActivity > 0 ? (activity / maxActivity) : 0;
+
+        let className = 'heatmap-cell';
+        if (intensity > 0.75) className += ' peak';
+        else if (intensity > 0.5) className += ' high';
+        else if (intensity > 0.25) className += ' medium';
+        else if (intensity > 0) className += ' low';
+
+        const hourLabel = hour.toString().padStart(2, '0') + ':00';
+
+        html += `
+            <div class="${className}" style="position: relative; cursor: pointer;">
+                <div class="heatmap-tooltip" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+                     background: var(--dark); color: white; padding: 0.5rem; border-radius: 4px;
+                     font-size: 0.75rem; white-space: nowrap; opacity: 0; pointer-events: none;
+                     transition: opacity 0.2s; z-index: 1000;">
+                    ${hourLabel}<br>
+                    Loads: ${data.loads}<br>
+                    Clicks: ${data.clicks}<br>
+                    Sessions: ${data.sessions}
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+
+    // Add hover effects
+    container.querySelectorAll('.heatmap-cell').forEach(cell => {
+        cell.addEventListener('mouseenter', function() {
+            const tooltip = this.querySelector('.heatmap-tooltip');
+            if (tooltip) tooltip.style.opacity = '1';
+        });
+        cell.addEventListener('mouseleave', function() {
+            const tooltip = this.querySelector('.heatmap-tooltip');
+            if (tooltip) tooltip.style.opacity = '0';
+        });
+    });
+}
+
+// View enhanced client details
+function viewEnhancedClientDetails(clientId) {
+    const client = enhancedAnalyticsData?.clients.find(c => c.clientId === clientId);
+    if (!client) {
+        showToast('Client details not found', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('enhancedClientModal');
+    document.getElementById('enhancedClientModalTitle').textContent = `Analytics: ${client.name}`;
+
+    const content = `
+        <div class="client-detail-grid">
+            <div>
+                <h3 style="margin-bottom: 1rem; color: var(--dark);">Session Information</h3>
+                <div class="info-row">
+                    <div class="info-label">Session ID</div>
+                    <div class="info-value"><code>${client.sessionId}</code></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Client ID</div>
+                    <div class="info-value">${client.clientId}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Domain</div>
+                    <div class="info-value">${client.domain || 'Unknown'}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">First Seen</div>
+                    <div class="info-value">${new Date(client.firstSeen).toLocaleString()}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Last Seen</div>
+                    <div class="info-value">${new Date(client.lastSeen).toLocaleString()}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Session Duration</div>
+                    <div class="info-value">${client.sessionDuration} minutes</div>
+                </div>
+
+                ${client.searches && client.searches.length > 0 ? `
+                    <h3 style="margin: 2rem 0 1rem; color: var(--dark);">Search History</h3>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        ${client.searches.map(search => `
+                            <div class="usage-metric">
+                                <span class="metric-label">${search.term}</span>
+                                <span class="metric-value">${new Date(search.timestamp).toLocaleTimeString()}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+
+            <div>
+                <h3 style="margin-bottom: 1rem; color: var(--dark);">Engagement Metrics</h3>
+                <div class="stat-card">
+                    <div class="stat-value">${client.engagementScore}</div>
+                    <div class="stat-label">Engagement Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${client.maxScrollDepth}%</div>
+                    <div class="stat-label">Max Scroll Depth</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${client.interactionRate}%</div>
+                    <div class="stat-label">Interaction Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${client.conversionRate}%</div>
+                    <div class="stat-label">Conversion Rate</div>
+                </div>
+
+                ${client.filterUsage && Object.keys(client.filterUsage).length > 0 ? `
+                    <h3 style="margin: 2rem 0 1rem; color: var(--dark);">Filter Usage</h3>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        ${Object.entries(client.filterUsage).map(([filter, count]) => `
+                            <div class="usage-metric">
+                                <span class="metric-label">${filter.replace(/_/g, ' ')}</span>
+                                <span class="metric-value">${count} times</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+
+    document.getElementById('enhancedClientModalContent').innerHTML = content;
+    modal.classList.add('active');
+}
+
+// Search enhanced clients
+function searchEnhancedClients(query) {
+    if (!enhancedAnalyticsData || !enhancedAnalyticsData.clients) {
+        return;
+    }
+
+    const filtered = query ?
+        enhancedAnalyticsData.clients.filter(client =>
+            client.name.toLowerCase().includes(query.toLowerCase()) ||
+            client.domain?.toLowerCase().includes(query.toLowerCase()) ||
+            client.sessionId?.toLowerCase().includes(query.toLowerCase())
+        ) : enhancedAnalyticsData.clients;
+
+    updateEnhancedClientsTable(filtered);
+}
+
+// Refresh enhanced analytics
+function refreshEnhancedAnalytics() {
+    showToast('Refreshing enhanced analytics...', 'info');
+    loadEnhancedAnalytics();
+}
+
+// Export client data
+async function exportClientData(clientId) {
+    const client = enhancedAnalyticsData?.clients.find(c => c.clientId === clientId);
+    if (!client) {
+        showToast('Client not found', 'error');
+        return;
+    }
+
+    try {
+        const exportData = {
+            client: client,
+            exportDate: new Date().toISOString(),
+            metrics: {
+                engagement: client.engagementScore,
+                scrollDepth: client.maxScrollDepth,
+                interactionRate: client.interactionRate,
+                conversionRate: client.conversionRate
+            }
+        };
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${clientId}_analytics_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showToast('Client data exported successfully', 'success');
+    } catch (error) {
+        console.error('Export error:', error);
+        showToast('Failed to export client data', 'error');
+    }
+}
+
+
+    function showSection(sectionId) {
+    // Update menu
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // Find and activate the correct menu item
+    const menuItems = document.querySelectorAll('.menu-item');
+    menuItems.forEach(item => {
+        if (item.textContent.toLowerCase().includes(sectionId.replace('-', ' ').toLowerCase()) ||
+            (sectionId === 'enhanced-analytics' && item.textContent.includes('Enhanced Analytics')) ||
+            (sectionId === 'dashboard' && item.textContent.includes('Dashboard')) ||
+            (sectionId === 'jobsdata' && item.textContent.includes('Jobs Data'))) {
+            item.classList.add('active');
+        }
+    });
+
+    // Update sections
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+
+    // Update page title
+    const titles = {
+        dashboard: 'Dashboard',
+        sessions: 'Live Sessions',
+        clients: 'Client Management',
+        analytics: 'Analytics',
+        'enhanced-analytics': 'Enhanced Analytics',
+        revenue: 'Revenue Calculator',
+        api: 'API Management',
+        activity: 'Activity Feed',
+        jobsdata: 'Jobs Data API',
+        settings: 'Settings'
+    };
+    document.getElementById('pageTitle').textContent = titles[sectionId] || 'Dashboard';
+
+    // Load section data
+    switch(sectionId) {
+        case 'sessions':
+            loadSessions();
+            break;
+        case 'clients':
+            loadClients();
+            break;
+        case 'api':
+            loadAPIKeys();
+            break;
+        case 'activity':
+            loadActivity();
+            break;
+        case 'revenue':
+            loadRevenueCalculator();
+            break;
+        case 'jobsdata':
+            initializeDynamicEndpoints();
+            break;
+        case 'enhanced-analytics':
+            loadEnhancedAnalytics();
+            break;
+        case 'settings':
+            checkSystemHealth();
+            break;
+    }
+}
+
+// Add menu item for Enhanced Analytics
+function addEnhancedAnalyticsMenuItem() {
+    const sidebar = document.querySelector('.sidebar-menu');
+    if (!sidebar) return;
+
+    // Check if already exists
+    if (Array.from(sidebar.querySelectorAll('.menu-item')).some(item =>
+        item.textContent.includes('Enhanced Analytics'))) {
+        return;
+    }
+
+    // Find the regular Analytics menu item
+    const analyticsMenu = Array.from(sidebar.querySelectorAll('.menu-item')).find(item =>
+        item.textContent.includes('Analytics') && !item.textContent.includes('Enhanced')
+    );
+
+    if (analyticsMenu) {
+        const enhancedMenuItem = document.createElement('button');
+        enhancedMenuItem.className = 'menu-item';
+        enhancedMenuItem.onclick = () => showSection('enhanced-analytics');
+        enhancedMenuItem.innerHTML = `
+            <span class="menu-icon">📊</span>
+            <span>Enhanced Analytics</span>
+        `;
+        analyticsMenu.parentNode.insertBefore(enhancedMenuItem, analyticsMenu.nextSibling);
+    }
+}
+
+// Fixed revoke API key function
+async function revokeApiKey(clientId) {
+    if (!confirm('Are you sure you want to revoke this API key?')) return;
+
+    try {
+        // Remove from local state
+        state.apiKeys = state.apiKeys.filter(key => key.clientId !== clientId);
+
+        // Update the display
+        loadAPIKeys();
+
+        // Send delete request to server
+        const response = await fetch(`/api/admin/apikey/${clientId}`, {
+            method: 'DELETE',
+            headers: {
+                'x-session-token': sessionToken
+            }
+        });
+
+        if (response.ok) {
+            showToast('API key revoked successfully', 'success');
+        } else {
+            // Even if server fails, we've removed it from UI
+            showToast('API key removed locally', 'warning');
+        }
+
+        // Reload dashboard to sync
+        loadDashboard();
+
+    } catch (error) {
+        console.error('Error revoking API key:', error);
+        showToast('API key removed from view', 'info');
+        // Still reload to ensure consistency
+        loadDashboard();
+    }
+}
+
+// Code example switcher
+function showCodeExample(language) {
+    // Update tab states
+    document.querySelectorAll('.code-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+
+    // Hide all examples
+    document.querySelectorAll('.code-example').forEach(example => {
+        example.style.display = 'none';
+    });
+
+    // Show selected example
+    const selectedExample = document.getElementById(`code-${language}`);
+    if (selectedExample) {
+        selectedExample.style.display = 'block';
+    }
+}
+
+// System health check function
+async function checkSystemHealth() {
+    try {
+        const response = await fetch('/health', {
+            headers: {
+                'x-session-token': sessionToken
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Health check failed');
+        }
+
+        const health = await response.json();
+
+        // Update system status
+        document.getElementById('systemStatus').textContent = health.status || 'Unknown';
+        document.getElementById('systemStatus').style.color =
+            health.status === 'OK' ? 'var(--secondary)' :
+            health.status === 'PARTIAL' ? 'var(--warning)' : 'var(--danger)';
+
+        // Update DynamoDB status
+        const dbStatus = health.dynamoDB?.connected ? 'Connected' : 'Disconnected';
+        document.getElementById('dynamoStatus').textContent = dbStatus;
+        document.getElementById('dynamoStatus').style.color =
+            health.dynamoDB?.connected ? 'var(--secondary)' : 'var(--danger)';
+
+        // Update feed source
+        document.getElementById('feedSource').textContent = health.cache?.source || 'Unknown';
+
+        // Update cache age
+        if (health.cache?.age_seconds) {
+            const minutes = Math.floor(health.cache.age_seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            if (hours > 0) {
+                document.getElementById('cacheAge').textContent = `${hours}h ${minutes % 60}m`;
+            } else {
+                document.getElementById('cacheAge').textContent = `${minutes}m`;
+            }
+        } else {
+            document.getElementById('cacheAge').textContent = 'No cache';
+        }
+
+        // Update detailed information
+        document.getElementById('feedUrl').textContent = health.feedUrl || 'Not configured';
+        document.getElementById('totalJobsCached').textContent = health.cache?.jobs_count || 0;
+        document.getElementById('lastSyncTime').textContent = health.cache?.last_fetch ?
+            new Date(health.cache.last_fetch).toLocaleString() : 'Never';
+
+        // Calculate uptime
+        if (health.uptime) {
+            const uptimeHours = Math.floor(health.uptime / 3600);
+            const uptimeMinutes = Math.floor((health.uptime % 3600) / 60);
+            document.getElementById('serverUptime').textContent =
+                `${uptimeHours}h ${uptimeMinutes}m`;
+        }
+
+        // Memory usage
+        if (health.memory_usage) {
+            const memoryMB = Math.round(health.memory_usage.heapUsed / 1024 / 1024);
+            const totalMB = Math.round(health.memory_usage.heapTotal / 1024 / 1024);
+            document.getElementById('memoryUsage').textContent =
+                `${memoryMB}MB / ${totalMB}MB`;
+        }
+
+        showToast('System health checked', 'success');
+
+    } catch (error) {
+        console.error('System health check error:', error);
+
+        // Update with error state
+        document.getElementById('systemStatus').textContent = 'Error';
+        document.getElementById('systemStatus').style.color = 'var(--danger)';
+        document.getElementById('dynamoStatus').textContent = 'Unknown';
+        document.getElementById('feedSource').textContent = 'Unknown';
+        document.getElementById('cacheAge').textContent = 'Unknown';
+
+        showToast('Failed to check system health', 'error');
+    }
+}
+
+// Initialize enhanced analytics on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Add the enhanced analytics menu item
+    setTimeout(addEnhancedAnalyticsMenuItem, 100);
+
+    // Check system health on settings page load
+    if (window.location.hash === '#settings') {
+        checkSystemHealth();
+    }
+});
+
+// Fix the Generate Key Modal functionality
+function showGenerateKeyModal() {
+    const modal = document.getElementById('generateKeyModal');
+    if (modal) {
+        modal.classList.add('active');
+    } else {
+        // Fallback to prompt if modal doesn't exist
+        const clientName = prompt('Enter client name:');
+        const clientId = prompt('Enter client ID:');
+
+        if (clientName && clientId) {
+            generateAPIKey(clientId, clientName);
+        }
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+function submitGenerateKey() {
+    const clientName = document.getElementById('apiClientName').value;
+    const clientId = document.getElementById('apiClientId').value;
+
+    if (clientName && clientId) {
+        generateAPIKey(clientId, clientName);
+        closeModal('generateKeyModal');
+        document.getElementById('generateKeyForm').reset();
+    }
+}
+
+// Ensure generateAPIKey function works properly
+async function generateAPIKey(clientId, clientName) {
+    try {
+        const response = await fetch('/api/admin/generate-api-key', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-session-token': sessionToken
+            },
+            body: JSON.stringify({ clientId, clientName })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+
+            // Add to local state
+            state.apiKeys.push({
+                clientId: clientId,
+                clientName: clientName,
+                apiKey: data.apiKey,
+                fullKey: data.apiKey,
+                createdAt: new Date().toISOString(),
+                totalUsage: 0,
+                lastUsed: null
+            });
+
+            // Refresh the display
+            loadAPIKeys();
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(data.apiKey).then(() => {
+                showToast('API key generated and copied to clipboard', 'success');
+            }).catch(() => {
+                showToast('API key generated successfully', 'success');
+            });
+
+        } else {
+            throw new Error('Failed to generate API key');
+        }
+    } catch (error) {
+        console.error('Generate API key error:', error);
+        showToast('Error generating API key', 'error');
+    }
+}
+
+    // Client CPC rates storage
+let clientCPCRates = JSON.parse(localStorage.getItem('clientCPCRates') || '{}');
+
+// Load billing section
+function loadBillingSection() {
+    const select = document.getElementById('billingClient');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Select a client...</option>' +
+        state.clients.map(client =>
+            `<option value="${client.clientId}">${client.name} (${client.domain})</option>`
+        ).join('');
+
+    // Set default month to previous month
+    const now = new Date();
+    now.setMonth(now.getMonth() - 1);
+    document.getElementById('billingMonth').value = now.toISOString().slice(0, 7);
+}
+
+// Load client billing settings
+function loadClientBillingSettings() {
+    const clientId = document.getElementById('billingClient').value;
+    if (!clientId) {
+        document.getElementById('clientBillingSettings').style.display = 'none';
+        return;
+    }
+
+    document.getElementById('clientBillingSettings').style.display = 'block';
+
+    // Load saved CPC rate or default
+    const savedRate = clientCPCRates[clientId] || 0.50;
+    document.getElementById('clientCPC').value = savedRate;
+}
+
+// Save client CPC rate
+function saveClientCPC() {
+    const clientId = document.getElementById('billingClient').value;
+    const cpc = parseFloat(document.getElementById('clientCPC').value);
+
+    if (clientId && cpc > 0) {
+        clientCPCRates[clientId] = cpc;
+        localStorage.setItem('clientCPCRates', JSON.stringify(clientCPCRates));
+        showToast('Cost per click rate saved', 'success');
+    }
+}
+
+// Generate billing report
+async function generateBillingReport() {
+    const clientId = document.getElementById('billingClient').value;
+    const billingMonth = document.getElementById('billingMonth').value;
+    const cpc = parseFloat(document.getElementById('clientCPC').value || 0.50);
+
+    if (!clientId) {
+        showToast('Please select a client', 'warning');
+        return;
+    }
+
+    if (!billingMonth) {
+        showToast('Please select a billing month', 'warning');
+        return;
+    }
+
+    try {
+        // Get client data
+        const client = state.clients.find(c => c.clientId === clientId);
+        if (!client) {
+            throw new Error('Client not found');
+        }
+
+        // Parse month
+        const [year, month] = billingMonth.split('-').map(Number);
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59);
+
+        // Filter clicks for the selected month
+        // In production, this would come from the API
+        const mockClicks = generateMockClickData(client, startDate, endDate);
+
+        // Group clicks by job
+        const jobClicks = {};
+        mockClicks.forEach(click => {
+            const jobKey = click.jobId;
+            if (!jobClicks[jobKey]) {
+                jobClicks[jobKey] = {
+                    jobId: click.jobId,
+                    jobTitle: click.jobTitle,
+                    location: click.location,
+                    clicks: 0,
+                    dates: []
+                };
+            }
+            jobClicks[jobKey].clicks++;
+            jobClicks[jobKey].dates.push(click.date);
+        });
+
+        // Calculate totals
+        const totalClicks = mockClicks.length;
+        const totalCost = totalClicks * cpc;
+        const uniqueJobs = Object.keys(jobClicks).length;
+
+        // Update display
+        document.getElementById('reportTitle').textContent =
+            `Billing Report - ${client.name} - ${new Date(year, month - 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}`;
+        document.getElementById('totalOwed').textContent = `£${totalCost.toFixed(2)}`;
+        document.getElementById('billingPeriodText').textContent = 'Total Amount Due';
+        document.getElementById('totalClicks').textContent = totalClicks.toLocaleString();
+        document.getElementById('cpcRate').textContent = `£${cpc.toFixed(2)}`;
+        document.getElementById('uniqueJobs').textContent = uniqueJobs.toLocaleString();
+
+        // Populate table
+        const tbody = document.getElementById('billingDetailsTable');
+        tbody.innerHTML = Object.values(jobClicks)
+            .sort((a, b) => b.clicks - a.clicks)
+            .map(job => `
+                <tr>
+                    <td>${job.dates[0].toLocaleDateString()}</td>
+                    <td>${job.jobTitle}</td>
+                    <td><code>${job.jobId}</code></td>
+                    <td>${job.location}</td>
+                    <td>${job.clicks}</td>
+                    <td>£${(job.clicks * cpc).toFixed(2)}</td>
+                </tr>
+            `).join('');
+
+        document.getElementById('footerTotalClicks').textContent = totalClicks;
+        document.getElementById('footerTotalCost').textContent = `£${totalCost.toFixed(2)}`;
+
+        document.getElementById('billingReport').style.display = 'block';
+
+        // Store report data for export
+        window.currentBillingReport = {
+            client: client,
+            month: billingMonth,
+            clicks: mockClicks,
+            jobClicks: jobClicks,
+            totalClicks: totalClicks,
+            totalCost: totalCost,
+            cpc: cpc
+        };
+
+        showToast('Billing report generated', 'success');
+
+    } catch (error) {
+        console.error('Error generating billing report:', error);
+        showToast('Failed to generate billing report', 'error');
+    }
+}
+
+// Generate mock click data (replace with real API call)
+function generateMockClickData(client, startDate, endDate) {
+    const clicks = [];
+    const jobs = [
+        { id: 'JOB001', title: 'Consultant Cardiologist', location: 'London' },
+        { id: 'JOB002', title: 'GP Partner', location: 'Manchester' },
+        { id: 'JOB003', title: 'Registrar - Emergency Medicine', location: 'Birmingham' },
+        { id: 'JOB004', title: 'Staff Nurse', location: 'Leeds' },
+        { id: 'JOB005', title: 'Consultant Psychiatrist', location: 'Bristol' }
+    ];
+
+    // Generate random clicks
+    const numClicks = Math.floor(Math.random() * 100) + 50;
+    for (let i = 0; i < numClicks; i++) {
+        const job = jobs[Math.floor(Math.random() * jobs.length)];
+        const dayOffset = Math.floor(Math.random() * 30);
+        const clickDate = new Date(startDate);
+        clickDate.setDate(clickDate.getDate() + dayOffset);
+
+        clicks.push({
+            date: clickDate,
+            jobId: job.id,
+            jobTitle: job.title,
+            location: job.location,
+            clientId: client.clientId
+        });
+    }
+
+    return clicks;
+}
+
+// Export billing report as PDF
+async function exportBillingPDF() {
+    if (!window.currentBillingReport) {
+        showToast('No report to export', 'warning');
+        return;
+    }
+
+    const report = window.currentBillingReport;
+
+    // In production, you would use a library like jsPDF
+    // For now, we'll create a printable version
+    const printWindow = window.open('', '_blank');
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Billing Report - ${report.client.name}</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { color: #333; }
+                .header { border-bottom: 2px solid #0066cc; padding-bottom: 10px; margin-bottom: 20px; }
+                .summary { background: #f0f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                th { background: #f0f4f8; font-weight: bold; }
+                .total { font-weight: bold; background: #f0f4f8; }
+                .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>BMJ Careers Widget - Traffic Billing Report</h1>
+                <p><strong>Client:</strong> ${report.client.name}</p>
+                <p><strong>Period:</strong> ${new Date(report.month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
+                <p><strong>Generated:</strong> ${new Date().toLocaleDateString('en-GB')}</p>
+            </div>
+
+            <div class="summary">
+                <h2>Summary</h2>
+                <p><strong>Total Clicks:</strong> ${report.totalClicks}</p>
+                <p><strong>Cost Per Click:</strong> £${report.cpc.toFixed(2)}</p>
+                <p><strong>Total Amount Due:</strong> £${report.totalCost.toFixed(2)}</p>
+            </div>
+
+            <h2>Click Details by Job</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Job ID</th>
+                        <th>Job Title</th>
+                        <th>Location</th>
+                        <th>Clicks</th>
+                        <th>Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.values(report.jobClicks).map(job => `
+                        <tr>
+                            <td>${job.jobId}</td>
+                            <td>${job.jobTitle}</td>
+                            <td>${job.location}</td>
+                            <td>${job.clicks}</td>
+                            <td>£${(job.clicks * report.cpc).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                <tfoot>
+                    <tr class="total">
+                        <td colspan="3">Total</td>
+                        <td>${report.totalClicks}</td>
+                        <td>£${report.totalCost.toFixed(2)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <div class="footer">
+                <p>This report confirms ${report.totalClicks} clicks from the BMJ Careers widget installed on ${report.client.domain} during the specified period.</p>
+                <p>Please invoice BMJ Careers for the total amount of £${report.totalCost.toFixed(2)}.</p>
+            </div>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
+
+    showToast('PDF export opened in new window', 'success');
+}
+
+// Export billing report as CSV
+function exportBillingCSV() {
+    if (!window.currentBillingReport) {
+        showToast('No report to export', 'warning');
+        return;
+    }
+
+    const report = window.currentBillingReport;
+
+    let csv = 'Job ID,Job Title,Location,Clicks,Cost\n';
+    Object.values(report.jobClicks).forEach(job => {
+        csv += `"${job.jobId}","${job.jobTitle}","${job.location}",${job.clicks},£${(job.clicks * report.cpc).toFixed(2)}\n`;
+    });
+    csv += `\nTotal,,,${report.totalClicks},£${report.totalCost.toFixed(2)}\n`;
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `billing_${report.client.name}_${report.month}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    showToast('CSV exported successfully', 'success');
+}
+
+    const monthlyOwed = state.sessions.reduce((sum, s) => {
+    const clientCPC = clientCPCRates[s.clientIdentifier] || 0.50;
+    return sum + ((s.totalMetrics?.clicks || 0) * clientCPC);
+}, 0);
+document.getElementById('monthlyOwed').textContent = `£${monthlyOwed.toFixed(2)}`;
+
+
+    // Add this at the end of the script section
+window.debugTracking = function() {
+    console.log('=== TRACKING DEBUG ===');
+    console.log('Total Clients:', state.clients.length);
+    console.log('Total Sessions:', state.sessions.length);
+
+    state.clients.forEach(client => {
+        console.log(`Client: ${client.name} (${client.clientId})`);
+        console.log(`  - Sessions: ${client.sessions.length}`);
+        console.log(`  - Clicks: ${client.totalMetrics.clicks}`);
+        console.log(`  - Loads: ${client.totalMetrics.loads}`);
+    });
+
+    if (state.sessions.length > 0) {
+        console.log('\nSession Details:');
+        state.sessions.forEach(session => {
+            console.log(`  ${session.clientIdentifier}: ${session.totalMetrics.clicks} clicks`);
+        });
+    }
+};
+
+// Also add a manual refresh function
+window.forceRefresh = async function() {
+    console.log('Force refreshing dashboard...');
+    await loadDashboard();
+    console.log('Refresh complete');
+    window.debugTracking();
+};
+
+    // Debug function to check aggregation
+window.debugAggregation = function() {
+    console.log('=== CLIENT AGGREGATION DEBUG ===');
+    state.clients.forEach(client => {
+        console.log(`\nClient: ${client.name} (${client.clientId})`);
+        console.log(`  Domain: ${client.domain}`);
+        console.log(`  Session Count: ${client.sessionCount || 1}`);
+        console.log(`  Total Page Views: ${client.totalMetrics.loads}`);
+        console.log(`  Total Clicks: ${client.totalMetrics.clicks}`);
+        console.log(`  Total Revenue: £${client.totalMetrics.revenue.toFixed(2)}`);
+        console.log(`  Is Test: ${client.isTestEnvironment ? 'Yes' : 'No'}`);
+    });
+};
+
+    // Enhanced real-time updates
+function startRealTimeUpdates() {
+    // Update every 10 seconds for testing (change to 30 seconds in production)
+    state.refreshInterval = setInterval(() => {
+        if (state.settings.enableNotifications) {
+            loadDashboard();
+        }
+    }, 10000); // 10 seconds for testing
+}
+
 </script>
+<!-- Generate API Key Modal -->
+<div class="modal" id="generateKeyModal">
+    <div class="modal-content">
+        <h2 style="margin-bottom: 1.5rem;">Generate API Key</h2>
+        <form id="generateKeyForm" onsubmit="event.preventDefault(); submitGenerateKey();">
+            <div class="form-group">
+                <label class="form-label">Client Name</label>
+                <input type="text" class="form-input" id="apiClientName" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Client ID</label>
+                <input type="text" class="form-input" id="apiClientId" required>
+                <div class="form-help">Use domain name or unique identifier</div>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">Generate Key</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('generateKeyModal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Client Details Modal -->
+<div class="modal" id="clientDetailsModal">
+    <div class="modal-content" style="max-width: 800px;">
+        <h2 id="clientModalTitle" style="margin-bottom: 1.5rem;">Client Details</h2>
+        <div id="clientModalContent">
+            <!-- Client details will be loaded here -->
+        </div>
+        <button class="btn btn-secondary" onclick="closeModal('clientDetailsModal')" style="margin-top: 1.5rem;">
+            Close
+        </button>
+    </div>
+</div>
 </body>
 </html>
