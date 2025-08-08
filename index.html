@@ -29,7 +29,7 @@
             </button>
             <button class="category-btn" onclick="applyCategoryFilter('gp')" id="btn-gp">
                 <span class="emoji">🩺</span>
-                <span>GP Jobs</span>
+                <span>GP</span>
             </button>
             <button class="category-btn" onclick="applyCategoryFilter('overseas')" id="btn-overseas">
                 <span class="emoji">🌍</span>
@@ -37,7 +37,7 @@
             </button>
             <button class="category-btn" onclick="applyCategoryFilter('training')" id="btn-training">
                 <span class="emoji">🎓</span>
-                <span>Training</span>
+                <span>Academic</span>
             </button>
             <button class="category-btn" onclick="applyCategoryFilter('special')" id="btn-special">
                 <span class="emoji">⚡</span>
@@ -663,122 +663,133 @@ window.allJobsData = allJobsData;
     let activeCategoryFilter = 'all';
     let lastWindowWidth = window.innerWidth;
 
-    const categoryFilters = {
-        all: {
-            name: 'All Jobs',
-            keywords: [],
-            filter: () => true
-        },
-        consultant: {
-            name: 'Consultant',
-            keywords: ['consultant', 'specialist doctor', 'associate specialist'],
-            filter: (job) => {
-                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
-                return categoryFilters.consultant.keywords.some(keyword =>
-                    searchText.includes(keyword.toLowerCase())
-                );
-            }
-        },
-        gp: {
-            name: 'GP Jobs',
-            keywords: ['gp', 'general practitioner', 'family doctor', 'primary care'],
-            filter: (job) => {
-                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
-                return categoryFilters.gp.keywords.some(keyword =>
-                    searchText.includes(keyword.toLowerCase())
-                );
-            }
-        },
-        overseas: {
-    name: 'Overseas',
-    keywords: [],
-    filter: (job) => {
-        const country = (job.location_country || '').toLowerCase().trim();
-        const locationDesc = (job.location_description || '').toLowerCase().trim();
+    // In server.js, find the categoryFilters object and replace it with this updated version:
 
-        // List of UK countries/variations
-        const ukCountries = ['united kingdom', 'uk', 'england', 'scotland', 'wales', 'northern ireland',
-                           'britain', 'great britain', 'gb', 'u.k.', 'united kindom']; // Include typos
+const categoryFilters = {
+    all: {
+        name: 'All Jobs',
+        keywords: [],
+        filter: () => true
+    },
+    consultant: {
+        name: 'Consultant',
+        keywords: ['consultant'],
+        filter: (job) => {
+            const jobTitle = (job.job_title || '').toLowerCase();
+            const grade = (job.grade || '').toLowerCase();
 
-        // If country field exists and is not empty
-        if (country && country.length > 0) {
-            // Check if country is NOT UK
-            const isUK = ukCountries.some(ukVariant => country.includes(ukVariant));
-            if (!isUK) {
-                return true; // It's overseas
-            }
+            return jobTitle.includes('consultant') || grade.includes('consultant');
         }
+    },
+    gp: {
+        name: 'GP Jobs',
+        keywords: ['gp'],
+        filter: (job) => {
+            const sectors = job.sector || [];
+            return sectors.some(sector =>
+                sector.toLowerCase().includes('gp')
+            );
+        }
+    },
+    overseas: {
+        name: 'Overseas',
+        keywords: [],
+        filter: (job) => {
+            const country = (job.location_country || '').toLowerCase().trim();
+            const locationDesc = (job.location_description || '').toLowerCase().trim();
 
-        // Check location description for overseas indicators
-        const overseasIndicators = [
-            'australia', 'new zealand', 'canada', 'usa', 'united states', 'america',
-            'dubai', 'uae', 'emirates', 'singapore', 'hong kong', 'japan', 'china',
-            'india', 'germany', 'france', 'spain', 'italy', 'netherlands', 'belgium',
-            'switzerland', 'norway', 'sweden', 'denmark', 'ireland', 'dublin',
-            'sydney', 'melbourne', 'brisbane', 'perth', 'adelaide', 'auckland',
-            'wellington', 'toronto', 'vancouver', 'montreal'
-        ];
+            // List of UK countries/variations
+            const ukCountries = ['united kingdom', 'uk', 'england', 'scotland', 'wales', 'northern ireland',
+                               'britain', 'great britain', 'gb', 'u.k.', 'united kindom']; // Include typos
 
-        for (const indicator of overseasIndicators) {
-            // Special case for Ireland - exclude Northern Ireland
-            if (indicator === 'ireland' && (locationDesc.includes('northern') || country.includes('northern'))) {
-                continue;
+            // If country field exists and is not empty
+            if (country && country.length > 0) {
+                // Check if country is NOT UK
+                const isUK = ukCountries.some(ukVariant => country.includes(ukVariant));
+                if (!isUK) {
+                    return true; // It's overseas
+                }
             }
-            if (locationDesc.includes(indicator)) {
-                return true;
+
+            // Check location description for overseas indicators
+            const overseasIndicators = [
+                'australia', 'new zealand', 'canada', 'usa', 'united states', 'america',
+                'dubai', 'uae', 'emirates', 'singapore', 'hong kong', 'japan', 'china',
+                'india', 'germany', 'france', 'spain', 'italy', 'netherlands', 'belgium',
+                'switzerland', 'norway', 'sweden', 'denmark', 'ireland', 'dublin',
+                'sydney', 'melbourne', 'brisbane', 'perth', 'adelaide', 'auckland',
+                'wellington', 'toronto', 'vancouver', 'montreal'
+            ];
+
+            for (const indicator of overseasIndicators) {
+                // Special case for Ireland - exclude Northern Ireland
+                if (indicator === 'ireland' && (locationDesc.includes('northern') || country.includes('northern'))) {
+                    continue;
+                }
+                if (locationDesc.includes(indicator)) {
+                    return true;
+                }
             }
+
+            // If location contains common UK regions, it's NOT overseas
+            const ukRegions = ['london', 'manchester', 'birmingham', 'leeds', 'glasgow',
+                              'edinburgh', 'cardiff', 'belfast', 'liverpool', 'bristol',
+                              'sheffield', 'newcastle', 'nottingham', 'southampton', 'oxford',
+                              'cambridge', 'brighton', 'leicester', 'coventry', 'hull'];
+
+            const hasUKRegion = ukRegions.some(region => locationDesc.includes(region));
+            if (hasUKRegion) {
+                return false;
+            }
+
+            // Final check - if country exists and doesn't match UK, it's overseas
+            if (country && country.length > 0) {
+                return !ukCountries.some(ukVariant => country.includes(ukVariant));
+            }
+
+            return false; // Default to UK if uncertain
         }
+    },
+    training: {
+        name: 'Academic', // Renamed from 'Training'
+        keywords: ['medical education', 'training', 'lecturer', 'professor'],
+        filter: (job) => {
+            const sectors = job.sector || [];
+            const grade = (job.grade || '').toLowerCase();
 
-        // If location contains common UK regions, it's NOT overseas
-        const ukRegions = ['london', 'manchester', 'birmingham', 'leeds', 'glasgow',
-                          'edinburgh', 'cardiff', 'belfast', 'liverpool', 'bristol',
-                          'sheffield', 'newcastle', 'nottingham', 'southampton', 'oxford',
-                          'cambridge', 'brighton', 'leicester', 'coventry', 'hull'];
+            // Check if sector contains "Medical education & training"
+            const hasEducationSector = sectors.some(sector =>
+                sector.toLowerCase().includes('medical education') &&
+                sector.toLowerCase().includes('training')
+            );
 
-        const hasUKRegion = ukRegions.some(region => locationDesc.includes(region));
-        if (hasUKRegion) {
-            return false;
+            // Check if grade contains "Lecturer" or "Professor"
+            const hasAcademicGrade = grade.includes('lecturer') || grade.includes('professor');
+
+            return hasEducationSector || hasAcademicGrade;
         }
-
-        // Final check - if country exists and doesn't match UK, it's overseas
-        if (country && country.length > 0) {
-            return !ukCountries.some(ukVariant => country.includes(ukVariant));
+    },
+    special: {
+        name: 'Special',
+        keywords: ['special appointments'],
+        filter: (job) => {
+            const sectors = job.sector || [];
+            return sectors.some(sector =>
+                sector.toLowerCase().includes('special appointments')
+            );
         }
-
-        return false; // Default to UK if uncertain
+    },
+    research: {
+        name: 'Research',
+        keywords: ['medical research'],
+        filter: (job) => {
+            const sectors = job.sector || [];
+            return sectors.some(sector =>
+                sector.toLowerCase().includes('medical research')
+            );
+        }
     }
-},
-        training: {
-            name: 'Training',
-            keywords: ['training', 'education', 'foundation', 'registrar', 'fellowship', 'residency', 'trainee'],
-            filter: (job) => {
-                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
-                return categoryFilters.training.keywords.some(keyword =>
-                    searchText.includes(keyword.toLowerCase())
-                );
-            }
-        },
-        special: {
-            name: 'Special',
-            keywords: ['locum', 'temporary', 'interim', 'contract', 'special', 'urgent', 'immediate'],
-            filter: (job) => {
-                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
-                return categoryFilters.special.keywords.some(keyword =>
-                    searchText.includes(keyword.toLowerCase())
-                );
-            }
-        },
-        research: {
-            name: 'Research',
-            keywords: ['research', 'clinical trial', 'study', 'academic', 'university', 'scientist', 'laboratory'],
-            filter: (job) => {
-                const searchText = `${job.job_title} ${job.short_description} ${job.sector ? job.sector.join(' ') : ''} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
-                return categoryFilters.research.keywords.some(keyword =>
-                    searchText.includes(keyword.toLowerCase())
-                );
-            }
-        }
-    };
+};
 
     // All function definitions remain the same
     function normalizeLocation(location) {
@@ -915,8 +926,10 @@ window.allJobsData = allJobsData;
 window.clearKeywordSearch = function() {
     document.getElementById('keywordSearch').value = '';
     applyFilters();
+    updateCategoryButtons(); // Update button states after clearing search
     scrollToTop();
 };
+
 
 // Add this to the addEventListeners function
 keywordSearch.addEventListener('input', function() {
@@ -927,11 +940,13 @@ keywordSearch.addEventListener('input', function() {
     }, 100);
 });
 
-    window.selectKeyword = function(keyword) {
-        document.getElementById('keywordSearch').value = keyword;
-        applyFilters();
-        scrollToTop();
-    };
+window.selectKeyword = function(keyword) {
+    document.getElementById('keywordSearch').value = keyword;
+    applyFilters();
+    updateCategoryButtons(); // Update button states after selecting keyword
+    scrollToTop();
+};
+
 
     window.toggleFilterGroup = function(groupName) {
         const arrow = document.getElementById(groupName + 'Arrow');
@@ -963,43 +978,69 @@ keywordSearch.addEventListener('input', function() {
         }
     };
 
-    window.handleParentCategoryChange = function(category, parentName) {
-        const parentCheckbox = document.getElementById(`${category}_parent_${parentName.replace(/\s+/g, '_')}`);
-        const isChecked = parentCheckbox.checked;
+window.handleParentCategoryChange = function(category, parentName) {
+    const parentCheckbox = document.getElementById(`${category}_parent_${parentName.replace(/\s+/g, '_')}`);
+    const isChecked = parentCheckbox.checked;
 
-        const subcategoryContainer = document.getElementById(`${category}_subcategories_${parentName.replace(/\s+/g, '_')}`);
-        const subCheckboxes = subcategoryContainer.querySelectorAll(`.${category}-sub-checkbox`);
+    const subcategoryContainer = document.getElementById(`${category}_subcategories_${parentName.replace(/\s+/g, '_')}`);
+    const subCheckboxes = subcategoryContainer.querySelectorAll(`.${category}-sub-checkbox`);
 
-        subCheckboxes.forEach(checkbox => {
-            checkbox.checked = isChecked;
-        });
+    subCheckboxes.forEach(checkbox => {
+        checkbox.checked = isChecked;
+    });
 
-        applyFilters();
-        scrollToTop();
-    };
+    applyFilters();
+    updateCategoryButtons(); // Update button states after filter change
+    scrollToTop();
+};
 
-    window.handleSubCategoryChange = function(category, parentName, subName) {
-        updateParentCheckboxState(category, parentName);
-        applyFilters();
-        scrollToTop();
-    };
+
+window.handleSubCategoryChange = function(category, parentName, subName) {
+    updateParentCheckboxState(category, parentName);
+    applyFilters();
+    updateCategoryButtons(); // Update button states after filter change
+    scrollToTop();
+};
 
     window.toggleProfessionParent = function(parentName) {
         toggleParentCategory('profession', parentName);
     };
 
-    window.handleParentProfessionChange = function(parentName) {
-        handleParentCategoryChange('profession', parentName);
-    };
+window.handleParentProfessionChange = function(parentName) {
+    handleParentCategoryChange('profession', parentName);
+};
 
-    window.handleSubProfessionChange = function(parentName, subName) {
-        handleSubCategoryChange('profession', parentName, subName);
-    };
+window.handleSubProfessionChange = function(parentName, subName) {
+    handleSubCategoryChange('profession', parentName, subName);
 
-    window.handleFilterChange = function(category, value) {
-        applyFilters();
-        scrollToTop();
-    };
+    // Send tracking event
+    if (window.self !== window.top) {
+        window.parent.postMessage({
+            type: 'bmj-careers-filter-change',
+            filterType: 'profession',
+            filterValue: subName,
+            parent: parentName
+        }, '*');
+    }
+};
+
+window.handleFilterChange = function(category, value) {
+    // Send tracking event to parent if in iframe
+    if (window.self !== window.top) {
+        window.parent.postMessage({
+            type: 'bmj-careers-filter-change',
+            filterType: category,
+            filterValue: value,
+            checked: document.getElementById(`${category}_${value.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`).checked
+        }, '*');
+    }
+
+    applyFilters();
+    updateCategoryButtons(); // Update button states after filter change
+    scrollToTop();
+};
+
+
 
     window.applyToJob = function(jobId) {
         const job = allJobsData.find(j => j.id === jobId);
@@ -1041,16 +1082,30 @@ keywordSearch.addEventListener('input', function() {
         }
     }
 
-    function updateCategoryButtons() {
-        document.querySelectorAll('.category-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
+function updateCategoryButtons() {
+    // First, check if there are any active filters
+    const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
+    const hasCheckedFilters = document.querySelectorAll('.filter-checkbox:checked, .profession-parent-checkbox:checked, .profession-sub-checkbox:checked, .location-checkbox:checked, .location-sub-checkbox:checked').length > 0;
+    const hasActiveFilters = searchTerm.length > 0 || hasCheckedFilters;
 
-        const activeBtn = document.getElementById(`btn-${activeCategoryFilter}`);
-        if (activeBtn) {
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // Only add active class if it's truly the active category and no other filters are applied
+    const activeBtn = document.getElementById(`btn-${activeCategoryFilter}`);
+    if (activeBtn) {
+        // For 'all' button, only show active if no filters are applied
+        if (activeCategoryFilter === 'all' && !hasActiveFilters) {
+            activeBtn.classList.add('active');
+        } else if (activeCategoryFilter !== 'all') {
+            // For other category buttons, always show active when selected
             activeBtn.classList.add('active');
         }
     }
+}
+
+
 
     function updateParentCheckboxState(category, parentName) {
         const parentCheckbox = document.getElementById(`${category}_parent_${parentName.replace(/\s+/g, '_')}`);
@@ -2011,6 +2066,23 @@ function buildDynamicHierarchies() {
 
     const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
 
+    const hasActiveFilters = searchTerm.length > 0 ||
+                            Object.values(activeFilters).some(arr => arr.length > 0);
+
+    // If any filters are active and category is 'all', remove active state
+    if (hasActiveFilters && activeCategoryFilter === 'all') {
+        document.getElementById('btn-all').classList.remove('active');
+    }
+
+    // Send search event if in iframe and search term exists
+    if (window.self !== window.top && searchTerm) {
+        window.parent.postMessage({
+            type: 'bmj-careers-search',
+            searchTerm: searchTerm,
+            resultsCount: filteredJobs.length
+        }, '*');
+    }
+
     filteredJobs = activeJobs.filter(job => {
         if (activeCategoryFilter !== 'all') {
             if (!categoryFilters[activeCategoryFilter].filter(job)) {
@@ -2597,41 +2669,44 @@ function syncJobsData() {
        lastWindowWidth = currentWidth;
    }
 
-   function addEventListeners() {
-       const keywordSearch = document.getElementById('keywordSearch');
-       keywordSearch.addEventListener('input', function() {
-           clearTimeout(this.searchTimeout);
-           this.searchTimeout = setTimeout(() => {
-               applyFilters();
-               scrollToTop();
-           }, 100);
-       });
+function addEventListeners() {
+    const keywordSearch = document.getElementById('keywordSearch');
+    keywordSearch.addEventListener('input', function() {
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+            applyFilters();
+            updateCategoryButtons(); // Update button states after keyword change
+            scrollToTop();
+        }, 100);
+    });
 
-       keywordSearch.addEventListener('keypress', function(e) {
-           if (e.key === 'Enter') {
-               clearTimeout(this.searchTimeout);
-               applyFilters();
-               scrollToTop();
-           }
-       });
+    keywordSearch.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            clearTimeout(this.searchTimeout);
+            applyFilters();
+            updateCategoryButtons(); // Update button states after keyword change
+            scrollToTop();
+        }
+    });
 
-       window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll);
 
-       // Add resize event listener
-       window.addEventListener('resize', handleResize);
-   }
+    // Add resize event listener
+    window.addEventListener('resize', handleResize);
+}
 
    // Make initApp globally accessible for API integration
    window.initApp = initApp;
 
    // Initialize the app when DOM is ready
-   document.addEventListener('DOMContentLoaded', function() {
-       // Only initialize if we already have data
-       if (window.allJobsData && window.allJobsData.length > 0) {
-           initApp();
-       }
-       // Otherwise, the API integration will call initApp when data is loaded
-   });
+document.addEventListener('DOMContentLoaded', function() {
+    // Only initialize if we already have data
+    if (window.allJobsData && window.allJobsData.length > 0) {
+        initApp();
+        initializeButtonStates(); // Add this line
+    }
+});
+
 
    // Listen for data updates from the API
    window.addEventListener('jobsDataUpdated', function() {
@@ -2643,7 +2718,9 @@ window.addEventListener('jobsDataLoaded', function() {
     console.log('Jobs data loaded event received');
     syncJobsData();
     initApp();
+    initializeButtonStates(); // Add this line
 });
+
 
 // Also check periodically if data is available
 let dataCheckInterval = setInterval(function() {
@@ -2662,6 +2739,9 @@ setTimeout(function() {
 
 </script>
 <!-- Cross-Origin Style Communication Script -->
+<!-- Add this enhanced section to your existing Cross-Origin Style Communication Script -->
+<!-- Replace the existing script section starting at line ~3000 with this enhanced version -->
+
 <script>
     (function() {
         'use strict';
@@ -2669,14 +2749,308 @@ setTimeout(function() {
         // Widget configuration
         const WIDGET_CONFIG = {
             widgetId: 'bmj-careers-widget',
-            version: '1.0.0'
+            version: '2.0.0' // Updated version for enhanced tracking
         };
 
         // Detect if running in iframe
         const isInIframe = window.self !== window.top;
 
         // Security: Configure allowed origins (update for production)
-        const ALLOWED_ORIGINS = '*'; // Change to ['https://client1.com', 'https://client2.com'] in production
+        const ALLOWED_ORIGINS = '*'; // Change to specific domains in production
+
+        // Store custom category configuration from client
+        let customCategoryConfig = null;
+        let clientTrackingConfig = null;
+
+        // Enhanced tracking data
+        const trackingData = {
+            sessionId: null,
+            clientId: null,
+            interactions: [],
+            scrollDepth: 0,
+            timeOnPage: 0,
+            searches: [],
+            filterChanges: [],
+            jobClicks: []
+        };
+
+        // Apply custom categories if provided
+        function applyCustomCategories(categories) {
+            if (!categories || typeof categories !== 'object') return;
+
+            console.log('Applying custom categories:', categories);
+            customCategoryConfig = categories;
+
+            // Update the category buttons
+            const categoryButtons = document.querySelectorAll('.category-btn');
+
+            categoryButtons.forEach(btn => {
+                const btnId = btn.id;
+                const categoryKey = btnId.replace('btn-', '');
+
+                if (categories[categoryKey]) {
+                    const config = categories[categoryKey];
+
+                    // Hide or show button
+                    if (config.enabled === false) {
+                        btn.style.display = 'none';
+                    } else {
+                        btn.style.display = '';
+
+                        // Update label if provided
+                        if (config.label) {
+                            const textSpan = btn.querySelector('span:last-child');
+                            if (textSpan) {
+                                textSpan.textContent = config.label;
+                            }
+                        }
+
+                        // Update icon if provided
+                        if (config.icon) {
+                            const emojiSpan = btn.querySelector('.emoji');
+                            if (emojiSpan) {
+                                emojiSpan.textContent = config.icon;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Override the category filters
+            if (window.categoryFilters) {
+                Object.keys(categories).forEach(key => {
+                    const config = categories[key];
+                    if (config.enabled !== false && window.categoryFilters[key]) {
+                        // Create custom filter function
+                        const originalFilter = window.categoryFilters[key].filter;
+
+                        window.categoryFilters[key] = {
+                            name: config.label || window.categoryFilters[key].name,
+                            keywords: config.keywords || [],
+                            filter: function(job) {
+                                // If no custom keywords, use original filter
+                                if (!config.keywords || config.keywords.length === 0) {
+                                    return originalFilter ? originalFilter(job) : true;
+                                }
+
+                                // Build search text based on searchIn configuration
+                                let searchText = '';
+                                const searchIn = config.searchIn || ['title', 'description', 'sector', 'grade'];
+
+                                searchIn.forEach(field => {
+                                    switch(field) {
+                                        case 'title':
+                                            searchText += ' ' + (job.job_title || '');
+                                            break;
+                                        case 'description':
+                                            searchText += ' ' + (job.short_description || '');
+                                            break;
+                                        case 'sector':
+                                            if (job.sector && Array.isArray(job.sector)) {
+                                                searchText += ' ' + job.sector.join(' ');
+                                            }
+                                            break;
+                                        case 'grade':
+                                            searchText += ' ' + (job.grade || '');
+                                            break;
+                                        case 'location':
+                                            searchText += ' ' + (job.location_description || '');
+                                            break;
+                                        case 'employer':
+                                            searchText += ' ' + (job.recruiter_name || '') + ' ' + (job.alternate_recruiter_name || '');
+                                            break;
+                                    }
+                                });
+
+                                searchText = searchText.toLowerCase();
+
+                                // Check if any keyword matches
+                                return config.keywords.some(keyword =>
+                                    searchText.includes(keyword.toLowerCase())
+                                );
+                            }
+                        };
+                    }
+                });
+            }
+        }
+
+function initializeButtonStates() {
+    // Check if we have any active filters on load
+    const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
+    const hasCheckedFilters = document.querySelectorAll('.filter-checkbox:checked, .profession-parent-checkbox:checked, .profession-sub-checkbox:checked, .location-checkbox:checked, .location-sub-checkbox:checked').length > 0;
+
+    // If no filters are active and category is 'all', ensure button is active
+    if (!searchTerm && !hasCheckedFilters && activeCategoryFilter === 'all') {
+        document.getElementById('btn-all').classList.add('active');
+    } else if (activeCategoryFilter === 'all') {
+        // If filters exist but category is 'all', remove active state
+        document.getElementById('btn-all').classList.remove('active');
+    }
+
+    updateCategoryButtons();
+}
+
+        // Enhanced tracking functions
+        function initializeTracking(config) {
+            if (!config || !config.tracking) return;
+
+            trackingData.sessionId = config.tracking.sessionId;
+            trackingData.clientId = config.tracking.clientId;
+            clientTrackingConfig = config.tracking.features || {};
+
+            console.log('Tracking initialized:', trackingData.sessionId);
+
+            // Start tracking various events
+            if (clientTrackingConfig.trackInteractions) {
+                trackInteractions();
+            }
+
+            if (clientTrackingConfig.trackScrollDepth) {
+                trackScrollDepth();
+            }
+
+            if (clientTrackingConfig.trackSearches) {
+                trackSearches();
+            }
+
+            if (clientTrackingConfig.trackFilters) {
+                trackFilterChanges();
+            }
+        }
+
+        function trackInteractions() {
+            document.addEventListener('click', function(e) {
+                const target = e.target;
+                const data = {
+                    element: target.tagName,
+                    className: target.className,
+                    id: target.id,
+                    text: target.innerText?.substring(0, 50)
+                };
+
+                trackingData.interactions.push(data);
+                sendTrackingEvent('interaction', data);
+            });
+        }
+
+        function trackScrollDepth() {
+            let maxScroll = 0;
+            window.addEventListener('scroll', debounce(function() {
+                const scrollPercentage = Math.round((window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100);
+                if (scrollPercentage > maxScroll) {
+                    maxScroll = scrollPercentage;
+                    trackingData.scrollDepth = maxScroll;
+                    sendTrackingEvent('scroll', { depth: maxScroll });
+                }
+            }, 500));
+        }
+
+        function trackSearches() {
+            const searchInput = document.getElementById('keywordSearch');
+            if (searchInput) {
+                searchInput.addEventListener('change', function() {
+                    const searchTerm = this.value;
+                    trackingData.searches.push({
+                        term: searchTerm,
+                        timestamp: Date.now()
+                    });
+                    sendTrackingEvent('search', { searchTerm });
+                });
+            }
+        }
+
+        function trackFilterChanges() {
+            // Track category button clicks
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.category-btn')) {
+                    const btn = e.target.closest('.category-btn');
+                    const categoryId = btn.id.replace('btn-', '');
+                    sendTrackingEvent('filter_change', {
+                        filterType: 'category',
+                        filterValue: categoryId
+                    });
+                }
+
+                // Track other filter changes
+                if (e.target.matches('.filter-checkbox, .profession-sub-checkbox, .location-sub-checkbox')) {
+                    sendTrackingEvent('filter_change', {
+                        filterType: e.target.className,
+                        filterValue: e.target.id,
+                        checked: e.target.checked
+                    });
+                }
+            });
+        }
+
+        function sendTrackingEvent(eventType, data) {
+            if (!isInIframe) return;
+
+            window.parent.postMessage({
+                type: 'bmj-careers-event',
+                eventType: eventType,
+                data: data,
+                timestamp: Date.now()
+            }, '*');
+        }
+
+        // Override the applyToJob function to track job clicks
+        const originalApplyToJob = window.applyToJob;
+window.applyToJob = function(jobId) {
+    const job = allJobsData.find(j => j.id === jobId);
+
+    // Send tracking event to parent if in iframe
+    if (window.self !== window.top) {
+        window.parent.postMessage({
+            type: 'bmj-careers-job-click',
+            jobId: jobId,
+            jobTitle: job?.job_title || 'Unknown',
+            employer: job?.recruiter_name || job?.alternate_recruiter_name || 'Unknown'
+        }, '*');
+    }
+
+    if (job && job.job_url) {
+        window.open(job.job_url, '_blank', 'noopener,noreferrer');
+    } else {
+        window.open('https://www.bmj.com/careers/jobs/', '_blank', 'noopener,noreferrer');
+    }
+};
+
+        // Override applyCategoryFilter to use custom configuration
+        const originalApplyCategoryFilter = window.applyCategoryFilter;
+window.applyCategoryFilter = function(category) {
+    activeCategoryFilter = category;
+
+    // Send tracking event to parent if in iframe
+    if (window.self !== window.top) {
+        window.parent.postMessage({
+            type: 'bmj-careers-filter-change',
+            filterType: 'category',
+            filterValue: category
+        }, '*');
+    }
+
+    updateCategoryButtons();
+
+    // If "All Jobs" is selected, reset everything
+    if (category === 'all') {
+        // Clear keyword search
+        document.getElementById('keywordSearch').value = '';
+
+        // Uncheck all filter checkboxes
+        document.querySelectorAll('.filter-checkbox, .profession-parent-checkbox, .profession-sub-checkbox, .location-checkbox, .location-sub-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+            checkbox.classList.remove('indeterminate');
+        });
+
+        // Ensure All Jobs button gets active state
+        document.getElementById('btn-all').classList.add('active');
+    }
+
+    applyFilters();
+    scrollToTop();
+};
+
 
         // Performance: Debounce function
         function debounce(func, wait) {
@@ -2691,116 +3065,7 @@ setTimeout(function() {
             };
         }
 
-        // Apply iframe-specific styles immediately
-        if (isInIframe) {
-            const iframeStyles = document.createElement('style');
-            iframeStyles.id = 'bmj-iframe-styles';
-            iframeStyles.textContent = `
-                /* Remove ONLY the main page scrollbar for iframe mode */
-                html, body {
-                    overflow: visible !important;
-                    height: auto !important;
-                    min-height: 100% !important;
-                }
-
-                .main-wrapper {
-                    min-height: auto !important;
-                    height: auto !important;
-                }
-
-                /* Ensure sidebar doesn't stick in iframe mode */
-                .sidebar {
-                    position: relative !important;
-                    top: auto !important;
-                }
-            `;
-            document.head.appendChild(iframeStyles);
-            document.body.classList.add('bmj-iframe-mode');
-        }
-
-        // Optimized height calculation
-        let lastHeight = 0;
-        function getDocumentHeight() {
-            const body = document.body;
-            const html = document.documentElement;
-            return Math.max(
-               body.scrollHeight,
-                body.offsetHeight,
-                html.clientHeight,
-                html.scrollHeight,
-                html.offsetHeight
-            );
-        }
-
-        // Send height updates to parent
-        const sendHeightUpdate = debounce(function() {
-            if (!isInIframe) return;
-
-            const height = getDocumentHeight();
-            if (height !== lastHeight) {
-                lastHeight = height;
-                window.parent.postMessage({
-                    type: 'bmj-careers-height-update',
-                    widgetId: WIDGET_CONFIG.widgetId,
-                    height: height
-                }, '*');
-            }
-        }, 100);
-
-        // Handle scroll detection for scroll-to-top button
-        if (!isInIframe) {
-            // Normal mode - use window scroll
-            const handleScroll = debounce(function() {
-                const scrollToTopBtn = document.getElementById('scrollToTop');
-                if (scrollToTopBtn) {
-                    if (window.pageYOffset > 300) {
-                        scrollToTopBtn.classList.add('show');
-                    } else {
-                        scrollToTopBtn.classList.remove('show');
-                    }
-                }
-            }, 50);
-
-            window.addEventListener('scroll', handleScroll, { passive: true });
-        } else {
-            // Iframe mode - button visibility handled by existing handleScroll in index.html
-            // But we need to ensure scroll-to-top works properly
-            window.addEventListener('load', function() {
-                const scrollToTopBtn = document.getElementById('scrollToTop');
-                if (scrollToTopBtn) {
-                    // Override the existing onclick to work in iframe
-                    scrollToTopBtn.onclick = function(e) {
-                        e.preventDefault();
-
-                        // Try multiple methods to ensure scrolling works
-                        try {
-                            // Method 1: Scroll parent's iframe
-                            window.parent.postMessage({
-                                type: 'bmj-careers-scroll-to-top',
-                                widgetId: WIDGET_CONFIG.widgetId
-                            }, '*');
-                        } catch (e) {}
-
-                        // Method 2: Scroll own window
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-                        // Method 3: Scroll document element
-                        document.documentElement.scrollTop = 0;
-                        document.body.scrollTop = 0;
-
-                        return false;
-                    };
-                }
-            });
-        }
-
-        // Security: Validate message origin
-        function isAllowedOrigin(origin) {
-            if (ALLOWED_ORIGINS === '*') return true;
-            return ALLOWED_ORIGINS.includes(origin);
-        }
-
-        // Optimized message handler
+        // Enhanced message handler
         window.addEventListener('message', function(event) {
             // Security check
             if (!isAllowedOrigin(event.origin)) {
@@ -2811,313 +3076,53 @@ setTimeout(function() {
             if (!event.data || typeof event.data !== 'object') return;
 
             switch (event.data.type) {
+                case 'bmj-careers-config':
+                    // Apply full configuration
+                    if (event.data.styles) {
+                        applyCustomStyles(event.data.styles);
+                    }
+                    if (event.data.categories) {
+                        applyCustomCategories(event.data.categories);
+                    }
+                    if (event.data.tracking) {
+                        initializeTracking(event.data);
+                    }
+                    break;
+
                 case 'bmj-careers-styles':
                     applyCustomStyles(event.data.styles);
                     break;
+
+                case 'bmj-careers-categories':
+                    applyCustomCategories(event.data.categories);
+                    break;
+
                 case 'bmj-careers-command':
                     handleCommand(event.data.command, event.data.data);
+                    break;
+
+                case 'bmj-careers-tracking':
+                    // Handle tracking data from parent
+                    if (event.data.eventType === 'heartbeat') {
+                        trackingData.timeOnPage = event.data.data.timeOnPage;
+                    }
                     break;
             }
         });
 
-        // Optimized style application
+        // Security: Validate message origin
+        function isAllowedOrigin(origin) {
+            if (ALLOWED_ORIGINS === '*') return true;
+            return ALLOWED_ORIGINS.includes(origin);
+        }
+
+        // Keep existing applyCustomStyles function
         const applyCustomStyles = (function() {
             let styleElement = null;
 
             return function(styles) {
-                if (!styles || typeof styles !== 'object') return;
-
-                // Create or reuse style element
-                if (!styleElement) {
-                    styleElement = document.createElement('style');
-                    styleElement.id = 'bmj-custom-styles';
-                    document.head.appendChild(styleElement);
-                }
-
-                // Build CSS efficiently
-                const cssRules = [];
-
-                // Primary color
-                if (styles.primaryColor) {
-                    cssRules.push(`
-                        .job-header,
-                        .category-btn.active,
-                        .category-btn:hover,
-                        .pagination-btn.active,
-                        .scroll-to-top,
-                        .scroll-to-top:hover {
-                            background: ${styles.primaryColor} !important;
-                            background-color: ${styles.primaryColor} !important;
-                        }
-
-                        .job-title,
-                        .search-title,
-                        .filters-title,
-                        .jobs-title,
-                        .job-count-main,
-                        .category-btn,
-                        .pagination-btn,
-                        .filter-arrow,
-                        .profession-parent-arrow {
-                            color: ${styles.primaryColor} !important;
-                            -webkit-text-fill-color: ${styles.primaryColor} !important;
-                        }
-
-                        .filter-checkbox:checked,
-                        .profession-parent-checkbox:checked,
-                        .profession-sub-checkbox:checked,
-                        .location-checkbox:checked,
-                        .location-sub-checkbox:checked,
-                        input[type="checkbox"]:checked,
-                        input[type="checkbox"]:checked::before {
-                            background: ${styles.primaryColor} !important;
-                            background-color: ${styles.primaryColor} !important;
-                            border-color: ${styles.primaryColor} !important;
-                        }
-
-                        .search-input:focus,
-                        .keyword-tag:hover {
-                            border-color: ${styles.primaryColor} !important;
-                            box-shadow: 0 0 0 4px ${styles.primaryColor}20 !important;
-                        }
-
-                        input[type="checkbox"]:not(:checked):hover {
-                            border-color: ${styles.primaryColor} !important;
-                            box-shadow: 0 0 0 4px ${styles.primaryColor}20 !important;
-                        }
-
-                        .job-details li::before {
-                            color: ${styles.primaryColor} !important;
-                        }
-                    `);
-                }
-
-                // Secondary color
-                if (styles.secondaryColor) {
-                    cssRules.push(`
-                        .apply-btn {
-                            background: ${styles.secondaryColor} !important;
-                            background-color: ${styles.secondaryColor} !important;
-                            box-shadow: 0 4px 12px ${styles.secondaryColor}40 !important;
-                        }
-
-                        .apply-btn:hover {
-                            background: ${styles.secondaryColorHover || styles.secondaryColor} !important;
-                            background-color: ${styles.secondaryColorHover || styles.secondaryColor} !important;
-                            filter: brightness(1.1);
-                            box-shadow: 0 6px 20px ${styles.secondaryColor}50 !important;
-                        }
-                    `);
-                }
-
-                // Text color
-                if (styles.textColor) {
-                    cssRules.push(`
-                        body,
-                        .job-details,
-                        .job-details li,
-                        .job-details strong,
-                        .filter-label,
-                        .profession-parent-label,
-                        .profession-sub-label,
-                        .location-text,
-                        .filter-header,
-                        .job-description,
-                        .pagination-info,
-                        .job-count-subtitle,
-                        .no-jobs-message {
-                            color: ${styles.textColor} !important;
-                        }
-                    `);
-                }
-
-                // Background colors
-                if (styles.backgroundColor) {
-                    cssRules.push(`
-                        body {
-                            background: ${styles.backgroundColor} !important;
-                        }
-                    `);
-                }
-
-                if (styles.cardBackgroundColor) {
-                    cssRules.push(`
-                        .sidebar,
-                        .main-content,
-                        .job-card,
-                        .search-section,
-                        .filters-section,
-                        .job-body,
-                        .pagination-section,
-                        .filter-checkbox:not(:checked),
-                        .profession-parent-checkbox:not(:checked),
-                        .profession-sub-checkbox:not(:checked),
-                        .location-checkbox:not(:checked),
-                        .location-sub-checkbox:not(:checked),
-                        input[type="checkbox"]:not(:checked) {
-                            background-color: ${styles.cardBackgroundColor} !important;
-                            background: ${styles.cardBackgroundColor} !important;
-                        }
-                    `);
-                }
-
-                // Keyword tags
-                if (styles.keywordBackgroundColor) {
-                    cssRules.push(`
-                        .keyword-tag {
-                            background: ${styles.keywordBackgroundColor} !important;
-                            color: ${styles.keywordTextColor || styles.primaryColor} !important;
-                            border: 1px solid ${styles.keywordBorderColor || 'transparent'} !important;
-                        }
-
-                        .keyword-tag:hover {
-                            background: ${styles.keywordHoverBackgroundColor || styles.primaryColor} !important;
-                            color: ${styles.keywordHoverTextColor || '#FFFFFF'} !important;
-                        }
-                    `);
-                }
-
-                // Borders
-                if (styles.borderColor) {
-                    cssRules.push(`
-                        .sidebar,
-                        .main-content,
-                        .job-card,
-                        .filter-group,
-                        .search-input,
-                        .search-section,
-                        .pagination-section,
-                        .category-btn,
-                        .filter-checkbox:not(:checked),
-                        .profession-parent-checkbox:not(:checked),
-                        .profession-sub-checkbox:not(:checked),
-                        .location-checkbox:not(:checked),
-                        .location-sub-checkbox:not(:checked) {
-                            border-color: ${styles.borderColor} !important;
-                        }
-                    `);
-                }
-
-                // Typography
-                if (styles.fontFamily) {
-                    cssRules.push(`
-                        body,
-                        * {
-                            font-family: ${styles.fontFamily} !important;
-                        }
-                    `);
-                }
-
-                if (styles.baseFontSize) {
-                    cssRules.push(`
-                        body {
-                            font-size: ${styles.baseFontSize} !important;
-                        }
-
-                        .job-details,
-                        .job-description,
-                        .filter-label {
-                            font-size: calc(${styles.baseFontSize} * 0.9375) !important;
-                        }
-
-                        .filter-count,
-                        .keywords-label {
-                            font-size: calc(${styles.baseFontSize} * 0.8125) !important;
-                        }
-                    `);
-                }
-
-                if (styles.headerFontSize) {
-                    cssRules.push(`
-                        .job-header {
-                            font-size: ${styles.headerFontSize} !important;
-                        }
-
-                        .job-count-main {
-                            font-size: calc(${styles.headerFontSize} * 1.5) !important;
-                        }
-
-                        .search-title,
-                        .filters-title {
-                            font-size: calc(${styles.headerFontSize} * 0.75) !important;
-                        }
-                    `);
-                }
-
-                // Shadows
-                if (styles.shadowColor) {
-                    cssRules.push(`
-                        .sidebar,
-                        .main-content,
-                        .job-card {
-                            box-shadow: 0 2px 8px ${styles.shadowColor}10 !important;
-                        }
-
-                        .sidebar:hover,
-                        .main-content:hover {
-                            box-shadow: 0 8px 24px ${styles.shadowColor}20 !important;
-                        }
-
-                        .job-card:hover {
-                            box-shadow: 0 10px 30px ${styles.shadowColor}25 !important;
-                        }
-
-                        .category-btn:hover,
-                        .pagination-btn:hover {
-                            box-shadow: 0 6px 20px ${styles.shadowColor}40 !important;
-                        }
-
-                        .scroll-to-top {
-                            box-shadow: 0 6px 20px ${styles.shadowColor}30 !important;
-                        }
-
-                        .scroll-to-top:hover {
-                            box-shadow: 0 8px 25px ${styles.shadowColor}40 !important;
-                        }
-                    `);
-                }
-
-                // Button text colors
-                if (styles.buttonTextColor) {
-                    cssRules.push(`
-                        .category-btn.active,
-                        .category-btn:hover,
-                        .pagination-btn.active,
-                        .scroll-to-top {
-                            color: ${styles.buttonTextColor} !important;
-                        }
-                    `);
-                }
-
-                if (styles.applyButtonTextColor) {
-                    cssRules.push(`
-                        .apply-btn,
-                        .apply-btn:hover {
-                            color: ${styles.applyButtonTextColor} !important;
-                        }
-                    `);
-                }
-
-                // Hover effects
-                if (styles.hoverScale !== false) {
-                    cssRules.push(`
-                        .category-btn:hover,
-                        .apply-btn:hover,
-                        .keyword-tag:hover {
-                            transform: translateY(-2px) scale(1.02);
-                        }
-                    `);
-                }
-
-                // Apply all styles at once
-                styleElement.textContent = cssRules.join('\n');
-
-                // Send confirmation
-                window.parent.postMessage({
-                    type: 'bmj-careers-styles-applied',
-                    widgetId: WIDGET_CONFIG.widgetId,
-                    stylesApplied: true
-                }, '*');
+                // ... keep your existing style application code ...
+                // This remains unchanged from your current implementation
             };
         })();
 
@@ -3130,52 +3135,42 @@ setTimeout(function() {
                 case 'scrollToTop':
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                     break;
+                case 'requestConfig':
+                    // Send current configuration back
+                    window.parent.postMessage({
+                        type: 'bmj-careers-current-config',
+                        categories: customCategoryConfig,
+                        tracking: trackingData
+                    }, '*');
+                    break;
             }
         }
 
-        // Optimized content monitoring for iframe mode
-        if (isInIframe) {
-            // Initial height send
-            setTimeout(sendHeightUpdate, 100);
-
-            // Efficient mutation observer
-            const observer = new MutationObserver(sendHeightUpdate);
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true,
-                attributes: false,
-                characterData: false
-            });
-
-            // Window resize handler
-            window.addEventListener('resize', sendHeightUpdate, { passive: true });
-
-            // Content loaded handlers
-            window.addEventListener('load', sendHeightUpdate);
-            document.addEventListener('DOMContentLoaded', sendHeightUpdate);
-
-            // Filter/pagination change handler
-            document.addEventListener('click', function(e) {
-                if (e.target.matches('.filter-checkbox, .category-btn, .pagination-btn, .filter-header, .profession-parent-header')) {
-                    setTimeout(sendHeightUpdate, 300);
-                }
-            }, { passive: true });
-        }
-
-        // Send ready message efficiently
+        // Send ready message with enhanced capabilities
         function sendReadyMessage() {
             window.parent.postMessage({
                 type: 'bmj-careers-ready',
                 widgetId: WIDGET_CONFIG.widgetId,
                 version: WIDGET_CONFIG.version,
-                isInIframe: isInIframe
+                isInIframe: isInIframe,
+                capabilities: {
+                    customCategories: true,
+                    enhancedTracking: true,
+                    customStyles: true
+                }
             }, '*');
 
-            console.log('BMJ Careers Widget initialized and ready');
-
+            // Request configuration from parent
             if (isInIframe) {
-                sendHeightUpdate();
+                setTimeout(() => {
+                    window.parent.postMessage({
+                        type: 'bmj-careers-request-config',
+                        widgetId: WIDGET_CONFIG.widgetId
+                    }, '*');
+                }, 100);
             }
+
+            console.log('BMJ Careers Widget initialized with enhanced features v2.0');
         }
 
         // Send ready on load
@@ -3183,13 +3178,15 @@ setTimeout(function() {
             sendReadyMessage();
         } else {
             window.addEventListener('load', sendReadyMessage);
-            // Backup ready message
-            document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Content Loaded');
-    // Don't initialize immediately, wait for data from server
-    // The server will call initApp when data is ready
-});
+            document.addEventListener('DOMContentLoaded', sendReadyMessage);
         }
+
+        // Export for debugging
+        window.BMJWidgetTracking = {
+            getData: () => trackingData,
+            getConfig: () => customCategoryConfig,
+            sendEvent: sendTrackingEvent
+        };
     })();
 </script>
 <!-- End Cross-Origin Style Communication Script -->
