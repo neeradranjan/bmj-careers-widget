@@ -14,6 +14,32 @@ body {
     flex-direction: column;
 }
 
+/* Critical CSS - Above the fold styles */
+:root {
+    --primary-color: #0066cc;
+    --secondary-color: #FFC000;
+    --text-color: #1d1d1b;
+    --bg-color: #f0f4f8;
+    --card-bg: #ffffff;
+    --border-color: #e5e7eb;
+}
+
+/* Reduce animation complexity */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Add will-change for animated elements */
+.category-btn,
+.job-card,
+.pagination-btn {
+    will-change: transform;
+}
+
 /* Main wrapper for full page layout */
 .main-wrapper {
     flex: 1;
@@ -34,11 +60,11 @@ body {
 @keyframes fadeInDown {
     from {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translate3d(0, -20px, 0);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0);
     }
 }
 
