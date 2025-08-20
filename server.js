@@ -33,6 +33,19 @@ app.use(express.json());
 // Serve static files from public folder (for CSS)
 app.use(express.static('public'));
 
+// Security headers and cookie configuration
+app.use((req, res, next) => {
+    // Set security headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow iframe embedding
+    res.setHeader('Referrer-Policy', 'origin-when-cross-origin');
+
+    // Set cookie policy for cross-origin
+    res.setHeader('Set-Cookie', 'SameSite=None; Secure');
+
+    next();
+});
+
 // ========================================================================
 // AWS CONFIGURATION - Using AWS Profile
 // ========================================================================
@@ -608,7 +621,7 @@ function convertXMLJobToJSON(xmlJob) {
     job_url: xmlJob.Job_URL || `https://www.bmj.com/careers/job/${jobId}`,
     logo_url: xmlJob.Logo_URL || null,
     recruiter_name: xmlJob.Recruiter_name || 'Unknown',
-    alternate_recruiter_name: null,
+    alternate_recruiter_name: xmlJob.Alternate_recruiter_name || null,
     published: publishedText,
     created_date: createdDate,
     modified_date: createdDate,
@@ -1618,7 +1631,214 @@ app.get('/api/admin/dashboard', async (req, res) => {
   }
 });
 
-// Add these new endpoints to your server.js file
+// Enhanced tracking endpoint for embedded widgets
+// Enhanced widget tracking endpoint with proper daily metrics
+app.post('/api/track/widget', async (req, res) => {
+    try {
+        const {
+            event,
+            clientId,
+            clientName,
+            sessionId,
+            data
+        } = req.body;
+
+        console.log(`[TRACKING] Event: ${event}, Client: ${clientId}, Session: ${sessionId}`);
+
+        // Skip if no valid client ID
+        if (!clientId || clientId === 'direct' || clientId === 'unknown') {
+            return res.json({ success: true, skipped: true });
+        }
+
+        // Get current date keys
+        const now = new Date();
+        const dateKey = now.toISOString().split('T')[0];
+        const hourKey = `${dateKey}-${now.getHours()}`;
+
+        // Initialize client tracking if doesn't exist
+        if (!clientTracking[clientId]) {
+            clientTracking[clientId] = {
+                name: clientName,
+                clientId: clientId,
+                domain: data?.url || 'embedded-widget',
+                utm_source: clientId,
+                utm_medium: 'embedded-widget',
+                firstSeen: now.toISOString(),
+                lastSeen: now.toISOString(),
+                sessions: {},
+                metrics: {
+                    totalLoads: 0,
+                    totalClicks: 0,
+                    totalApiCalls: 0,
+                    totalTime: 0,
+                    daily: {},
+                    hourly: {}
+                },
+                searches: [],
+                filterUsage: {}
+            };
+        }
+
+        // Update last seen
+        clientTracking[clientId].lastSeen = now.toISOString();
+
+        // Initialize session if doesn't exist
+        if (!clientTracking[clientId].sessions[sessionId]) {
+            clientTracking[clientId].sessions[sessionId] = {
+                sessionId: sessionId,
+                startTime: now.toISOString(),
+                lastActivity: now.toISOString(),
+                loads: 0,
+                clicks: 0,
+                events: []
+            };
+        }
+
+        // Initialize daily metrics if not exists
+        if (!clientTracking[clientId].metrics.daily[dateKey]) {
+            clientTracking[clientId].metrics.daily[dateKey] = {
+                loads: 0,
+                clicks: 0,
+                apiCalls: 0,
+                time: 0,
+                searches: 0,
+                filters: 0
+            };
+        }
+
+        // Initialize hourly metrics if not exists
+        if (!clientTracking[clientId].metrics.hourly[hourKey]) {
+            clientTracking[clientId].metrics.hourly[hourKey] = {
+                loads: 0,
+                clicks: 0,
+                apiCalls: 0,
+                time: 0
+            };
+        }
+
+        // Process event based on type
+        switch(event) {
+            case 'page_view':
+            case 'page_load':
+                clientTracking[clientId].metrics.totalLoads++;
+                clientTracking[clientId].metrics.daily[dateKey].loads++;
+                clientTracking[clientId].metrics.hourly[hourKey].loads++;
+                clientTracking[clientId].sessions[sessionId].loads++;
+                console.log(`[TRACKING] Page view recorded for ${clientId}. Total loads: ${clientTracking[clientId].metrics.totalLoads}`);
+                break;
+
+            case 'job_click':
+            case 'click':
+                clientTracking[clientId].metrics.totalClicks++;
+                clientTracking[clientId].metrics.daily[dateKey].clicks++;
+                clientTracking[clientId].metrics.hourly[hourKey].clicks++;
+                clientTracking[clientId].sessions[sessionId].clicks++;
+
+                // Store click details
+                if (!clientTracking[clientId].clickDetails) {
+                    clientTracking[clientId].clickDetails = [];
+                }
+                clientTracking[clientId].clickDetails.push({
+                    jobId: data.jobId,
+                    jobTitle: data.jobTitle,
+                    employer: data.employer,
+                    timestamp: now.toISOString()
+                });
+
+                console.log(`[TRACKING] Click recorded for ${clientId}. Total clicks: ${clientTracking[clientId].metrics.totalClicks}`);
+                break;
+
+            case 'search':
+                clientTracking[clientId].metrics.daily[dateKey].searches++;
+                clientTracking[clientId].searches.push({
+                    term: data.searchTerm,
+                    timestamp: now.toISOString()
+                });
+                console.log(`[TRACKING] Search recorded for ${clientId}: ${data.searchTerm}`);
+                break;
+
+            case 'filter_change':
+                clientTracking[clientId].metrics.daily[dateKey].filters++;
+                const filterKey = `${data.filterType}_${data.filterValue}`;
+                clientTracking[clientId].filterUsage[filterKey] =
+                    (clientTracking[clientId].filterUsage[filterKey] || 0) + 1;
+                console.log(`[TRACKING] Filter change recorded for ${clientId}: ${filterKey}`);
+                break;
+
+            case 'api_call':
+                clientTracking[clientId].metrics.totalApiCalls++;
+                clientTracking[clientId].metrics.daily[dateKey].apiCalls++;
+                clientTracking[clientId].metrics.hourly[hourKey].apiCalls++;
+                break;
+        }
+
+        // Update session activity
+        clientTracking[clientId].sessions[sessionId].lastActivity = now.toISOString();
+        clientTracking[clientId].sessions[sessionId].events.push({
+            type: event,
+            data: data,
+            timestamp: now.toISOString()
+        });
+
+        // Persist to DynamoDB if available (fire and forget)
+        if (dynamoDBConnectionStatus.isConnected) {
+            const trackingParams = {
+                TableName: TABLE_NAME,
+                Item: {
+                    id: `CLIENT_${clientId}`,
+                    type: 'client_tracking',
+                    clientData: clientTracking[clientId],
+                    lastUpdated: now.toISOString()
+                }
+            };
+
+            dynamodb.send(new PutCommand(trackingParams)).catch(err => {
+                console.error('Failed to persist client tracking:', err.message);
+            });
+        }
+
+        // Also save tracking data periodically
+        saveTrackingData();
+
+        res.json({
+            success: true,
+            tracked: true,
+            event: event,
+            clientId: clientId,
+            metrics: {
+                totalClicks: clientTracking[clientId].metrics.totalClicks,
+                totalLoads: clientTracking[clientId].metrics.totalLoads
+            }
+        });
+
+    } catch (error) {
+        console.error('[TRACKING ERROR]:', error);
+        res.status(500).json({ error: 'Tracking failed', message: error.message });
+    }
+});
+
+// Add endpoint to get real-time metrics
+app.get('/api/admin/metrics/:clientId', async (req, res) => {
+    try {
+        const { clientId } = req.params;
+        const client = clientTracking[clientId];
+
+        if (!client) {
+            return res.status(404).json({ error: 'Client not found' });
+        }
+
+        res.json({
+            success: true,
+            metrics: client.metrics,
+            sessions: Object.values(client.sessions),
+            searches: client.searches,
+            filterUsage: client.filterUsage,
+            clickDetails: client.clickDetails || []
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get metrics' });
+    }
+});
 
 // Enhanced tracking endpoint for beacon API (for reliable tracking on page unload)
 app.post('/api/track/beacon', express.raw({ type: 'application/json' }), async (req, res) => {
