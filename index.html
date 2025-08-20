@@ -3,10 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Browse and search medical job opportunities across the UK and internationally. Find consultant, GP, specialist, and healthcare positions with BMJ Careers.">
+    <meta name="keywords" content="medical jobs, healthcare careers, NHS jobs, consultant positions, GP vacancies, medical recruitment, BMJ careers">
+    <meta name="author" content="BMJ Careers">
+    <meta name="robots" content="index, follow">
+    <!-- Preconnect to improve performance -->
+    <link rel="preconnect" href="https://www.bmj.com">
+    <link rel="dns-prefetch" href="https://www.bmj.com">
     <title>BMJ Careers - Medical Jobs</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<script>
+    // Set document.domain if needed for cross-origin
+    try {
+        if (window.location.hostname.includes('bmj')) {
+            document.domain = window.location.hostname.split('.').slice(-2).join('.');
+        }
+    } catch(e) {
+        // Domain setting not needed
+    }
+</script>
+
 <div class="main-wrapper">
     <div class="job-count-header">
         <div class="job-count-main" id="jobCountDisplay">
@@ -19,32 +37,33 @@
 
     <div class="category-buttons-wrapper">
         <div class="category-buttons">
+            <!-- Replace the category buttons section emojis -->
             <button class="category-btn active" onclick="applyCategoryFilter('all')" id="btn-all">
-                <span class="emoji">🏥</span>
+                <span class="emoji" aria-hidden="true">&#x1F3E5;</span>
                 <span>All Jobs</span>
             </button>
             <button class="category-btn" onclick="applyCategoryFilter('consultant')" id="btn-consultant">
-                <span class="emoji">👨‍⚕️</span>
+                <span class="emoji" aria-hidden="true">&#x1F468;&#x200D;&#x2695;&#xFE0F;</span>
                 <span>Consultant</span>
             </button>
             <button class="category-btn" onclick="applyCategoryFilter('gp')" id="btn-gp">
-                <span class="emoji">🩺</span>
+                <span class="emoji" aria-hidden="true">&#x1FA7A;</span>
                 <span>GP</span>
             </button>
             <button class="category-btn" onclick="applyCategoryFilter('overseas')" id="btn-overseas">
-                <span class="emoji">🌍</span>
+                <span class="emoji" aria-hidden="true">&#x1F30D;</span>
                 <span>Overseas</span>
             </button>
             <button class="category-btn" onclick="applyCategoryFilter('training')" id="btn-training">
-                <span class="emoji">🎓</span>
+                <span class="emoji" aria-hidden="true">&#x1F393;</span>
                 <span>Academic</span>
             </button>
             <button class="category-btn" onclick="applyCategoryFilter('special')" id="btn-special">
-                <span class="emoji">⚡</span>
+                <span class="emoji" aria-hidden="true">&#x26A1;</span>
                 <span>Special</span>
             </button>
             <button class="category-btn" onclick="applyCategoryFilter('research')" id="btn-research">
-                <span class="emoji">🔬</span>
+                <span class="emoji" aria-hidden="true">&#x1F52C;</span>
                 <span>Research</span>
             </button>
         </div>
@@ -930,14 +949,15 @@ window.clearKeywordSearch = function() {
     scrollToTop();
 };
 
-
-// Add this to the addEventListeners function
 keywordSearch.addEventListener('input', function() {
     clearTimeout(this.searchTimeout);
     this.searchTimeout = setTimeout(() => {
-        applyFilters();
-        scrollToTop();
-    }, 100);
+        requestAnimationFrame(() => {
+            applyFilters();
+            updateCategoryButtons();
+            scrollToTop();
+        });
+    }, 300); // Increased debounce time
 });
 
 window.selectKeyword = function(keyword) {
@@ -1025,31 +1045,114 @@ window.handleSubProfessionChange = function(parentName, subName) {
 };
 
 window.handleFilterChange = function(category, value) {
-    // Send tracking event to parent if in iframe
-    if (window.self !== window.top) {
-        window.parent.postMessage({
-            type: 'bmj-careers-filter-change',
-            filterType: category,
-            filterValue: value,
-            checked: document.getElementById(`${category}_${value.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`).checked
-        }, '*');
+    if (window.widgetClientInfo && window.widgetClientInfo.clientId !== 'direct') {
+        fetch('/api/track/widget', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                event: 'filter_change',
+                clientId: window.widgetClientInfo.clientId,
+                clientName: window.widgetClientInfo.clientName,
+                sessionId: window.widgetClientInfo.sessionId,
+                data: {
+                    filterType: category,
+                    filterValue: value,
+                    timestamp: Date.now()
+                }
+            })
+        }).catch(err => console.error('Filter tracking failed:', err));
     }
 
     applyFilters();
-    updateCategoryButtons(); // Update button states after filter change
+    updateCategoryButtons();
     scrollToTop();
 };
 
-
-
-    window.applyToJob = function(jobId) {
-        const job = allJobsData.find(j => j.id === jobId);
-        if (job && job.job_url) {
-            window.open(job.job_url, '_blank', 'noopener,noreferrer');
-        } else {
-            window.open('https://www.bmj.com/careers/jobs/', '_blank', 'noopener,noreferrer');
-        }
+(function initializeWidgetTracking() {
+    // Get client info from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    window.widgetClientInfo = {
+        clientId: urlParams.get('client_id') || urlParams.get('utm_source') || 'direct',
+        clientName: urlParams.get('client_name') || urlParams.get('utm_source') || 'Unknown',
+        sessionId: urlParams.get('session_id') || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     };
+
+    console.log('Widget initialized with client info:', window.widgetClientInfo);
+
+    // Track page load
+    if (window.widgetClientInfo.clientId !== 'direct') {
+        fetch('/api/track/widget', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                event: 'page_view',
+                clientId: window.widgetClientInfo.clientId,
+                clientName: window.widgetClientInfo.clientName,
+                sessionId: window.widgetClientInfo.sessionId,
+                data: {
+                    url: window.location.href,
+                    timestamp: Date.now()
+                }
+            })
+        }).catch(err => console.error('Page view tracking failed:', err));
+    }
+})();
+
+
+window.applyToJob = function(jobId) {
+    const job = window.allJobsData.find(j => j.id === jobId);
+
+    console.log('Job click detected:', {
+        jobId: jobId,
+        jobTitle: job?.job_title,
+        clientId: window.widgetClientInfo?.clientId
+    });
+
+    // Track the click properly
+    if (window.widgetClientInfo && window.widgetClientInfo.clientId !== 'direct') {
+        // Send to server
+        fetch('/api/track/widget', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                event: 'job_click',
+                clientId: window.widgetClientInfo.clientId,
+                clientName: window.widgetClientInfo.clientName,
+                sessionId: window.widgetClientInfo.sessionId,
+                data: {
+                    jobId: jobId,
+                    jobTitle: job?.job_title || 'Unknown',
+                    employer: job?.alternate_recruiter_name || job?.recruiter_name || 'Unknown',
+                    timestamp: Date.now()
+                }
+            })
+        }).then(response => {
+            console.log('Click tracked successfully');
+        }).catch(err => {
+            console.error('Click tracking failed:', err);
+        });
+
+        // Send to parent frame if embedded
+        if (window.self !== window.top) {
+            window.parent.postMessage({
+                type: 'bmj-careers-job-click',
+                jobId: jobId,
+                jobTitle: job?.job_title || 'Unknown',
+                employer: job?.alternate_recruiter_name || job?.recruiter_name || 'Unknown',
+                clientId: window.widgetClientInfo.clientId,
+                clientName: window.widgetClientInfo.clientName
+            }, '*');
+        }
+    }
+
+    // Open the job URL
+    if (job && job.job_url) {
+        window.open(job.job_url, '_blank', 'noopener,noreferrer');
+    } else {
+        window.open('https://www.bmj.com/careers/job/' + jobId, '_blank', 'noopener,noreferrer');
+    }
+};
+
 
     window.goToPage = function(page) {
         const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
@@ -1081,6 +1184,71 @@ window.handleFilterChange = function(category, value) {
             scrollToTopBtn.classList.remove('show');
         }
     }
+
+
+window.trackWidgetEvent = function(eventType, eventData) {
+    // Get client info from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get('client_id') || urlParams.get('utm_source') || 'direct';
+    const clientName = urlParams.get('client_name') || clientId;
+    const sessionId = urlParams.get('session_id') || 'direct_' + Date.now();
+
+    // Send to parent if in iframe
+    if (window.self !== window.top) {
+        window.parent.postMessage({
+            type: 'bmj-careers-event',
+            eventType: eventType,
+            data: eventData,
+            clientId: clientId,
+            clientName: clientName,
+            sessionId: sessionId
+        }, '*');
+    }
+
+    // Also send to server
+    fetch('/api/track/widget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            event: eventType,
+            clientId: clientId,
+            clientName: clientName,
+            sessionId: sessionId,
+            data: eventData
+        })
+    }).catch(err => console.error('Tracking failed:', err));
+};
+
+// Track search events
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('keywordSearch');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const searchTerm = this.value;
+
+            searchTimeout = setTimeout(() => {
+                if (window.widgetClientInfo && window.widgetClientInfo.clientId !== 'direct' && searchTerm) {
+                    fetch('/api/track/widget', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            event: 'search',
+                            clientId: window.widgetClientInfo.clientId,
+                            clientName: window.widgetClientInfo.clientName,
+                            sessionId: window.widgetClientInfo.sessionId,
+                            data: {
+                                searchTerm: searchTerm,
+                                timestamp: Date.now()
+                            }
+                        })
+                    }).catch(err => console.error('Search tracking failed:', err));
+                }
+            }, 500); // Debounce search tracking
+        });
+    }
+});
 
 function updateCategoryButtons() {
     // First, check if there are any active filters
@@ -2617,37 +2785,44 @@ function syncJobsData() {
        document.getElementById('lastBtn').disabled = currentPage === totalPages || totalPages === 0;
    }
 
-   // FIXED renderJobsList function
    function renderJobsList() {
-       const jobsList = document.getElementById('jobsList');
-       const pageJobs = getCurrentPageJobs();
+    const jobsList = document.getElementById('jobsList');
+    const pageJobs = getCurrentPageJobs();
 
-       if (pageJobs.length === 0) {
-           jobsList.innerHTML = '<div class="no-jobs-message">No jobs found matching your criteria.</div>';
-           return;
-       }
+    if (pageJobs.length === 0) {
+        jobsList.innerHTML = '<div class="no-jobs-message">No jobs found matching your criteria.</div>';
+        return;
+    }
 
-       jobsList.innerHTML = pageJobs.map(job => {
-           const employer = job.alternate_recruiter_name || job.recruiter_name || 'Unknown Employer';
-           return `
-               <div class="job-card">
-                   <div class="job-header">${job.job_title}</div>
-                   <div class="job-body">
-                       ${job.logo_url ? `<img src="${job.logo_url}" alt="${employer} Logo" class="nhs-logo">` : ''}
-                       <div class="job-details">
-                           <ul>
-                               <li><strong>Location:</strong> ${job.location_description}</li>
-                               <li><strong>Salary:</strong> ${job.salary || 'Competitive'}</li>
-                               <li><strong>Employer:</strong> ${employer}</li>
-                           </ul>
-                       </div>
-                       <div class="job-description">${job.short_description}</div>
-                       <button class="apply-btn" onclick="applyToJob(${job.id})">View Details on BMJ Careers</button>
-                   </div>
-               </div>
-           `;
-       }).join('');
-   }
+    // Use DocumentFragment for better performance
+    const fragment = document.createDocumentFragment();
+    const container = document.createElement('div');
+
+    container.innerHTML = pageJobs.map(job => {
+        const employer = job.alternate_recruiter_name || job.recruiter_name || 'Unknown Employer';
+        return `
+            <div class="job-card">
+                <div class="job-header">${job.job_title}</div>
+                <div class="job-body">
+                    ${job.logo_url ? `<img src="${job.logo_url}" alt="${employer} Logo" class="nhs-logo" loading="lazy">` : ''}
+                    <div class="job-details">
+                        <ul>
+                            <li><strong>Location:</strong> ${job.location_description}</li>
+                            <li><strong>Salary:</strong> ${job.salary || 'Competitive'}</li>
+                            <li><strong>Employer:</strong> ${employer}</li>
+                        </ul>
+                    </div>
+                    <div class="job-description">${job.short_description}</div>
+                    <button class="apply-btn" onclick="applyToJob(${job.id})">View Details on BMJ Careers</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    fragment.appendChild(container);
+    jobsList.innerHTML = '';
+    jobsList.appendChild(fragment.firstChild);
+}
 
    // Auto-close dropdowns on window resize
    function handleResize() {
@@ -2736,6 +2911,38 @@ let dataCheckInterval = setInterval(function() {
 setTimeout(function() {
     clearInterval(dataCheckInterval);
 }, 30000);
+
+    // Lazy load images
+if ('IntersectionObserver' in window) {
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                if (img.dataset.src) {
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                    observer.unobserve(img);
+                }
+            }
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            imageObserver.observe(img);
+        });
+    });
+}
+
+// Optimize scroll performance
+let ticking = false;
+function requestTick() {
+    if (!ticking) {
+        window.requestAnimationFrame(handleScroll);
+        ticking = true;
+    }
+}
+window.addEventListener('scroll', requestTick, { passive: true });
 
 </script>
 <!-- Cross-Origin Style Communication Script -->
@@ -3065,50 +3272,53 @@ window.applyCategoryFilter = function(category) {
             };
         }
 
-        // Enhanced message handler
-        window.addEventListener('message', function(event) {
-            // Security check
-            if (!isAllowedOrigin(event.origin)) {
-                console.warn('Rejected message from unauthorized origin:', event.origin);
-                return;
+window.addEventListener('message', function(event) {
+    // Add origin validation
+    const trustedOrigins = ['http://localhost:3000', 'https://careers.bmj.com', window.location.origin];
+    if (event.origin && !trustedOrigins.includes(event.origin) && !event.origin.includes('bmj')) {
+        console.warn('Untrusted origin:', event.origin);
+        return;
+    }
+
+    if (!event.data || typeof event.data !== 'object') return;
+
+    switch (event.data.type) {
+        case 'bmj-careers-config':
+            // Apply configuration from parent
+            if (event.data.categories) {
+                window.customCategoryConfig = event.data.categories;
+                if (typeof applyCategoryFilter === 'function') {
+                    applyCategoryFilter('all'); // Refresh with new config
+                }
             }
+            break;
 
-            if (!event.data || typeof event.data !== 'object') return;
+        case 'bmj-careers-tracking':
+            // Handle tracking events from parent
+            const { eventType, sessionId, clientId, clientName, data } = event.data;
 
-            switch (event.data.type) {
-                case 'bmj-careers-config':
-                    // Apply full configuration
-                    if (event.data.styles) {
-                        applyCustomStyles(event.data.styles);
-                    }
-                    if (event.data.categories) {
-                        applyCustomCategories(event.data.categories);
-                    }
-                    if (event.data.tracking) {
-                        initializeTracking(event.data);
-                    }
-                    break;
+            // Store client info for tracking
+            window.widgetClientInfo = {
+                clientId: clientId,
+                clientName: clientName,
+                sessionId: sessionId
+            };
 
-                case 'bmj-careers-styles':
-                    applyCustomStyles(event.data.styles);
-                    break;
+            console.log('Received tracking config:', window.widgetClientInfo);
+            break;
+    }
+});
 
-                case 'bmj-careers-categories':
-                    applyCustomCategories(event.data.categories);
-                    break;
-
-                case 'bmj-careers-command':
-                    handleCommand(event.data.command, event.data.data);
-                    break;
-
-                case 'bmj-careers-tracking':
-                    // Handle tracking data from parent
-                    if (event.data.eventType === 'heartbeat') {
-                        trackingData.timeOnPage = event.data.data.timeOnPage;
-                    }
-                    break;
-            }
-        });
+// Send ready message when widget loads
+window.addEventListener('load', function() {
+    if (window.self !== window.top) {
+        window.parent.postMessage({
+            type: 'bmj-careers-ready',
+            widgetId: 'bmj-careers-widget',
+            version: '2.0.0'
+        }, '*');
+    }
+});
 
         // Security: Validate message origin
         function isAllowedOrigin(origin) {
@@ -3188,6 +3398,7 @@ window.applyCategoryFilter = function(category) {
             sendEvent: sendTrackingEvent
         };
     })();
+
 </script>
 <!-- End Cross-Origin Style Communication Script -->
 </body>
