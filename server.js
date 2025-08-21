@@ -27,29 +27,8 @@ const app = express();
 const PORT = 3000;
 
 // Enable CORS for all origins during development
-// Configure CORS properly
-app.use(cors({
-    credentials: true,
-    origin: function(origin, callback) {
-        // Allow requests with no origin (mobile apps, Postman, etc)
-        if (!origin) return callback(null, true);
-        // Allow all origins for widget embedding
-        return callback(null, true);
-    },
-    optionsSuccessStatus: 200
-}));
-
+app.use(cors());
 app.use(express.json());
-
-// Security headers
-app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minute cache
-    next();
-});
 
 // Serve static files from public folder (for CSS)
 app.use(express.static('public'));
@@ -2764,19 +2743,13 @@ window.fetch = function(...args) {
             showLoading();
         }
 
-        fetch('/api/jobs', {
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
+        fetch('/api/jobs')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.status);
                 }
+                return response.json();
             })
-                .then(response => {
-                    if (!response.ok) {
-                        console.warn('API response not ok:', response.status);
-                        return { jobs: [] };
-                    }
-                    return response.json();
-                })
             .then(data => {
                 console.log('API Response:', data);
                 console.log('Source:', data.source, 'From Cache:', data.fromCache);
@@ -2833,21 +2806,11 @@ window.fetch = function(...args) {
 
     ${renderJobsListUpdate}
 
-// Defer non-critical initialization
+    // Load jobs immediately when DOM is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(() => loadJobsFromAPI(false), { timeout: 3000 });
-            } else {
-                setTimeout(() => loadJobsFromAPI(false), 100);
-            }
-        });
+        document.addEventListener('DOMContentLoaded', () => loadJobsFromAPI(false));
     } else {
-        if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => loadJobsFromAPI(false), { timeout: 3000 });
-        } else {
-            setTimeout(() => loadJobsFromAPI(false), 100);
-        }
+        loadJobsFromAPI(false);
     }
 
     // Expose functions for debugging
