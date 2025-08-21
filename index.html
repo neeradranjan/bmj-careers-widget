@@ -7,21 +7,52 @@
     <meta name="keywords" content="medical jobs, healthcare careers, NHS jobs, consultant positions, GP vacancies, medical recruitment, BMJ careers">
     <meta name="author" content="BMJ Careers">
     <meta name="robots" content="index, follow">
-    <!-- Preconnect to improve performance -->
-    <link rel="preconnect" href="https://www.bmj.com">
-    <link rel="dns-prefetch" href="https://www.bmj.com">
     <title>BMJ Careers - Medical Jobs</title>
-    <link rel="stylesheet" href="styles.css">
+
+    <!-- Resource hints for performance -->
+    <link rel="preconnect" href="https://www.bmj.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.bmj.com">
+
+    <!-- Inline critical CSS -->
+    <style>
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; }
+        .main-wrapper { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .job-count-header { margin-bottom: 2rem; }
+    </style>
+
+    <!-- Defer non-critical CSS -->
+    <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css"></noscript>
 </head>
 <body>
 <script>
-    // Set document.domain if needed for cross-origin
-    try {
-        if (window.location.hostname.includes('bmj')) {
-            document.domain = window.location.hostname.split('.').slice(-2).join('.');
+    // Prevent console errors from undefined variables
+    window.allJobsData = window.allJobsData || [];
+    window.filteredJobs = window.filteredJobs || [];
+    window.activeCategoryFilter = window.activeCategoryFilter || 'all';
+
+    // Handle localStorage safely
+    const safeStorage = {
+        getItem: (key) => {
+            try {
+                return localStorage.getItem(key);
+            } catch (e) {
+                return null;
+            }
+        },
+        setItem: (key, value) => {
+            try {
+                localStorage.setItem(key, value);
+            } catch (e) {
+                // Silently fail - storage might be blocked
+            }
         }
-    } catch(e) {
-        // Domain setting not needed
+    };
+
+    // Replace sessionStorage usage with safeStorage
+    if (!window.sessionStorage) {
+        window.sessionStorage = safeStorage;
     }
 </script>
 
@@ -119,560 +150,607 @@
 </button>
 
 <script>
+    // Performance utilities
+    const perfUtils = {
+        debounce: function(func, wait, immediate) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    timeout = null;
+                    if (!immediate) func(...args);
+                };
+                const callNow = immediate && !timeout;
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+                if (callNow) func(...args);
+            };
+        },
+
+        throttle: function(func, limit) {
+            let inThrottle;
+            return function(...args) {
+                if (!inThrottle) {
+                    func.apply(this, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            };
+        }
+    };
+
     // Initialize with empty array - will be populated by API
     let allJobsData = [];
 window.allJobsData = allJobsData;
 
-    // Dynamic hierarchy objects that will be populated from data
+    // Lazy load hierarchies to reduce initial bundle size
+    let professionHierarchy = null;
+    let locationHierarchy = null;
     let dynamicProfessionHierarchy = {};
     let dynamicLocationHierarchy = {};
 
-    const professionHierarchy = {
-        'GP': {
-            subcategories: [
-                'Digital GP',
-                'GP Partner',
-                'GP Trainee',
-                'Locum GP',
-                'Salaried GP'
-            ]
-        },
-        'Specialist Doctor': {
-            subcategories: [
-                'Acute Internal Medicine',
-                'Adult Critical Care',
-                'Anaesthesia',
-                'Anatomy',
-                'Audiological Medicine',
-                'BioChemistry',
-                'Cardiology',
-                'Cardiothoracic Surgery',
-                'Cytopathology',
-                'Dermatology',
-                'Diabetes & Endocrinology',
-                'Emergency medicine',
-                'ENT/Otolaryngology',
-                'Forensic Pathology',
-                'Gastroenterology',
-                'General Internal Medicine',
-                'General Surgery',
-                'Genetics',
-                'Genitourinary Medicine',
-                'Geriatric Medicine',
-                'GP in Emergency Medicine',
-                'Gynaecological Oncology',
-                'Haematology',
-                'Hepatology',
-                'Histopathology',
-                'Immunology',
-                'Intensive and Critical Care Medicine',
-                'Locum Doctor',
-                'Maternal and Foetal Medicine',
-                'Metabolic Medicine',
-                'Microbiology, Virology and Infectious Diseases',
-                'Neonatology',
-                'Nephrology/Renal Medicine',
-                'Neurology',
-                'Neuropathology',
-                'Neurophysiology',
-                'Neurosurgery',
-                'Nuclear Medicine',
-                'Obstetrics and Gynaecology',
-                'Occupational Medicine',
-                'Oncology',
-                'Ophthalmology',
-                'Oral and Maxillofacial Surgery',
-                {
-                    name: 'Paediatrics',
-                    subcategories: [
-                        'Paediatric cardiology',
-                        'Paediatric diabetes and endocrinology',
-                        'Paediatric emergency medicine',
-                        'Paediatric gastroenterology, Hepatology and Nutrition',
-                        'Paediatric immunology, infectious diseases and allergy',
-                        'Paediatric intensive Care Medicine',
-                        'Paediatric nephrology',
-                        'Paediatric neurodisability',
-                        'Paediatric neurology',
-                        'Paediatric oncology',
-                        'Paediatric palliative Medicine',
-                        'Paediatric pathology',
-                        'Paediatric respiratory medicine',
-                        'Paediatric rheumatology',
-                        'Paediatric surgery'
-                    ]
-                },
-                'Palliative medicine',
-                'Pathology',
-                'Pharmaceutical medicine',
-                'Pharmalogy and Therapeutics',
-                'Physiology',
-                'Plastic Surgery',
-                'Pre Hospital Emergency Medicine',
-                {
-                    name: 'Psychiatry',
-                    subcategories: [
-                        'Child and Adolescent Psychiatry',
-                        'Community Psychiatry',
-                        'Forensic Psychiatry',
-                        'General Adult Psychiatry',
-                        'Liaison Psychiatry',
-                        'Medical Psychotherapy',
-                        'Old-age Psychiatry',
-                        'Psychiatry of eating disorders',
-                        'Psychiatry of learning disablity',
-                        'Rehabilition Psychiatry',
-                        'Substance Misuse Psychiatry'
-                    ]
-                },
-                'Public Health Medicine and Epidemiology',
-                'Radiology',
-                'Rahabilitation Medicine',
-                'Respiratory Medicine',
-                'Rheumatology',
-                'RMO',
-                'Sexual and Reproductive Health',
-                'Spinal Injuries',
-                'Sports and Exercise Medicine',
-                'Stroke Medicine',
-                'Trauma and Orthopaedics',
-                'Tropical Medicine',
-                'Urogynaecology',
-                'Urology',
-                'Vascular Surgery'
-            ]
-        },
-        'Other Medical Roles': {
-            subcategories: [
-                'Armed Forces Doctor',
-                'Commissioning',
-                'Government and Health Policy',
-                'Healthtech',
-                'International medical Jobs',
-                'Medical Education and Training',
-                'Medical Examiner',
-                'Medical leadership',
-                'Medical training Initiative',
-                'Medico-legal',
-                'Occupational health',
-                'Pharmaceutical',
-                'Public Health',
-                'Special Appointements'
-            ]
-        },
-        'Nurse': {
-            subcategories: [
-                {
-                    name: 'Adult Nurse',
-                    subcategories: [
-                        'A&E Nurse',
-                        'Acute Nurse',
-                        'Anaesthesia Nurse',
-                        'Cancer Nurse',
-                        'Cardiology Nurse',
-                        'Elderly Care Nurse',
-                        'Fertility Nurse',
-                        'ICU Nurse',
-                        'Ophthalmics Nurse',
-                        'Palliative Care Nurse',
-                        'Renal Nurse',
-                        'Respiratory Nurse',
-                        'Sexual Health Nurse',
-                        'Theatre Nurse',
-                        'Trauma Nurse'
-                    ]
-                },
-                {
-                    name: 'Community Nurse',
-                    subcategories: [
-                        'Care Home Nurse',
-                        'Community MidWife',
-                        'District Nurse',
-                        'Health Visitor',
-                        'Mental Health Nurse - Community',
-                        'School Nurse'
-                    ]
-                },
-                'General Practice Nurse',
-                'Learning Disablity Nurse',
-                {
-                    name: 'Mental Health Nurse',
-                    subcategories: [
-                        'Adult Mental Health Nurse',
-                        'CAMHS Nurse',
-                        'Community Mental Health Nurse',
-                        'Eating Disorders Nurse',
-                        'Forensic Mental Health Nurse',
-                        'Mental Health Liaison Nurse',
-                        'Mental health Nurse in Primary care',
-                        'Old Age Mental Health Care Nurse',
-                        'Perinatal Mental Health Nurse',
-                        'Rehabilitation Mental Health Nurse',
-                        'Substance Misuse Nurse'
-                    ]
-                },
-                'Midwife',
-                'Nurse associate',
-                {
-                    name: 'Paediatric Nurse',
-                    subcategories: [
-                        'Neonatal Nurse',
-                        'Paediatric A&E Nurse'
-                    ]
-                },
-                'Prison Nurse'
-            ]
-        },
-        'Mental Health Professional': {
-            subcategories: [
-                'CBT Therapist',
-                'Counsellor',
-                'Mental health Practitioner',
-                'Psychologist',
-                'Psychotherapist'
-            ]
-        },
-        'Pharmacist': {
-            subcategories: [
-                'Pharmacy technician'
-            ]
-        },
-        'Physician Associate': {
-            subcategories: []
-        },
-        'Senior Manager': {
-            subcategories: []
-        },
-        'Other Health Profession': {
-            subcategories: []
-        }
-    };
+    function initializeHierarchies() {
+        professionHierarchy = {
+            'GP': { subcategories: [] },
+            'Specialist Doctor': { subcategories: [] },
+            'Other Medical Roles': { subcategories: [] },
+            'Nurse': { subcategories: [] },
+            'Mental Health Professional': { subcategories: [] },
+            'Pharmacist': { subcategories: [] },
+            'Physician Associate': { subcategories: [] },
+            'Senior Manager': { subcategories: [] },
+            'Other Health Profession': { subcategories: [] }
+        };
 
-    const locationHierarchy = {
-        'London': {
-            subcategories: [
-                'Central London',
-                'North London',
-                'South London',
-                'East London',
-                'West London',
-                'Greater London'
-            ]
-        },
-        'South East England': {
-            subcategories: [
-                'Brighton',
-                'Canterbury',
-                'Oxford',
-                'Reading',
-                'Southampton',
-                'Portsmouth',
-                'Guildford',
-                'Maidstone',
-                'Crawley',
-                'Slough',
-                'Milton Keynes',
-                'Luton',
-                'Medway',
-                'Ashford',
-                'Basingstoke',
-                'Eastbourne',
-                'Hastings',
-                'Worthing',
-                'Bracknell',
-                'Maidenhead',
-                'Windsor',
-                'Berkshire',
-                'Buckinghamshire',
-                'East Sussex',
-                'Hampshire',
-                'Isle of Wight',
-                'Kent',
-                'Oxfordshire',
-                'Surrey',
-                'West Sussex'
-            ]
-        },
-        'South West England': {
-            subcategories: [
-                'Bristol',
-                'Plymouth',
-                'Bournemouth',
-                'Swindon',
-                'Gloucester',
-                'Exeter',
-                'Bath',
-                'Cheltenham',
-                'Torbay',
-                'Poole',
-                'Taunton',
-                'Salisbury',
-                'Truro',
-                'Weymouth',
-                'Weston-super-Mare',
-                'Yeovil',
-                'Barnstaple',
-                'Bridgwater',
-                'Cornwall',
-                'Devon',
-                'Dorset',
-                'Gloucestershire',
-                'Somerset',
-                'Wiltshire'
-            ]
-        },
-        'East of England': {
-            subcategories: [
-                'Cambridge',
-                'Norwich',
-                'Peterborough',
-                'Ipswich',
-                'Colchester',
-                'Southend-on-Sea',
-                'Luton',
-                'Watford',
-                'St Albans',
-                'Chelmsford',
-                'Basildon',
-                'Harlow',
-                'Stevenage',
-                'Bedford',
-                'Bury St Edmunds',
-                'Hertford',
-                'Huntingdon',
-                'Kings Lynn',
-                'Lowestoft',
-                'Bedfordshire',
-                'Cambridgeshire',
-                'Essex',
-                'Hertfordshire',
-                'Norfolk',
-                'Suffolk'
-            ]
-        },
-        'East Midlands': {
-            subcategories: [
-                'Nottingham',
-                'Leicester',
-                'Derby',
-                'Northampton',
-                'Lincoln',
-                'Mansfield',
-                'Chesterfield',
-                'Kettering',
-                'Loughborough',
-                'Boston',
-                'Grantham',
-                'Corby',
-                'Hinckley',
-                'Newark',
-                'Wellingborough',
-                'Derbyshire',
-                'Leicestershire',
-                'Lincolnshire',
-                'Northamptonshire',
-                'Nottinghamshire',
-                'Rutland'
-            ]
-        },
-        'West Midlands': {
-            subcategories: [
-                'Birmingham',
-                'Coventry',
-                'Wolverhampton',
-                'Stoke-on-Trent',
-                'Solihull',
-                'Walsall',
-                'Dudley',
-                'Sandwell',
-                'Worcester',
-                'Shrewsbury',
-                'Telford',
-                'Stafford',
-                'Warwick',
-                'Hereford',
-                'Stratford-upon-Avon',
-                'Lichfield',
-                'Tamworth',
-                'Redditch',
-                'Kidderminster',
-                'Herefordshire',
-                'Shropshire',
-                'Staffordshire',
-                'Warwickshire',
-                'Worcestershire'
-            ]
-        },
-        'Yorkshire and the Humber': {
-            subcategories: [
-                'Leeds',
-                'Sheffield',
-                'Bradford',
-                'Hull',
-                'York',
-                'Huddersfield',
-                'Middlesbrough',
-                'Doncaster',
-                'Rotherham',
-                'Wakefield',
-                'Barnsley',
-                'Halifax',
-                'Harrogate',
-                'Scarborough',
-                'Dewsbury',
-                'Keighley',
-                'Scunthorpe',
-                'Grimsby',
-                'East Yorkshire',
-                'North Yorkshire',
-                'South Yorkshire',
-                'West Yorkshire'
-            ]
-        },
-        'North West England': {
-            subcategories: [
-                'Manchester',
-                'Liverpool',
-                'Warrington',
-                'Bolton',
-                'Blackpool',
-                'Preston',
-                'Chester',
-                'Stockport',
-                'Oldham',
-                'Rochdale',
-                'Salford',
-                'Wigan',
-                'Bury',
-                'Blackburn',
-                'St Helens',
-                'Carlisle',
-                'Lancaster',
-                'Crewe',
-                'Burnley',
-                'Macclesfield',
-                'Barrow-in-Furness',
-                'Runcorn',
-                'Ellesmere Port',
-                'Cheshire',
-                'Cumbria',
-                'Greater Manchester',
-                'Lancashire',
-                'Merseyside'
-            ]
-        },
-        'North East England': {
-            subcategories: [
-                'Newcastle upon Tyne',
-                'Sunderland',
-                'Durham',
-                'Gateshead',
-                'Middlesbrough',
-                'Stockton-on-Tees',
-                'Darlington',
-                'Hartlepool',
-                'South Shields',
-                'Tynemouth',
-                'Washington',
-                'Ashington',
-                'Blyth',
-                'Redcar',
-                'Bishop Auckland',
-                'County Durham',
-                'Northumberland',
-                'Tyne and Wear',
-                'Teesside'
-            ]
-        },
-        'Scotland': {
-            subcategories: [
-                'Edinburgh',
-                'Glasgow',
-                'Aberdeen',
-                'Dundee',
-                'Inverness',
-                'Perth',
-                'Stirling',
-                'Paisley',
-                'East Kilbride',
-                'Livingston',
-                'Hamilton',
-                'Cumbernauld',
-                'Dunfermline',
-                'Kirkcaldy',
-                'Ayr',
-                'Kilmarnock',
-                'Greenock',
-                'Coatbridge',
-                'Glenrothes',
-                'Falkirk'
-            ]
-        },
-        'Wales': {
-            subcategories: [
-                'Cardiff',
-                'Swansea',
-                'Newport',
-                'Wrexham',
-                'Barry',
-                'Neath',
-                'Cwmbran',
-                'Llanelli',
-                'Rhondda',
-                'Merthyr Tydfil',
-                'Bridgend',
-                'Caerphilly',
-                'Port Talbot',
-                'Pontypridd',
-                'Aberdare',
-                'Colwyn Bay',
-                'Rhyl',
-                'Flintshire',
-                'Gwynedd',
-                'Anglesey'
-            ]
-        },
-        'Northern Ireland': {
-            subcategories: [
-                'Belfast',
-                'Derry',
-                'Lisburn',
-                'Newtownabbey',
-                'Bangor',
-                'Craigavon',
-                'Castlereagh',
-                'Ballymena',
-                'Newtownards',
-                'Newry',
-                'Carrickfergus',
-                'Coleraine',
-                'Omagh',
-                'Larne',
-                'Banbridge',
-                'Armagh',
-                'Dungannon',
-                'Enniskillen',
-                'Strabane',
-                'Antrim'
-            ]
-        },
-        'Overseas': {
-            subcategories: [
-                'Republic of Ireland',
-                'Channel Islands',
-                'Isle of Man',
-                'Europe',
-                'Middle East',
-                'Asia Pacific',
-                'North America',
-                'South America',
-                'Africa',
-                'Australia',
-                'New Zealand',
-                'Other International'
-            ]
-        }
-    };
+        locationHierarchy = {
+            'London': { subcategories: [] },
+            'South East England': { subcategories: [] },
+            'South West England': { subcategories: [] },
+            'East of England': { subcategories: [] },
+            'East Midlands': { subcategories: [] },
+            'West Midlands': { subcategories: [] },
+            'Yorkshire and the Humber': { subcategories: [] },
+            'North West England': { subcategories: [] },
+            'North East England': { subcategories: [] },
+            'Scotland': { subcategories: [] },
+            'Wales': { subcategories: [] },
+            'Northern Ireland': { subcategories: [] },
+            'Overseas': { subcategories: [] }
+        };
+    }
+
+// Initialize hierarchies
+    initializeHierarchies();
+
+    // Full hierarchy data - loaded asynchronously
+    function loadFullHierarchies() {
+        // Full profession hierarchy
+        professionHierarchy['GP'].subcategories = [
+            'Digital GP',
+            'GP Partner',
+            'GP Trainee',
+            'Locum GP',
+            'Salaried GP'
+        ];
+
+        professionHierarchy['Specialist Doctor'].subcategories = [
+            'Acute Internal Medicine',
+            'Adult Critical Care',
+            'Anaesthesia',
+            'Anatomy',
+            'Audiological Medicine',
+            'BioChemistry',
+            'Cardiology',
+            'Cardiothoracic Surgery',
+            'Cytopathology',
+            'Dermatology',
+            'Diabetes & Endocrinology',
+            'Emergency medicine',
+            'ENT/Otolaryngology',
+            'Forensic Pathology',
+            'Gastroenterology',
+            'General Internal Medicine',
+            'General Surgery',
+            'Genetics',
+            'Genitourinary Medicine',
+            'Geriatric Medicine',
+            'GP in Emergency Medicine',
+            'Gynaecological Oncology',
+            'Haematology',
+            'Hepatology',
+            'Histopathology',
+            'Immunology',
+            'Intensive and Critical Care Medicine',
+            'Locum Doctor',
+            'Maternal and Foetal Medicine',
+            'Metabolic Medicine',
+            'Microbiology, Virology and Infectious Diseases',
+            'Neonatology',
+            'Nephrology/Renal Medicine',
+            'Neurology',
+            'Neuropathology',
+            'Neurophysiology',
+            'Neurosurgery',
+            'Nuclear Medicine',
+            'Obstetrics and Gynaecology',
+            'Occupational Medicine',
+            'Oncology',
+            'Ophthalmology',
+            'Oral and Maxillofacial Surgery',
+            {
+                name: 'Paediatrics',
+                subcategories: [
+                    'Paediatric cardiology',
+                    'Paediatric diabetes and endocrinology',
+                    'Paediatric emergency medicine',
+                    'Paediatric gastroenterology, Hepatology and Nutrition',
+                    'Paediatric immunology, infectious diseases and allergy',
+                    'Paediatric intensive Care Medicine',
+                    'Paediatric nephrology',
+                    'Paediatric neurodisability',
+                    'Paediatric neurology',
+                    'Paediatric oncology',
+                    'Paediatric palliative Medicine',
+                    'Paediatric pathology',
+                    'Paediatric respiratory medicine',
+                    'Paediatric rheumatology',
+                    'Paediatric surgery'
+                ]
+            },
+            'Palliative medicine',
+            'Pathology',
+            'Pharmaceutical medicine',
+            'Pharmalogy and Therapeutics',
+            'Physiology',
+            'Plastic Surgery',
+            'Pre Hospital Emergency Medicine',
+            {
+                name: 'Psychiatry',
+                subcategories: [
+                    'Child and Adolescent Psychiatry',
+                    'Community Psychiatry',
+                    'Forensic Psychiatry',
+                    'General Adult Psychiatry',
+                    'Liaison Psychiatry',
+                    'Medical Psychotherapy',
+                    'Old-age Psychiatry',
+                    'Psychiatry of eating disorders',
+                    'Psychiatry of learning disablity',
+                    'Rehabilition Psychiatry',
+                    'Substance Misuse Psychiatry'
+                ]
+            },
+            'Public Health Medicine and Epidemiology',
+            'Radiology',
+            'Rahabilitation Medicine',
+            'Respiratory Medicine',
+            'Rheumatology',
+            'RMO',
+            'Sexual and Reproductive Health',
+            'Spinal Injuries',
+            'Sports and Exercise Medicine',
+            'Stroke Medicine',
+            'Trauma and Orthopaedics',
+            'Tropical Medicine',
+            'Urogynaecology',
+            'Urology',
+            'Vascular Surgery'
+        ];
+
+        professionHierarchy['Other Medical Roles'].subcategories = [
+            'Armed Forces Doctor',
+            'Commissioning',
+            'Government and Health Policy',
+            'Healthtech',
+            'International medical Jobs',
+            'Medical Education and Training',
+            'Medical Examiner',
+            'Medical leadership',
+            'Medical training Initiative',
+            'Medico-legal',
+            'Occupational health',
+            'Pharmaceutical',
+            'Public Health',
+            'Special Appointements'
+        ];
+
+        professionHierarchy['Nurse'].subcategories = [
+            {
+                name: 'Adult Nurse',
+                subcategories: [
+                    'A&E Nurse',
+                    'Acute Nurse',
+                    'Anaesthesia Nurse',
+                    'Cancer Nurse',
+                    'Cardiology Nurse',
+                    'Elderly Care Nurse',
+                    'Fertility Nurse',
+                    'ICU Nurse',
+                    'Ophthalmics Nurse',
+                    'Palliative Care Nurse',
+                    'Renal Nurse',
+                    'Respiratory Nurse',
+                    'Sexual Health Nurse',
+                    'Theatre Nurse',
+                    'Trauma Nurse'
+                ]
+            },
+            {
+                name: 'Community Nurse',
+                subcategories: [
+                    'Care Home Nurse',
+                    'Community MidWife',
+                    'District Nurse',
+                    'Health Visitor',
+                    'Mental Health Nurse - Community',
+                    'School Nurse'
+                ]
+            },
+            'General Practice Nurse',
+            'Learning Disablity Nurse',
+            {
+                name: 'Mental Health Nurse',
+                subcategories: [
+                    'Adult Mental Health Nurse',
+                    'CAMHS Nurse',
+                    'Community Mental Health Nurse',
+                    'Eating Disorders Nurse',
+                    'Forensic Mental Health Nurse',
+                    'Mental Health Liaison Nurse',
+                    'Mental health Nurse in Primary care',
+                    'Old Age Mental Health Care Nurse',
+                    'Perinatal Mental Health Nurse',
+                    'Rehabilitation Mental Health Nurse',
+                    'Substance Misuse Nurse'
+                ]
+            },
+            'Midwife',
+            'Nurse associate',
+            {
+                name: 'Paediatric Nurse',
+                subcategories: [
+                    'Neonatal Nurse',
+                    'Paediatric A&E Nurse'
+                ]
+            },
+            'Prison Nurse'
+        ];
+
+        professionHierarchy['Mental Health Professional'].subcategories = [
+            'CBT Therapist',
+            'Counsellor',
+            'Mental health Practitioner',
+            'Psychologist',
+            'Psychotherapist'
+        ];
+
+        professionHierarchy['Pharmacist'].subcategories = [
+            'Pharmacy technician'
+        ];
+
+        // Full location hierarchy
+        locationHierarchy['London'].subcategories = [
+            'Central London',
+            'North London',
+            'South London',
+            'East London',
+            'West London',
+            'Greater London'
+        ];
+
+        locationHierarchy['South East England'].subcategories = [
+            'Brighton',
+            'Canterbury',
+            'Oxford',
+            'Reading',
+            'Southampton',
+            'Portsmouth',
+            'Guildford',
+            'Maidstone',
+            'Crawley',
+            'Slough',
+            'Milton Keynes',
+            'Luton',
+            'Medway',
+            'Ashford',
+            'Basingstoke',
+            'Eastbourne',
+            'Hastings',
+            'Worthing',
+            'Bracknell',
+            'Maidenhead',
+            'Windsor',
+            'Berkshire',
+            'Buckinghamshire',
+            'East Sussex',
+            'Hampshire',
+            'Isle of Wight',
+            'Kent',
+            'Oxfordshire',
+            'Surrey',
+            'West Sussex'
+        ];
+
+        locationHierarchy['South West England'].subcategories = [
+            'Bristol',
+            'Plymouth',
+            'Bournemouth',
+            'Swindon',
+            'Gloucester',
+            'Exeter',
+            'Bath',
+            'Cheltenham',
+            'Torbay',
+            'Poole',
+            'Taunton',
+            'Salisbury',
+            'Truro',
+            'Weymouth',
+            'Weston-super-Mare',
+            'Yeovil',
+            'Barnstaple',
+            'Bridgwater',
+            'Cornwall',
+            'Devon',
+            'Dorset',
+            'Gloucestershire',
+            'Somerset',
+            'Wiltshire'
+        ];
+
+        locationHierarchy['East of England'].subcategories = [
+            'Cambridge',
+            'Norwich',
+            'Peterborough',
+            'Ipswich',
+            'Colchester',
+            'Southend-on-Sea',
+            'Luton',
+            'Watford',
+            'St Albans',
+            'Chelmsford',
+            'Basildon',
+            'Harlow',
+            'Stevenage',
+            'Bedford',
+            'Bury St Edmunds',
+            'Hertford',
+            'Huntingdon',
+            'Kings Lynn',
+            'Lowestoft',
+            'Bedfordshire',
+            'Cambridgeshire',
+            'Essex',
+            'Hertfordshire',
+            'Norfolk',
+            'Suffolk'
+        ];
+
+        locationHierarchy['East Midlands'].subcategories = [
+            'Nottingham',
+            'Leicester',
+            'Derby',
+            'Northampton',
+            'Lincoln',
+            'Mansfield',
+            'Chesterfield',
+            'Kettering',
+            'Loughborough',
+            'Boston',
+            'Grantham',
+            'Corby',
+            'Hinckley',
+            'Newark',
+            'Wellingborough',
+            'Derbyshire',
+            'Leicestershire',
+            'Lincolnshire',
+            'Northamptonshire',
+            'Nottinghamshire',
+            'Rutland'
+        ];
+
+        locationHierarchy['West Midlands'].subcategories = [
+            'Birmingham',
+            'Coventry',
+            'Wolverhampton',
+            'Stoke-on-Trent',
+            'Solihull',
+            'Walsall',
+            'Dudley',
+            'Sandwell',
+            'Worcester',
+            'Shrewsbury',
+            'Telford',
+            'Stafford',
+            'Warwick',
+            'Hereford',
+            'Stratford-upon-Avon',
+            'Lichfield',
+            'Tamworth',
+            'Redditch',
+            'Kidderminster',
+            'Herefordshire',
+            'Shropshire',
+            'Staffordshire',
+            'Warwickshire',
+            'Worcestershire'
+        ];
+
+        locationHierarchy['Yorkshire and the Humber'].subcategories = [
+            'Leeds',
+            'Sheffield',
+            'Bradford',
+            'Hull',
+            'York',
+            'Huddersfield',
+            'Middlesbrough',
+            'Doncaster',
+            'Rotherham',
+            'Wakefield',
+            'Barnsley',
+            'Halifax',
+            'Harrogate',
+            'Scarborough',
+            'Dewsbury',
+            'Keighley',
+            'Scunthorpe',
+            'Grimsby',
+            'East Yorkshire',
+            'North Yorkshire',
+            'South Yorkshire',
+            'West Yorkshire'
+        ];
+
+        locationHierarchy['North West England'].subcategories = [
+            'Manchester',
+            'Liverpool',
+            'Warrington',
+            'Bolton',
+            'Blackpool',
+            'Preston',
+            'Chester',
+            'Stockport',
+            'Oldham',
+            'Rochdale',
+            'Salford',
+            'Wigan',
+            'Bury',
+            'Blackburn',
+            'St Helens',
+            'Carlisle',
+            'Lancaster',
+            'Crewe',
+            'Burnley',
+            'Macclesfield',
+            'Barrow-in-Furness',
+            'Runcorn',
+            'Ellesmere Port',
+            'Cheshire',
+            'Cumbria',
+            'Greater Manchester',
+            'Lancashire',
+            'Merseyside'
+        ];
+
+        locationHierarchy['North East England'].subcategories = [
+            'Newcastle upon Tyne',
+            'Sunderland',
+            'Durham',
+            'Gateshead',
+            'Middlesbrough',
+            'Stockton-on-Tees',
+            'Darlington',
+            'Hartlepool',
+            'South Shields',
+            'Tynemouth',
+            'Washington',
+            'Ashington',
+            'Blyth',
+            'Redcar',
+            'Bishop Auckland',
+            'County Durham',
+            'Northumberland',
+            'Tyne and Wear',
+            'Teesside'
+        ];
+
+        locationHierarchy['Scotland'].subcategories = [
+            'Edinburgh',
+            'Glasgow',
+            'Aberdeen',
+            'Dundee',
+            'Inverness',
+            'Perth',
+            'Stirling',
+            'Paisley',
+            'East Kilbride',
+            'Livingston',
+            'Hamilton',
+            'Cumbernauld',
+            'Dunfermline',
+            'Kirkcaldy',
+            'Ayr',
+            'Kilmarnock',
+            'Greenock',
+            'Coatbridge',
+            'Glenrothes',
+            'Falkirk'
+        ];
+
+        locationHierarchy['Wales'].subcategories = [
+            'Cardiff',
+            'Swansea',
+            'Newport',
+            'Wrexham',
+            'Barry',
+            'Neath',
+            'Cwmbran',
+            'Llanelli',
+            'Rhondda',
+            'Merthyr Tydfil',
+            'Bridgend',
+            'Caerphilly',
+            'Port Talbot',
+            'Pontypridd',
+            'Aberdare',
+            'Colwyn Bay',
+            'Rhyl',
+            'Flintshire',
+            'Gwynedd',
+            'Anglesey'
+        ];
+
+        locationHierarchy['Northern Ireland'].subcategories = [
+            'Belfast',
+            'Derry',
+            'Lisburn',
+            'Newtownabbey',
+            'Bangor',
+            'Craigavon',
+            'Castlereagh',
+            'Ballymena',
+            'Newtownards',
+            'Newry',
+            'Carrickfergus',
+            'Coleraine',
+            'Omagh',
+            'Larne',
+            'Banbridge',
+            'Armagh',
+            'Dungannon',
+            'Enniskillen',
+            'Strabane',
+            'Antrim'
+        ];
+
+        locationHierarchy['Overseas'].subcategories = [
+            'Republic of Ireland',
+            'Channel Islands',
+            'Isle of Man',
+            'Europe',
+            'Middle East',
+            'Asia Pacific',
+            'North America',
+            'South America',
+            'Africa',
+            'Australia',
+            'New Zealand',
+            'Other International'
+        ];
+
+        // Update dynamic hierarchies
+        dynamicProfessionHierarchy = JSON.parse(JSON.stringify(professionHierarchy));
+        dynamicLocationHierarchy = JSON.parse(JSON.stringify(locationHierarchy));
+
+        console.log('Full hierarchies loaded');
+    }
+
+    // Load full hierarchies after page loads
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => loadFullHierarchies(), { timeout: 2000 });
+    } else {
+        setTimeout(() => loadFullHierarchies(), 500);
+    }
 
     let filterData = {};
     let keywords = [];
@@ -1169,21 +1247,24 @@ window.applyToJob = function(jobId) {
         return currentPage;
     };
 
-    window.scrollToTop = function() {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
+window.scrollToTop = function() {
+        // Avoid forced reflow by using requestAnimationFrame
+        requestAnimationFrame(() => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         });
     };
 
-    function handleScroll() {
+const handleScroll = perfUtils.throttle(() => {
         const scrollToTopBtn = document.getElementById('scrollToTop');
         if (window.pageYOffset > 300) {
             scrollToTopBtn.classList.add('show');
         } else {
             scrollToTopBtn.classList.remove('show');
         }
-    }
+    }, 100);
 
 
 window.trackWidgetEvent = function(eventType, eventData) {
@@ -1297,6 +1378,11 @@ function updateCategoryButtons() {
 
     // Build dynamic hierarchies from job data
 function buildDynamicHierarchies() {
+
+ if (!professionHierarchy || Object.keys(professionHierarchy).length === 0) {
+        loadFullHierarchies();
+    }
+
     // Deep copy the base hierarchies
     dynamicProfessionHierarchy = JSON.parse(JSON.stringify(professionHierarchy));
     dynamicLocationHierarchy = JSON.parse(JSON.stringify(locationHierarchy));
@@ -2211,10 +2297,11 @@ function buildDynamicHierarchies() {
    }
 
    function applyFilters() {
-    let activeJobs = filterActiveJobs(allJobsData);
-
+    // Batch all reads first to avoid forced reflows
+    const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
     const activeFilters = {};
 
+    // Collect all filter states in one pass
     Object.keys(filterData).forEach(category => {
         activeFilters[category] = [];
         if (category === 'profession') {
@@ -2222,24 +2309,25 @@ function buildDynamicHierarchies() {
         } else if (category === 'location') {
             activeFilters[category] = getCheckedLocations();
         } else {
-            filterData[category].forEach(item => {
-                const checkboxId = `${category}_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-                const checkbox = document.getElementById(checkboxId);
-                if (checkbox && checkbox.checked) {
-                    activeFilters[category].push(item.name);
-                }
-            });
+            if (filterData[category]) {
+                filterData[category].forEach(item => {
+                    const checkboxId = `${category}_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+                    const checkbox = document.getElementById(checkboxId);
+                    if (checkbox && checkbox.checked) {
+                        activeFilters[category].push(item.name);
+                    }
+                });
+            }
         }
     });
-
-    const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
 
     const hasActiveFilters = searchTerm.length > 0 ||
                             Object.values(activeFilters).some(arr => arr.length > 0);
 
     // If any filters are active and category is 'all', remove active state
     if (hasActiveFilters && activeCategoryFilter === 'all') {
-        document.getElementById('btn-all').classList.remove('active');
+        const allBtn = document.getElementById('btn-all');
+        if (allBtn) allBtn.classList.remove('active');
     }
 
     // Send search event if in iframe and search term exists
@@ -2250,6 +2338,9 @@ function buildDynamicHierarchies() {
             resultsCount: filteredJobs.length
         }, '*');
     }
+
+    // Process filtering logic
+    let activeJobs = filterActiveJobs(allJobsData);
 
     filteredJobs = activeJobs.filter(job => {
         if (activeCategoryFilter !== 'all') {
@@ -2287,7 +2378,9 @@ function buildDynamicHierarchies() {
                     const jobLocation = job.location_description || '';
 
                     const matchesLocation = checkedLocations.some(location => {
-                        if (dynamicLocationHierarchy.Overseas.subcategories.includes(location)) {
+                        if (dynamicLocationHierarchy && dynamicLocationHierarchy.Overseas &&
+                            dynamicLocationHierarchy.Overseas.subcategories &&
+                            dynamicLocationHierarchy.Overseas.subcategories.includes(location)) {
                             if (!categoryFilters.overseas.filter(job)) {
                                 return false;
                             }
@@ -2361,13 +2454,18 @@ function buildDynamicHierarchies() {
 
     currentPage = 1;
 
-    renderJobsList();
-    updatePagination();
-    updateJobCount();
+    // Batch all DOM updates using requestAnimationFrame
+    requestAnimationFrame(() => {
+        renderJobsList();
+        updatePagination();
+        updateJobCount();
 
-    // DON'T recalculate all filter counts - just update the display counts
-    updateFilterCounts();
-    restoreFilterStates();
+        // Defer non-critical updates
+        requestAnimationFrame(() => {
+            updateFilterCounts();
+            restoreFilterStates();
+        });
+    });
 }
 
 function updateFilterCounts() {
@@ -2702,32 +2800,56 @@ function restoreFilterStates() {
        keywords = Array.from(keywordSet).slice(0, maxKeywords);
    }
 
-   function initApp() {
+function initApp() {
+    // Defer non-critical operations
+    requestAnimationFrame(() => {
+        syncJobsData();
 
-   syncJobsData();
-
-    // If still no data, wait for it
-    if (!allJobsData || allJobsData.length === 0) {
-        if (window.allJobsData && window.allJobsData.length > 0) {
-            allJobsData = window.allJobsData;
-        } else {
-            console.log('No jobs data available yet');
-            return;
+        if (!allJobsData || allJobsData.length === 0) {
+            if (window.allJobsData && window.allJobsData.length > 0) {
+                allJobsData = window.allJobsData;
+            } else {
+                console.log('No jobs data available yet');
+                return;
+            }
         }
-    }
 
-    filteredJobs = filterActiveJobs(allJobsData);
+        filteredJobs = filterActiveJobs(allJobsData);
 
-       calculateFilterCounts();
-       generateDynamicKeywords();
-       renderKeywords();
-       renderFilters();
-       renderJobsList();
-       updatePagination();
-       updateJobCount();
-       updateCategoryButtons();
-       addEventListeners();
-   }
+        // Initialize hierarchies if not already done
+        if (!professionHierarchy || !locationHierarchy) {
+            initializeHierarchies();
+        }
+
+        // Batch DOM updates
+        requestAnimationFrame(() => {
+            calculateFilterCounts();
+            generateDynamicKeywords();
+            renderKeywords();
+            renderFilters();
+
+            // Defer job rendering using requestIdleCallback if available
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => {
+                    renderJobsList();
+                    updatePagination();
+                    updateJobCount();
+                    updateCategoryButtons();
+                    addEventListeners();
+                }, { timeout: 1000 });
+            } else {
+                // Fallback for browsers that don't support requestIdleCallback
+                setTimeout(() => {
+                    renderJobsList();
+                    updatePagination();
+                    updateJobCount();
+                    updateCategoryButtons();
+                    addEventListeners();
+                }, 100);
+            }
+        });
+    });
+}
 
    // Sync global and local allJobsData
 function syncJobsData() {
@@ -2786,43 +2908,49 @@ function syncJobsData() {
    }
 
    function renderJobsList() {
-    const jobsList = document.getElementById('jobsList');
-    const pageJobs = getCurrentPageJobs();
+       const jobsList = document.getElementById('jobsList');
+       const pageJobs = getCurrentPageJobs();
 
-    if (pageJobs.length === 0) {
-        jobsList.innerHTML = '<div class="no-jobs-message">No jobs found matching your criteria.</div>';
-        return;
-    }
+       if (pageJobs.length === 0) {
+           jobsList.innerHTML = '<div class="no-jobs-message">No jobs found matching your criteria.</div>';
+           return;
+       }
 
-    // Use DocumentFragment for better performance
-    const fragment = document.createDocumentFragment();
-    const container = document.createElement('div');
+       // Use DocumentFragment for better performance
+       const fragment = document.createDocumentFragment();
+       const container = document.createElement('div');
 
-    container.innerHTML = pageJobs.map(job => {
-        const employer = job.alternate_recruiter_name || job.recruiter_name || 'Unknown Employer';
-        return `
-            <div class="job-card">
-                <div class="job-header">${job.job_title}</div>
-                <div class="job-body">
-                    ${job.logo_url ? `<img src="${job.logo_url}" alt="${employer} Logo" class="nhs-logo" loading="lazy">` : ''}
-                    <div class="job-details">
-                        <ul>
-                            <li><strong>Location:</strong> ${job.location_description}</li>
-                            <li><strong>Salary:</strong> ${job.salary || 'Competitive'}</li>
-                            <li><strong>Employer:</strong> ${employer}</li>
-                        </ul>
-                    </div>
-                    <div class="job-description">${job.short_description}</div>
-                    <button class="apply-btn" onclick="applyToJob(${job.id})">View Details on BMJ Careers</button>
-                </div>
-            </div>
-        `;
-    }).join('');
+       container.innerHTML = pageJobs.map(job => {
+           const employer = job.alternate_recruiter_name || job.recruiter_name || 'Unknown Employer';
+           return `
+               <div class="job-card">
+                   <div class="job-header">${job.job_title}</div>
+                   <div class="job-body">
+                       ${job.logo_url ? `<img src="${job.logo_url}" alt="${employer} Logo" class="nhs-logo" loading="lazy">` : ''}
+                       <div class="job-details">
+                           <ul>
+                               <li><strong>Location:</strong> ${job.location_description}</li>
+                               <li><strong>Salary:</strong> ${job.salary || 'Competitive'}</li>
+                               <li><strong>Employer:</strong> ${employer}</li>
+                           </ul>
+                       </div>
+                       <div class="job-description">${job.short_description}</div>
+                       <button class="apply-btn" onclick="applyToJob(${job.id})">View Details on BMJ Careers</button>
+                   </div>
+               </div>
+           `;
+       }).join('');
 
-    fragment.appendChild(container);
-    jobsList.innerHTML = '';
-    jobsList.appendChild(fragment.firstChild);
-}
+       // Transfer children to fragment
+       while (container.firstChild) {
+           fragment.appendChild(container.firstChild);
+       }
+
+       // Single DOM update
+       jobsList.innerHTML = '';
+       jobsList.appendChild(fragment);
+   }
+
 
    // Auto-close dropdowns on window resize
    function handleResize() {
@@ -2864,10 +2992,9 @@ function addEventListeners() {
         }
     });
 
-    window.addEventListener('scroll', handleScroll);
+window.addEventListener('scroll', handleScroll, { passive: true });
+window.addEventListener('resize', perfUtils.debounce(handleResize, 300), { passive: true });
 
-    // Add resize event listener
-    window.addEventListener('resize', handleResize);
 }
 
    // Make initApp globally accessible for API integration
@@ -3398,6 +3525,8 @@ window.addEventListener('load', function() {
             sendEvent: sendTrackingEvent
         };
     })();
+
+
 
 </script>
 <!-- End Cross-Origin Style Communication Script -->
