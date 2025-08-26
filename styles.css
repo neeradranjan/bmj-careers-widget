@@ -1,20 +1,39 @@
+/* Performance optimizations */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* CSS containment for better performance */
+.job-card {
+    contain: layout style paint;
+}
+
+.filter-group, .sidebar {
+    contain: layout style;
+    overflow-x: hidden;
+}
+
+/* Remove expensive animations on low-end devices */
+@media (max-width: 768px) {
+    * {
+        animation-duration: 0.3s !important;
+    }
+    .job-card:hover {
+        transform: none !important;
+    }
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #f0f4f8 0%, #e9ecef 100%);
-    color: #1d1d1b;
-    line-height: 1.6;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Critical CSS - Above the fold styles */
+/* CSS Variables */
 :root {
     --primary-color: #0066cc;
     --secondary-color: #FFC000;
@@ -24,23 +43,17 @@ body {
     --border-color: #e5e7eb;
 }
 
-/* Reduce animation complexity */
-@media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #f0f4f8 0%, #e9ecef 100%);
+    color: var(--text-color);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Add will-change for animated elements */
-.category-btn,
-.job-card,
-.pagination-btn {
-    will-change: transform;
-}
-
-/* Main wrapper for full page layout */
+/* Main wrapper */
 .main-wrapper {
     flex: 1;
     display: flex;
@@ -51,25 +64,14 @@ body {
     padding: 2rem;
 }
 
-/* Job count header integrated into main flow */
+/* Job count header */
 .job-count-header {
     margin-bottom: 2rem;
     animation: fadeInDown 0.6s ease-out;
 }
 
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translate3d(0, -20px, 0);
-    }
-    to {
-        opacity: 1;
-        transform: translate3d(0, 0, 0);
-    }
-}
-
 .job-count-main {
-    background: linear-gradient(135deg, #0066cc 0%, #004c99 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #004c99 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -80,18 +82,73 @@ body {
     animation: shimmer 3s ease-in-out infinite;
 }
 
-@keyframes shimmer {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
-}
-
 .job-count-subtitle {
     color: #6b7280;
     font-size: 1.125rem;
     font-weight: 400;
 }
 
-/* Category buttons container - multi-line wrapping */
+/* Animations */
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translate3d(0, -20px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInFromLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInFromRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes checkmark {
+    0% { transform: translate(-50%, -50%) scale(0); }
+    50% { transform: translate(-50%, -50%) scale(1.2); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes scaleIn {
+    0% { transform: scale(0.9); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+@keyframes shimmerMove {
+    0% { transform: translate(-50%, -50%); }
+    100% { transform: translate(50%, 50%); }
+}
+
+/* Category buttons wrapper */
 .category-buttons-wrapper {
     margin-bottom: 2.5rem;
     animation: fadeInUp 0.8s ease-out;
@@ -108,33 +165,10 @@ body {
     flex-wrap: wrap;
 }
 
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.05);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
 .category-btn {
-    background: #ffffff;
-    color: #0066cc;
-    border: 2px solid #e5e7eb;
+    background: var(--card-bg);
+    color: var(--primary-color);
+    border: 2px solid var(--border-color);
     padding: 0.875rem 1.5rem;
     border-radius: 8px;
     font-size: 0.9375rem;
@@ -154,6 +188,7 @@ body {
     min-width: 120px;
     animation: fadeInUp 0.8s ease-out backwards;
     overflow: hidden;
+    will-change: transform;
 }
 
 .category-btn::before {
@@ -183,9 +218,9 @@ body {
 .category-btn:nth-child(7) { animation-delay: 0.4s; }
 
 .category-btn:hover {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
-    color: #ffffff;
-    border-color: #0066cc;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%);
+    color: var(--card-bg);
+    border-color: var(--primary-color);
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 102, 204, 0.25);
 }
@@ -195,24 +230,11 @@ body {
 }
 
 .category-btn.active {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%);
     color: white;
-    border-color: #0066cc;
+    border-color: var(--primary-color);
     box-shadow: 0 4px 16px rgba(0, 102, 204, 0.3);
     transform: translateY(0);
-}
-
-/* Remove default active state from All Jobs button */
-.category-btn#btn-all {
-    background: #ffffff;
-    color: #0066cc;
-    border-color: #e5e7eb;
-}
-
-.category-btn#btn-all.active {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
-    color: white;
-    border-color: #0066cc;
 }
 
 .category-btn .emoji {
@@ -227,60 +249,72 @@ body {
     filter: brightness(1.1);
 }
 
-/* Main content container */
+/* Specific styling for All Jobs button */
+.category-btn#btn-all {
+    background: var(--card-bg) !important;
+    color: var(--primary-color) !important;
+    border: 2px solid var(--border-color) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+}
+
+.category-btn#btn-all.active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 4px 16px rgba(0, 102, 204, 0.3) !important;
+}
+
+.category-btn#btn-all:not(.active):hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 102, 204, 0.25) !important;
+}
+
+.category-btn#btn-all.active:hover {
+    background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 102, 204, 0.35) !important;
+}
+
+/* FIXED: Main content container - proper layout with sidebar taking less width */
 .content-container {
     display: grid;
-    grid-template-columns: 340px 1fr;
+    grid-template-columns: 280px 1fr; /* Fixed: Sidebar takes less width, main content takes remaining */
     gap: 2rem;
     flex: 1;
     align-items: start;
     animation: fadeIn 1s ease-out;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-/* Modern sidebar with React-like design - removed sticky positioning */
+/* FIXED: Sidebar styling - remove sticky positioning so it scrolls with content */
 .sidebar {
-    background: #ffffff;
+    background: var(--card-bg);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    overflow: hidden;
-    height: fit-content;
-    transition: all 0.3s ease;
     animation: slideInFromLeft 0.8s ease-out;
+    transition: all 0.3s ease;
     border: 1px solid rgba(0, 102, 204, 0.1);
-}
-
-@keyframes slideInFromLeft {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+    width: 280px;
+    max-width: 280px;
+    height: fit-content;
+    /* Removed position: sticky and top: 2rem to allow natural scrolling */
 }
 
 .sidebar:hover {
     box-shadow: 0 8px 24px rgba(0, 102, 204, 0.12);
 }
 
+/* Search section */
 .search-section {
     padding: 1.75rem;
-    border-bottom: 1px solid #e5e7eb;
-    background: #ffffff;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--card-bg);
 }
 
 .search-title {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -290,24 +324,6 @@ body {
     letter-spacing: -0.01em;
 }
 
-.search-input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 0.9375rem;
-    transition: all 0.3s ease;
-    background: #ffffff;
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: #0066cc;
-    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
-    background: #ffffff;
-}
-
-/* Search input wrapper and clear button */
 .search-input-wrapper {
     position: relative;
     width: 100%;
@@ -315,12 +331,19 @@ body {
 
 .search-input {
     width: 100%;
-    padding: 0.75rem 2.5rem 0.75rem 1rem; /* Add right padding for button */
-    border: 2px solid #e5e7eb;
+    padding: 0.75rem 2.5rem 0.75rem 1rem;
+    border: 2px solid var(--border-color);
     border-radius: 8px;
     font-size: 0.9375rem;
     transition: all 0.3s ease;
-    background: #ffffff;
+    background: var(--card-bg);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
+    background: var(--card-bg);
 }
 
 .clear-keyword-btn {
@@ -345,9 +368,10 @@ body {
 
 .clear-keyword-btn:hover {
     background: rgba(0, 0, 0, 0.05);
-    color: #0066cc;
+    color: var(--primary-color);
 }
 
+/* Keywords section */
 .keywords-section {
     margin-top: 1.25rem;
 }
@@ -370,7 +394,7 @@ body {
 
 .keyword-tag {
     background: linear-gradient(135deg, #e6f2ff 0%, #cce4ff 100%);
-    color: #0066cc;
+    color: var(--primary-color);
     padding: 0.375rem 0.875rem;
     border-radius: 8px;
     font-size: 0.8125rem;
@@ -407,20 +431,24 @@ body {
 .keyword-tag:nth-child(5) { animation-delay: 0.3s; }
 .keyword-tag:nth-child(6) { animation-delay: 0.35s; }
 
-.keyword-tag:hover {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+.keyword-tag:hover,
+.keyword-tag:focus {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%);
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 102, 204, 0.25);
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
+/* Filters section */
 .filters-section {
     padding: 1.75rem;
-    background: #ffffff;
+    background: var(--card-bg);
 }
 
 .filters-title {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -430,11 +458,14 @@ body {
     letter-spacing: -0.01em;
 }
 
+/* FIXED: Filter group styling for proper dropdown behavior */
 .filter-group {
     margin-bottom: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 1.5rem;
     animation: fadeIn 0.6s ease-out;
+    width: 100%;
+    overflow: visible; /* Fixed: Allow dropdowns to show */
 }
 
 .filter-group:last-child {
@@ -449,22 +480,33 @@ body {
     cursor: pointer;
     font-size: 1rem;
     font-weight: 600;
-    color: #1d1d1b;
+    color: var(--text-color);
     margin-bottom: 0.875rem;
     padding: 0.5rem;
     border-radius: 6px;
     transition: all 0.2s ease;
+    background: transparent;
+    border: none;
+    outline: none !important;
+    box-shadow: none !important;
+    user-select: none;
 }
 
 .filter-header:hover {
-    background-color: #f3f4f6;
+    background: #f7f7f7;
     transform: translateX(2px);
+}
+
+.filter-header:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
 }
 
 .filter-arrow {
     margin-right: 0.75rem;
     transition: transform 0.3s ease;
-    color: #0066cc;
+    color: var(--primary-color);
     font-size: 0.875rem;
 }
 
@@ -472,20 +514,35 @@ body {
     transform: rotate(-90deg);
 }
 
+/* FIXED: Filter options - vertical scroll only for main dropdowns */
 .filter-options {
-    max-height: 300px;
-    overflow-y: auto;
-    transition: max-height 0.3s ease;
-    padding: 0 0.5rem;
-    overflow-x: hidden;
+    width: 100%;
+    transition: all 0.3s ease-in-out;
+    background: transparent;
+    border: none;
+    padding: 0;
+    overflow-x: hidden; /* Prevent horizontal scrollbars */
+    max-height: 300px; /* Add max height to trigger scrolling */
+    overflow-y: auto; /* Add vertical scrollbar when needed */
 }
 
 .filter-options.collapsed {
+    display: none !important;
     max-height: 0;
     overflow: hidden;
-    padding: 0;
+    opacity: 0;
 }
 
+.filter-options:not(.collapsed) {
+    display: block !important;
+    max-height: 300px; /* Limit height and show scrollbar */
+    opacity: 1;
+    padding: 0.5rem 0;
+    overflow-y: auto; /* Ensure scrollbar appears when content exceeds height */
+    overflow-x: hidden; /* Prevent horizontal scrollbars */
+}
+
+/* Filter items */
 .filter-item {
     display: flex;
     align-items: center;
@@ -494,6 +551,7 @@ body {
     cursor: pointer;
     border-radius: 6px;
     transition: all 0.2s ease;
+    width: 100%;
 }
 
 .filter-item:hover {
@@ -501,136 +559,72 @@ body {
     transform: translateX(4px);
 }
 
-.filter-checkbox {
-    margin-right: 0.75rem;
-    width: 1.125rem;
-    height: 1.125rem;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    border: 2px solid #d1d5db;
-    border-radius: 4px;
-    position: relative;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-    background-color: #ffffff !important;
-}
-
-.filter-checkbox:checked {
-    background-color: #0066cc !important;
-    background-image: none !important;
-    border-color: #0066cc !important;
-}
-
-.filter-checkbox:checked::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 0.75rem;
-    font-weight: bold;
-    animation: checkmark 0.3s ease-out;
-}
-
-@keyframes checkmark {
-    0% {
-        transform: translate(-50%, -50%) scale(0);
-    }
-    50% {
-        transform: translate(-50%, -50%) scale(1.2);
-    }
-    100% {
-        transform: translate(-50%, -50%) scale(1);
-    }
-}
-
-.filter-checkbox:hover {
-    border-color: #0066cc;
-    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
-}
-
 .filter-label {
     flex: 1;
     cursor: pointer;
-    color: #1d1d1b;
+    color: var(--text-color);
     word-break: break-word;
+    margin-right: 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 80px); /* Fixed: Leave room for count */
 }
 
+/* Filter count styling - grey background for better readability */
 .filter-count {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
     color: #6b7280;
     font-size: 0.75rem;
-    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    font-weight: 500;
     padding: 0.125rem 0.5rem;
     border-radius: 12px;
-    font-weight: 500;
-    margin-left: 0.5rem;
+    margin-left: auto;
     flex-shrink: 0;
+    min-width: 24px;
+    text-align: center;
+    white-space: nowrap;
+    border: 1px solid #d1d5db;
 }
 
-/* Enhanced profession filters */
-.profession-parent-group {
-    margin-bottom: 0;
-    border-radius: 0;
-    background: transparent;
-    border: none;
-    overflow: visible;
-}
-
-.profession-parent-header {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #1d1d1b;
-    padding: 0.625rem 0.5rem;
-    background: transparent;
-    transition: background-color 0.2s ease;
-    border-radius: 6px;
-    margin-bottom: 0.25rem;
-}
-
-.profession-parent-header:hover {
-    background-color: #f3f4f6;
-}
-
-.profession-parent-checkbox {
-    margin-right: 0.75rem;
+/* Universal checkbox styling */
+input[type="checkbox"],
+.filter-checkbox,
+.profession-parent-checkbox,
+.profession-sub-checkbox,
+.location-checkbox,
+.location-sub-checkbox {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
     width: 1.125rem;
     height: 1.125rem;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
     border: 2px solid #d1d5db;
     border-radius: 4px;
+    background-color: var(--card-bg);
+    cursor: pointer;
     position: relative;
     transition: all 0.2s ease;
     flex-shrink: 0;
-    background-color: #ffffff !important;
+    margin-right: 0.75rem;
 }
 
-.profession-parent-checkbox:checked {
-    background-color: #0066cc !important;
-    background-image: none !important;
-    border-color: #0066cc !important;
+input[type="checkbox"]:checked,
+.filter-checkbox:checked,
+.profession-parent-checkbox:checked,
+.profession-sub-checkbox:checked,
+.location-checkbox:checked,
+.location-sub-checkbox:checked {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
 }
 
-.profession-parent-checkbox.indeterminate {
-    background-color: #0066cc !important;
-    background-image: none !important;
-    border-color: #0066cc !important;
-}
-
-.profession-parent-checkbox:hover {
-    border-color: #0066cc;
-    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
-}
-
-.profession-parent-checkbox:checked::after {
+input[type="checkbox"]:checked::after,
+.filter-checkbox:checked::after,
+.profession-parent-checkbox:checked::after,
+.profession-sub-checkbox:checked::after,
+.location-checkbox:checked::after,
+.location-sub-checkbox:checked::after {
     content: '✓';
     position: absolute;
     top: 50%;
@@ -639,15 +633,18 @@ body {
     color: white;
     font-size: 0.75rem;
     font-weight: bold;
+    display: block;
     animation: checkmark 0.3s ease-out;
 }
 
-.profession-parent-checkbox.indeterminate {
-    background-color: #0066cc;
-    border-color: #0066cc;
+.profession-parent-checkbox.indeterminate,
+.location-checkbox.indeterminate {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
 }
 
-.profession-parent-checkbox.indeterminate::after {
+.profession-parent-checkbox.indeterminate::after,
+.location-checkbox.indeterminate::after {
     content: '−';
     position: absolute;
     top: 50%;
@@ -656,22 +653,79 @@ body {
     color: white;
     font-size: 0.875rem;
     font-weight: bold;
+    display: block;
+}
+
+input[type="checkbox"]:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
+}
+
+.profession-sub-checkbox,
+.location-sub-checkbox {
+    width: 1rem;
+    height: 1rem;
+}
+
+.profession-sub-checkbox:checked::after,
+.location-sub-checkbox:checked::after {
+    font-size: 0.625rem;
+}
+
+/* FIXED: Profession filters - proper hierarchy and dropdown behavior */
+.profession-parent-group {
+    margin-bottom: 0.5rem;
+    width: 100%;
+    overflow: visible;/* Fixed: Allow dropdowns to show */
+}
+
+.profession-parent-group .profession-parent-group{
+margin-left: 1rem;
+}
+
+.profession-parent-group .profession-parent-group .profession-parent-sub-item{
+margin-left: 2.5rem;
+width: calc(100% - 2.5rem);
+}
+
+.profession-parent-header {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-color);
+    padding: 0.625rem 0.5rem;
+    background: transparent;
+    transition: background-color 0.2s ease;
+    border-radius: 6px;
+    margin-bottom: 0.25rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.profession-parent-header:hover {
+    background-color: #f3f4f6;
 }
 
 .profession-parent-label {
     flex: 1;
     cursor: pointer;
     font-size: 0.875rem;
-    color: #1d1d1b;
+    color: var(--text-color);
     word-break: break-word;
     padding-right: 0.5rem;
+    margin-right: 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 80px); /* Fixed: Leave room for count and arrow */
 }
 
 .profession-parent-arrow {
     margin-left: auto;
     transition: transform 0.3s ease;
     font-size: 0.75rem;
-    color: #0066cc;
+    color: var(--primary-color);
     margin-right: 0.5rem;
     flex-shrink: 0;
 }
@@ -680,20 +734,29 @@ body {
     transform: rotate(-90deg);
 }
 
+/* FIXED: Profession subcategories - NO scrollbars, inherit from parent */
 .profession-subcategories {
-    max-height: 300px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 0;
-    transition: max-height 0.3s ease;
+    width: 100%;
+    transition: all 0.3s ease-in-out;
     background: transparent;
     margin-bottom: 0.5rem;
+    padding: 0;
+    overflow: visible; /* No scrollbars - use parent's scroll */
+    max-height: none; /* Remove height limits */
 }
 
 .profession-subcategories.collapsed {
+    display: none !important;
     max-height: 0;
     overflow: hidden;
-    padding: 0;
+    opacity: 0;
+}
+
+.profession-subcategories:not(.collapsed) {
+    display: block !important;
+    max-height: none; /* No height limit - inherit parent scroll */
+    opacity: 1;
+    overflow: visible; /* No individual scrollbars */
 }
 
 .profession-sub-item {
@@ -705,6 +768,8 @@ body {
     margin-left: 1.75rem;
     transition: background-color 0.2s ease;
     border-radius: 6px;
+    width: calc(100% - 1.75rem);
+    min-height: 32px;
 }
 
 .profession-sub-item:hover {
@@ -712,57 +777,22 @@ body {
     transform: translateX(4px);
 }
 
-/* Profession sub checkboxes */
-.profession-sub-checkbox {
-    margin-right: 0.75rem;
-    width: 1rem;
-    height: 1rem;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    border: 2px solid #d1d5db;
-    border-radius: 3px;
-    position: relative;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-    background-color: #ffffff !important;
-}
-
-.profession-sub-checkbox:checked {
-    background-color: #0066cc !important;
-    background-image: none !important;
-    border-color: #0066cc !important;
-}
-
-.profession-sub-checkbox:hover {
-    border-color: #0066cc;
-    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
-}
-
-.profession-sub-checkbox:checked::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 0.625rem;
-    font-weight: bold;
-    animation: checkmark 0.3s ease-out;
-}
-
 .profession-sub-label {
     flex: 1;
     cursor: pointer;
     font-size: 0.8125rem;
-    color: #1d1d1b;
+    color: var(--text-color);
     word-break: break-word;
+    margin-right: 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 50px); /* Fixed: Leave room for count */
 }
 
-/* Enhanced main content with React-like design */
+/* Main content */
 .main-content {
-    background: #ffffff;
+    background: var(--card-bg);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     overflow: hidden;
@@ -772,30 +802,22 @@ body {
     animation: slideInFromRight 0.8s ease-out;
     transition: all 0.3s ease;
     border: 1px solid rgba(0, 102, 204, 0.1);
+    width: 100%; /* Fixed: Take full remaining width */
+    will-change: transform;
 }
 
 .main-content:hover {
     box-shadow: 0 8px 24px rgba(0, 102, 204, 0.12);
 }
 
-@keyframes slideInFromRight {
-    from {
-        opacity: 0;
-        transform: translateX(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
+/* Jobs section */
 .jobs-section {
     padding: 2rem;
     flex: 1;
 }
 
 .jobs-title {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -805,26 +827,16 @@ body {
     letter-spacing: -0.01em;
 }
 
-/* Enhanced job cards with modern design */
+/* Job cards */
 .job-card {
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-bottom: 1.5rem;
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    background: #ffffff;
+    background: var(--card-bg);
     animation: fadeInUp 0.6s ease-out;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    will-change: transform;
 }
 
 .job-card:hover {
@@ -834,7 +846,7 @@ body {
 }
 
 .job-header {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%);
     color: white;
     padding: 1.25rem 1.5rem;
     font-weight: 600;
@@ -855,18 +867,13 @@ body {
     animation: shimmerMove 3s ease-in-out infinite;
 }
 
-@keyframes shimmerMove {
-    0% { transform: translate(-50%, -50%); }
-    100% { transform: translate(50%, 50%); }
-}
-
 .job-body {
     padding: 1.5rem;
     position: relative;
 }
 
 .job-title {
-    color: #0066cc;
+    color: var(--primary-color);
     font-size: 1.125rem;
     font-weight: 700;
     margin-bottom: 1rem;
@@ -880,11 +887,12 @@ body {
     text-decoration: underline;
 }
 
+/* FIXED: Job details styling with proper text wrapping */
 .job-details {
     font-size: 0.9375rem;
-    color: #1d1d1b;
+    color: var(--text-color);
     line-height: 1.7;
-    padding-right: 130px; /* Increased to ensure space for logo */
+    padding-right: 140px; /* Space for logo on desktop */
 }
 
 .job-details ul {
@@ -899,10 +907,12 @@ body {
     position: relative;
     opacity: 0;
     animation: slideInFromLeft 0.5s ease-out forwards;
-    word-wrap: break-word; /* Ensure text wraps */
-    overflow-wrap: break-word; /* Modern property for text wrapping */
-    display: block; /* Ensure block display for proper wrapping */
-    padding-right: 10px; /* Add some right padding */
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    display: block !important;
+    max-width: calc(100% - 10px) !important;
+    padding-right: 10px !important;
 }
 
 .job-details li:nth-child(1) { animation-delay: 0.1s; }
@@ -913,7 +923,7 @@ body {
     content: '•';
     position: absolute;
     left: 0;
-    color: #0066cc;
+    color: var(--primary-color);
     font-weight: bold;
     font-size: 1.25rem;
     line-height: 1;
@@ -921,93 +931,11 @@ body {
 }
 
 .job-details strong {
-    color: #1d1d1b;
+    color: var(--text-color);
     font-weight: 600;
-}
-
-.location-text {
     word-wrap: break-word;
-    display: inline-block;
-    max-width: calc(100% - 80px);
-}
-
-.location-checkbox {
-    margin-right: 0.75rem;
-    width: 1.125rem;
-    height: 1.125rem;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    border: 2px solid #d1d5db;
-    border-radius: 4px;
-    position: relative;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-    background-color: #ffffff !important;
-}
-
-.location-checkbox:checked {
-    background-color: #0066cc !important;
-    background-image: none !important;
-    border-color: #0066cc !important;
-}
-
-.location-checkbox:checked::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 0.75rem;
-    font-weight: bold;
-    animation: checkmark 0.3s ease-out;
-}
-
-.location-checkbox:hover {
-    border-color: #0066cc;
-    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
-}
-
-/* Location sub checkboxes */
-.location-sub-checkbox {
-    margin-right: 0.75rem;
-    width: 1rem;
-    height: 1rem;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    border: 2px solid #d1d5db;
-    border-radius: 3px;
-    position: relative;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-    background-color: #ffffff !important;
-}
-
-.location-sub-checkbox:checked {
-    background-color: #0066cc !important;
-    background-image: none !important;
-    border-color: #0066cc !important;
-}
-
-.location-sub-checkbox:checked::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 0.625rem;
-    font-weight: bold;
-    animation: checkmark 0.3s ease-out;
-}
-
-.location-sub-checkbox:hover {
-    border-color: #0066cc;
-    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
+    overflow-wrap: break-word;
+    display: inline;
 }
 
 .job-description {
@@ -1015,6 +943,7 @@ body {
     font-size: 0.9375rem;
     margin-top: 1rem;
     line-height: 1.7;
+    width: 100%;
 }
 
 .nhs-logo {
@@ -1037,8 +966,8 @@ body {
 }
 
 .apply-btn {
-    background: linear-gradient(135deg, #FFC000 0%, #e6ac00 100%);
-    color: #1d1d1b;
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #e6ac00 100%);
+    color: var(--text-color);
     padding: 0.75rem 1.75rem;
     border: none;
     border-radius: 8px;
@@ -1085,11 +1014,11 @@ body {
     animation: fadeIn 0.6s ease-out;
 }
 
-/* Enhanced pagination with modern design */
+/* Pagination */
 .pagination-section {
-    background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+    background: linear-gradient(180deg, #f9fafb 0%, var(--card-bg) 100%);
     padding: 1.5rem 2rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-color);
     text-align: center;
     margin-top: auto;
 }
@@ -1111,9 +1040,9 @@ body {
 
 .pagination-btn {
     padding: 0.5rem 0.875rem;
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-    color: #0066cc;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--primary-color);
     text-decoration: none;
     border-radius: 6px;
     font-size: 0.8125rem;
@@ -1124,6 +1053,7 @@ body {
     text-align: center;
     position: relative;
     overflow: hidden;
+    will-change: transform;
 }
 
 .pagination-btn::before {
@@ -1145,36 +1075,25 @@ body {
 
 .pagination-btn:hover {
     background: #e6f2ff;
-    border-color: #0066cc;
+    border-color: var(--primary-color);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 102, 204, 0.15);
 }
 
 .pagination-btn.active {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%);
     color: white;
-    border-color: #0066cc;
+    border-color: var(--primary-color);
     box-shadow: 0 4px 12px rgba(0, 102, 204, 0.25);
     animation: scaleIn 0.3s ease-out;
 }
 
-@keyframes scaleIn {
-    0% {
-        transform: scale(0.9);
-    }
-    50% {
-        transform: scale(1.05);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
 .pagination-btn:disabled {
-    color: #9ca3af;
+    color: #4a5568;
     cursor: not-allowed;
-    opacity: 0.6;
-    background: #f3f4f6;
+    opacity: 0.7;
+    background: #e2e8f0;
+    border-color: #cbd5e0;
 }
 
 .pagination-btn:disabled:hover {
@@ -1182,14 +1101,14 @@ body {
     box-shadow: none;
 }
 
-/* Scroll to top button with modern design */
+/* Scroll to top button */
 .scroll-to-top {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
     width: 3rem;
     height: 3rem;
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0052a3 100%);
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -1202,18 +1121,6 @@ body {
     transition: all 0.3s ease;
     z-index: 1000;
     animation: bounceIn 0.6s ease-out;
-}
-
-@keyframes bounceIn {
-    0% {
-        transform: scale(0);
-    }
-    50% {
-        transform: scale(1.2);
-    }
-    100% {
-        transform: scale(1);
-    }
 }
 
 .scroll-to-top:hover {
@@ -1248,6 +1155,122 @@ body {
     background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
 }
 
+/* Date Published Radio-like behavior styles */
+.published-filter-item {
+    display: flex;
+    align-items: center;
+    padding: 0.625rem 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.published-filter-item:hover {
+    background: #f3f4f6;
+    transform: translateX(4px);
+}
+
+/* Notification styles */
+.job-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--card-bg);
+    color: var(--text-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    padding: 16px 20px;
+    max-width: 360px;
+    z-index: 2147483647;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    animation: slideIn 0.3s ease-out;
+    transition: all 0.3s ease;
+}
+
+.job-notification.new-jobs {
+    border-left: 4px solid #27ae60;
+}
+
+.job-notification.updated-jobs {
+    border-left: 4px solid #3498db;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.notification-title {
+    font-weight: 600;
+    font-size: 16px;
+    margin: 0;
+    color: var(--text-color);
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--text-color);
+    opacity: 0.6;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 12px;
+    transition: opacity 0.2s;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+
+.notification-message {
+    margin: 0;
+    color: var(--text-color);
+    opacity: 0.9;
+}
+
+.notification-details {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.notification-job-item {
+    margin: 8px 0;
+    font-size: 13px;
+}
+
+.notification-job-title {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.notification-job-location {
+    color: var(--text-color);
+    opacity: 0.7;
+    font-size: 12px;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+.job-notification.removing {
+    animation: slideOut 0.3s ease-out forwards;
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
     .main-wrapper {
@@ -1255,8 +1278,13 @@ body {
     }
 
     .content-container {
-        grid-template-columns: 300px 1fr;
+        grid-template-columns: 260px 1fr; /* Slightly smaller sidebar */
         gap: 1.5rem;
+    }
+
+    .sidebar {
+        width: 260px;
+        max-width: 260px;
     }
 
     .category-btn {
@@ -1266,14 +1294,73 @@ body {
 
 @media (max-width: 1024px) {
     .content-container {
-        grid-template-columns: 280px 1fr;
+        grid-template-columns: 240px 1fr;
         gap: 1.5rem;
+    }
+
+    .sidebar {
+        width: 240px;
+        max-width: 240px;
     }
 
     .category-btn {
         padding: 0.75rem 1.25rem;
         font-size: 0.875rem;
         flex: 1 1 calc(33.33% - 1rem);
+    }
+
+    /* FIXED: Responsive logo centering for larger tablets */
+    .job-body {
+        padding: 1.5rem;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: left;
+    }
+
+    .nhs-logo {
+        position: static !important;
+        width: 110px !important;
+        height: auto !important;
+        max-height: 55px !important;
+        margin: 0 auto 1.25rem auto !important;
+        display: block !important;
+        opacity: 1 !important;
+        filter: none !important;
+        order: -1 !important;
+        transform: scale(1.2) !important;
+        top: auto !important;
+        right: auto !important;
+    }
+
+    .job-details {
+        padding-right: 0 !important;
+        width: 100% !important;
+        order: 1 !important;
+    }
+
+    .job-details ul {
+        width: 100% !important;
+        padding-left: 1.25rem !important;
+    }
+
+    .job-details li {
+        max-width: 100% !important;
+        padding-right: 10px !important;
+    }
+
+    .job-description {
+        width: 100% !important;
+        order: 2 !important;
+    }
+
+    .apply-btn {
+        width: auto !important;
+        min-width: 200px !important;
+        max-width: 300px !important;
+        margin: 1.25rem auto 0 auto !important;
+        display: block !important;
+        order: 3 !important;
     }
 }
 
@@ -1283,15 +1370,17 @@ body {
     }
 
     .content-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Single column layout */
         gap: 1.5rem;
     }
 
     .sidebar {
         width: 100%;
         max-width: 100%;
-        margin: 0 auto;
+        height: auto;
         order: 1;
+        position: static;
+        top: auto;
     }
 
     .main-content {
@@ -1317,40 +1406,29 @@ body {
     .category-btn:last-child {
         flex: 1 1 100%;
     }
-
-    .job-details {
-        padding-right: 0;
-    }
-
-    .location-text {
-        max-width: 100%;
-    }
 }
 
-/* Mobile responsive changes for job cards */
 @media (max-width: 768px) {
     .job-body {
         padding: 1.25rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
     }
 
     .nhs-logo {
-        position: static;
-        width: 120px; /* Increased from 100px */
-        max-height: 60px; /* Increased from 50px */
-        margin: 0 auto 1.5rem auto;
-        display: block;
-        transform: scale(1.15); /* Additional 15% increase */
+        position: static !important;
+        width: 120px !important;
+        max-height: 60px !important;
+        margin: 0 auto 1.5rem auto !important;
+        display: block !important;
+        transform: scale(1.25) !important;
+        top: auto !important;
+        right: auto !important;
     }
 
     .job-details {
-        padding-right: 0;
-        width: 100%;
-    }
-
-    .job-details ul {
+        padding-right: 0 !important;
         width: 100%;
     }
 
@@ -1416,23 +1494,20 @@ body {
 
     .job-body {
         padding: 1.25rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
     }
 
     .nhs-logo {
-        position: static;
-        width: 100px; /* Increased from 70px */
-        max-height: 50px; /* Increased from 35px */
-        margin: 0 auto 1.5rem auto;
-        display: block;
-        transform: scale(1.2); /* Additional 20% increase */
-    }
-
-    .job-details {
-        padding-right: 0;
-        width: 100%;
+        position: static !important;
+        width: 110px !important;
+        max-height: 55px !important;
+        margin: 0 auto 1.5rem auto !important;
+        display: block !important;
+        transform: scale(1.3) !important;
+        top: auto !important;
+        right: auto !important;
     }
 
     .apply-btn {
@@ -1450,6 +1525,13 @@ body {
         padding: 0.375rem 0.625rem;
         font-size: 0.75rem;
         min-width: 2rem;
+    }
+
+    .job-notification {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        width: auto;
     }
 }
 
@@ -1473,10 +1555,6 @@ body {
         font-size: 1.125rem;
     }
 
-    .filter-header {
-        font-size: 0.875rem;
-    }
-
     .scroll-to-top {
         bottom: 1rem;
         right: 1rem;
@@ -1484,135 +1562,7 @@ body {
         height: 2.5rem;
         font-size: 1rem;
     }
-}
 
-.job-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: var(--notification-bg, #ffffff);
-    color: var(--notification-text, inherit);
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-    padding: 16px 20px;
-    max-width: 360px;
-    z-index: 999999;
-    font-family: inherit;
-    font-size: 14px;
-    line-height: 1.5;
-    animation: slideIn 0.3s ease-out;
-    transition: all 0.3s ease;
-}
-
-/* Different notification types */
-.job-notification.new-jobs {
-    border-left: 4px solid var(--notification-success, #27ae60);
-}
-
-.job-notification.updated-jobs {
-    border-left: 4px solid var(--notification-primary, #3498db);
-}
-
-/* Notification header */
-.notification-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.notification-title {
-    font-weight: 600;
-    font-size: 16px;
-    margin: 0;
-    color: var(--notification-text, inherit);
-}
-
-/* Close button */
-.notification-close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    line-height: 1;
-    color: var(--notification-text, inherit);
-    opacity: 0.6;
-    cursor: pointer;
-    padding: 0;
-    margin-left: 12px;
-    transition: opacity 0.2s;
-}
-
-.notification-close:hover {
-    opacity: 1;
-}
-
-/* Notification content */
-.notification-message {
-    margin: 0;
-    color: var(--notification-text, inherit);
-    opacity: 0.9;
-}
-
-.notification-details {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.notification-job-item {
-    margin: 8px 0;
-    font-size: 13px;
-}
-
-.notification-job-title {
-    font-weight: 500;
-    color: var(--notification-text, inherit);
-}
-
-.notification-job-location {
-    color: var(--notification-text, inherit);
-    opacity: 0.7;
-    font-size: 12px;
-}
-
-/* Animation */
-@keyframes slideIn {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slideOut {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-}
-
-.job-notification.removing {
-    animation: slideOut 0.3s ease-out forwards;
-}
-
-/* Responsive design for all screen sizes */
-@media (max-width: 768px) {
-    .job-notification {
-        right: 10px;
-        left: 10px;
-        max-width: none;
-        width: auto;
-    }
-}
-
-@media (max-width: 480px) {
     .job-notification {
         top: 10px;
         right: 10px;
@@ -1633,11 +1583,11 @@ body {
     }
 }
 
-/* Dark mode support (if your widget has dark mode) */
+/* Dark mode support */
 @media (prefers-color-scheme: dark) {
     .job-notification {
-        background: var(--notification-bg-dark, #2c3e50);
-        color: var(--notification-text-dark, #ffffff);
+        background: #2c3e50;
+        color: #ffffff;
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
     }
 
@@ -1646,21 +1596,11 @@ body {
     }
 }
 
-/* Print styles - hide notifications */
+/* Print styles */
 @media print {
-    .job-notification {
+    .job-notification,
+    .scroll-to-top {
         display: none !important;
-    }
-}
-
-/* Accessibility - Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .job-notification {
-        animation: none;
-    }
-
-    .job-notification.removing {
-        display: none;
     }
 }
 
@@ -1671,435 +1611,4 @@ body {
 
 .job-notification:nth-of-type(3) {
     top: 180px;
-}
-
-/* Ensure notifications appear above modal/overlays */
-.job-notification {
-    z-index: 2147483647 !important; /* Maximum z-index */
-}
-
-input[type="checkbox"]:checked {
-    background-image: none !important;
-}
-
-/* Force all checkboxes to show solid colors */
-/* Universal checkbox styling - single source of truth */
-input[type="checkbox"],
-.filter-checkbox,
-.profession-parent-checkbox,
-.profession-sub-checkbox,
-.location-checkbox,
-.location-sub-checkbox {
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    appearance: none !important;
-    width: 1.125rem;
-    height: 1.125rem;
-    border: 2px solid #d1d5db;
-    border-radius: 4px;
-    background-color: #ffffff;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-/* Checked state */
-input[type="checkbox"]:checked,
-.filter-checkbox:checked,
-.profession-parent-checkbox:checked,
-.profession-sub-checkbox:checked,
-.location-checkbox:checked,
-.location-sub-checkbox:checked {
-    background-color: #0066cc !important;
-    border-color: #0066cc !important;
-}
-
-/* Checkmark for checked state */
-input[type="checkbox"]:checked::after,
-.filter-checkbox:checked::after,
-.profession-parent-checkbox:checked::after,
-.profession-sub-checkbox:checked::after,
-.location-checkbox:checked::after,
-.location-sub-checkbox:checked::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 0.75rem;
-    font-weight: bold;
-    display: block;
-}
-
-/* Indeterminate state for parent checkboxes */
-.profession-parent-checkbox.indeterminate,
-.location-checkbox.indeterminate {
-    background-color: #0066cc !important;
-    border-color: #0066cc !important;
-}
-
-.profession-parent-checkbox.indeterminate::after,
-.location-checkbox.indeterminate::after {
-    content: '−';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 0.875rem;
-    font-weight: bold;
-    display: block;
-}
-
-/* Hover state */
-input[type="checkbox"]:hover {
-    border-color: #0066cc;
-    box-shadow: 0 0 0 4px rgba(0, 102, 204, 0.1);
-}
-
-/* Smaller checkboxes for subcategories */
-.profession-sub-checkbox,
-.location-sub-checkbox {
-    width: 1rem;
-    height: 1rem;
-}
-
-.profession-sub-checkbox:checked::after,
-.location-sub-checkbox:checked::after {
-    font-size: 0.625rem;
-}
-
-/* ADD these CSS rules to fix responsive logo centering */
-/* The breakpoint should trigger when window is resized to 50% on laptop */
-
-/* For screens smaller than 1024px (including 50% of typical laptop screen) */
-@media (max-width: 1024px) {
-    .job-body {
-        padding: 1.25rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .nhs-logo {
-        position: static !important;
-        width: 120px !important;
-        max-height: 60px !important;
-        margin: 0 auto 1.5rem auto !important;
-        display: block !important;
-        transform: scale(1.2) !important;
-        top: auto !important;
-        right: auto !important;
-        opacity: 1 !important;
-        filter: none !important;
-    }
-
-    .job-details {
-        padding-right: 0 !important;
-        width: 100%;
-    }
-
-    .job-details ul {
-        width: 100%;
-    }
-
-    .job-details li {
-        max-width: 100%;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-    }
-
-    .job-description {
-        width: 100%;
-    }
-
-    .apply-btn {
-        width: 100%;
-        max-width: 300px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-}
-
-/* Keep existing mobile breakpoints but update them */
-@media (max-width: 768px) {
-    .job-body {
-        padding: 1.25rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .nhs-logo {
-        position: static !important;
-        width: 130px !important;
-        max-height: 65px !important;
-        margin: 0 auto 1.5rem auto !important;
-        display: block !important;
-        transform: scale(1.25) !important;
-        top: auto !important;
-        right: auto !important;
-    }
-
-    .job-details {
-        padding-right: 0 !important;
-        width: 100%;
-    }
-
-    .job-description {
-        width: 100%;
-    }
-
-    .apply-btn {
-        width: 100%;
-        max-width: 300px;
-    }
-}
-
-@media (max-width: 600px) {
-    .job-body {
-        padding: 1.25rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .nhs-logo {
-        position: static !important;
-        width: 110px !important;
-        max-height: 55px !important;
-        margin: 0 auto 1.5rem auto !important;
-        display: block !important;
-        transform: scale(1.3) !important;
-        top: auto !important;
-        right: auto !important;
-    }
-
-    .job-details {
-        padding-right: 0 !important;
-        width: 100%;
-    }
-
-    .apply-btn {
-        padding: 0.625rem 1.5rem;
-        font-size: 0.8125rem;
-        width: 100%;
-        max-width: 280px;
-    }
-}
-
-/* Alternative approach using container query if needed */
-@container (max-width: 700px) {
-    .job-body {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .nhs-logo {
-        position: static !important;
-        margin: 0 auto 1.5rem auto !important;
-        transform: scale(1.25) !important;
-    }
-}
-
-/* Fix for when widget is in smaller container */
-.main-content {
-    container-type: inline-size;
-}
-
-/* Also ensure the All Jobs button styling is correct */
-.category-btn#btn-all {
-    background: #ffffff !important;
-    color: #0066cc !important;
-    border-color: #e5e7eb !important;
-}
-
-.category-btn#btn-all.active {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
-    color: white !important;
-    border-color: #0066cc !important;
-    box-shadow: 0 4px 16px rgba(0, 102, 204, 0.3) !important;
-}
-
-.category-btn#btn-all:hover {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
-    color: #ffffff !important;
-    border-color: #0066cc !important;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 102, 204, 0.25);
-}
-
-/* ===============================================
-   RESPONSIVE CSS FIXES FOR LOGO CENTERING
-   ===============================================
-   Add these styles to your CSS section
-   These will trigger at 50% of standard laptop screen (around 960-1024px)
-*/
-
-/* Remove the default absolute positioning at smaller screens */
-@media (max-width: 1024px) {
-    .job-card .job-body {
-        padding: 1.5rem;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        text-align: left;
-    }
-
-    .job-card .nhs-logo {
-        position: static !important;
-        width: 110px !important;
-        height: auto !important;
-        max-height: 55px !important;
-        margin: 0 auto 1.25rem auto !important;
-        display: block !important;
-        opacity: 1 !important;
-        filter: none !important;
-        order: -1 !important; /* Ensures logo appears first */
-        transform: scale(1.2) !important; /* 20% increase */
-    }
-
-    .job-card .job-details {
-        padding-right: 0 !important;
-        width: 100% !important;
-        order: 1 !important;
-    }
-
-    .job-card .job-details ul {
-        width: 100% !important;
-        padding-left: 1.25rem !important;
-    }
-
-    .job-card .job-details li {
-        max-width: 100% !important;
-        word-wrap: break-word !important;
-        overflow-wrap: break-word !important;
-        padding-right: 10px !important;
-    }
-
-    .job-card .job-description {
-        width: 100% !important;
-        order: 2 !important;
-    }
-
-    .job-card .apply-btn {
-        width: auto !important;
-        min-width: 200px !important;
-        max-width: 300px !important;
-        margin: 1.25rem auto 0 auto !important;
-        display: block !important;
-        order: 3 !important;
-    }
-}
-
-/* Tablet screens */
-@media (max-width: 768px) {
-    .job-card .nhs-logo {
-        width: 120px !important;
-        max-height: 60px !important;
-        transform: scale(1.25) !important; /* 25% increase */
-        margin-bottom: 1.5rem !important;
-    }
-}
-
-/* Mobile screens */
-@media (max-width: 600px) {
-    .job-card .nhs-logo {
-        width: 100px !important;
-        max-height: 50px !important;
-        transform: scale(1.3) !important; /* 30% increase */
-    }
-
-    .job-card .apply-btn {
-        width: 100% !important;
-        max-width: 280px !important;
-    }
-}
-
-/* Small mobile screens */
-@media (max-width: 480px) {
-    .job-card .nhs-logo {
-        width: 90px !important;
-        max-height: 45px !important;
-        transform: scale(1.35) !important; /* 35% increase */
-    }
-}
-
-/* ===============================================
-   ALL JOBS BUTTON SPECIFIC STYLING
-   =============================================== */
-
-/* Ensure All Jobs button is white by default */
-.category-btn#btn-all {
-    background: #ffffff !important;
-    color: #0066cc !important;
-    border: 2px solid #e5e7eb !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
-}
-
-/* Only when active class is present, make it blue */
-.category-btn#btn-all.active {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
-    color: white !important;
-    border-color: #0066cc !important;
-    box-shadow: 0 4px 16px rgba(0, 102, 204, 0.3) !important;
-}
-
-/* Hover state for All Jobs when not active */
-.category-btn#btn-all:not(.active):hover {
-    background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%) !important;
-    color: #ffffff !important;
-    border-color: #0066cc !important;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 102, 204, 0.25) !important;
-}
-
-/* Hover state for All Jobs when active */
-.category-btn#btn-all.active:hover {
-    background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%) !important;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 102, 204, 0.35) !important;
-}
-
-/* ===============================================
-   FIX FOR TEXT WRAPPING IN JOB DETAILS
-   =============================================== */
-
-.job-details {
-    font-size: 0.9375rem;
-    color: #1d1d1b;
-    line-height: 1.7;
-    padding-right: 140px; /* Extra space for logo on desktop */
-}
-
-.job-details li {
-    margin-bottom: 0.625rem;
-    padding-left: 1.25rem;
-    position: relative;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-    display: block !important;
-    max-width: calc(100% - 10px) !important;
-    padding-right: 10px !important;
-}
-
-/* Ensure strong tags don't break layout */
-.job-details li strong {
-    display: inline;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-}
-
-/* Responsive adjustment for job details */
-@media (max-width: 1024px) {
-    .job-details {
-        padding-right: 0 !important;
-    }
-
-    .job-details li {
-        max-width: 100% !important;
-    }
 }
