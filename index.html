@@ -155,7 +155,7 @@
 </script>
 
 <div class="main-wrapper">
-    <div class="category-buttons-wrapper">
+    <nav class="category-buttons-wrapper" role="navigation" aria-label="Job category filters">
         <div class="category-buttons">
             <button class="category-btn active" onclick="applyCategoryFilter('all')" id="btn-all">
                 <span class="emoji" aria-hidden="true">&#x1F3E5;</span>
@@ -186,10 +186,10 @@
                 <span>Research</span>
             </button>
         </div>
-    </div>
+    </nav>
 
     <div class="content-container">
-        <div class="sidebar" id="sidebar">
+        <aside class="sidebar" id="sidebar" role="complementary" aria-label="Job search and filters">
             <div class="search-section">
                 <h3 class="search-title">Keyword Search</h3>
                 <div class="search-input-wrapper">
@@ -209,9 +209,9 @@
                 <div id="filtersContainer">
                 </div>
             </div>
-        </div>
+        </aside>
 
-        <div class="main-content">
+        <main class="main-content" role="main" aria-label="Job search results">
             <div class="jobs-section">
                 <div class="job-count-header" id="jobCountDisplay">
                     <!-- Dynamic job count will be displayed here -->
@@ -232,7 +232,7 @@
                     <button class="pagination-btn" id="lastBtn" onclick="goToPage(Math.ceil(filteredJobs.length / jobsPerPage))" aria-label="Go to last page">Last</button>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 </div>
 
@@ -1065,31 +1065,30 @@ locationHierarchy['Overseas'].subcategories = [
         updateCategoryButtons();
     }
 
-    // Modified function to count jobs for published filters with cumulative logic
-    function countJobsForPublishedFilter(filterName, allActiveJobs) {
-        return allActiveJobs.filter(job => {
-            if (!job.published) return false;
-            const jobDays = parseDaysFromPublished(job.published);
-            if (!jobDays) return false;
+ // Modified function to count jobs for published filters with correct logic
+function countJobsForPublishedFilter(filterName, allActiveJobs) {
+    return allActiveJobs.filter(job => {
+        if (!job.published) return false;
+        const jobDays = parseDaysFromPublished(job.published);
+        if (!jobDays) return false;
 
-            // Cumulative counting logic
-            switch(filterName) {
-                case "Last 3 Days":
-                    return jobDays <= 3;
-                case "Last 7 Days":
-                    return jobDays <= 7;
-                case "Last 14 Days":
-                    return jobDays <= 14;
-                case "Last 28 Days":
-                    return jobDays <= 28;
-                case "More than 28 Days":
-                    return true; // All jobs with valid published dates
-                default:
-                    return false;
-            }
-        }).length;
-    }
-
+        // Exclusive counting logic for each range
+        switch(filterName) {
+            case "Last 3 Days":
+                return jobDays <= 3;
+            case "Last 7 Days":
+                return jobDays <= 7;
+            case "Last 14 Days":
+                return jobDays <= 14;
+            case "Last 28 Days":
+                return jobDays <= 28;
+            case "More than 28 Days":
+                return jobDays > 28; // Only jobs older than 28 days
+            default:
+                return false;
+        }
+    }).length;
+}
 
     // Function to make keywords keyboard accessible
     function renderKeywords() {
@@ -1286,7 +1285,7 @@ function handleKeywordKeydown(event, keyword, index) {
     });
 
 
-    window.toggleFilterGroup = function(groupName) {
+  window.toggleFilterGroup = function(groupName) {
     const arrow = document.getElementById(groupName + 'Arrow');
     const options = document.getElementById(groupName + 'Options');
     const header = document.getElementById(groupName + '-header');
@@ -1296,38 +1295,63 @@ function handleKeywordKeydown(event, keyword, index) {
         header.blur();
     }
 
-    if (options.classList.contains('collapsed')) {
+    const isCollapsed = options.classList.contains('collapsed');
+
+    if (isCollapsed) {
         options.classList.remove('collapsed');
         arrow.classList.remove('collapsed');
         arrow.textContent = '▼';
         options.style.display = 'block';
+        header.setAttribute('aria-expanded', 'true');
     } else {
         options.classList.add('collapsed');
         arrow.classList.add('collapsed');
         arrow.textContent = '▶';
         options.style.display = 'none';
+        header.setAttribute('aria-expanded', 'false');
     }
 };
 
-    window.toggleParentCategory = function(category, parentName) {
+// Add keyboard handler for filter headers
+window.handleFilterHeaderKeydown = function(event, groupName) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleFilterGroup(groupName);
+    }
+};
+
+// Add keyboard handler for parent category headers
+window.handleParentCategoryKeydown = function(event, category, parentName) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleParentCategory(category, parentName);
+    }
+};
+
+   window.toggleParentCategory = function(category, parentName) {
     const arrow = document.getElementById(`${category}_parent_arrow_${parentName.replace(/\s+/g, '_')}`);
     const subcategories = document.getElementById(`${category}_subcategories_${parentName.replace(/\s+/g, '_')}`);
+    const header = arrow.closest('.profession-parent-header');
 
     // Remove any focus states
     if (event && event.target) {
         event.target.blur();
     }
 
-    if (subcategories.classList.contains('collapsed')) {
+    const isCollapsed = subcategories.classList.contains('collapsed');
+
+    if (isCollapsed) {
         subcategories.classList.remove('collapsed');
         arrow.classList.remove('collapsed');
         arrow.textContent = '▼';
         subcategories.style.display = 'block';
+        if (header) header.setAttribute('aria-expanded', 'true');
     } else {
         subcategories.classList.add('collapsed');
         arrow.classList.add('collapsed');
         arrow.textContent = '▶';
         subcategories.style.display = 'none';
+        if (header) header.setAttribute('aria-expanded', 'false');
     }
 };
 
@@ -1848,15 +1872,15 @@ function handleKeywordKeydown(event, keyword, index) {
                 const jobDays = parseDaysFromPublished(job.published);
                 if (!jobDays) return false;
                 return checkedPublished.some(selectedCategory => {
-                    switch(selectedCategory) {
-                        case "Last 3 Days": return jobDays <= 3;
-                        case "Last 7 Days": return jobDays <= 7;
-                        case "Last 14 Days": return jobDays <= 14;
-                        case "Last 28 Days": return jobDays <= 28;
-                        case "More than 28 Days": return true;
-                        default: return false;
-                    }
-                });
+    switch(selectedCategory) {
+        case "Last 3 Days": return jobDays <= 3;
+        case "Last 7 Days": return jobDays <= 7;
+        case "Last 14 Days": return jobDays <= 14;
+        case "Last 28 Days": return jobDays <= 28;
+        case "More than 28 Days": return jobDays > 28; // Only jobs older than 28 days
+        default: return false;
+    }
+});
             });
         }
 
@@ -1936,15 +1960,15 @@ function handleKeywordKeydown(event, keyword, index) {
                 const jobDays = parseDaysFromPublished(job.published);
                 if (!jobDays) return false;
                 return checkedPublished.some(selectedCategory => {
-                    switch(selectedCategory) {
-                        case "Last 3 Days": return jobDays <= 3;
-                        case "Last 7 Days": return jobDays <= 7;
-                        case "Last 14 Days": return jobDays <= 14;
-                        case "Last 28 Days": return jobDays <= 28;
-                        case "More than 28 Days": return true;
-                        default: return false;
-                    }
-                });
+    switch(selectedCategory) {
+        case "Last 3 Days": return jobDays <= 3;
+        case "Last 7 Days": return jobDays <= 7;
+        case "Last 14 Days": return jobDays <= 14;
+        case "Last 28 Days": return jobDays <= 28;
+        case "More than 28 Days": return jobDays > 28; // Only jobs older than 28 days
+        default: return false;
+    }
+});
             });
         }
 
@@ -2149,15 +2173,15 @@ function handleKeywordKeydown(event, keyword, index) {
                 const jobDays = parseDaysFromPublished(job.published);
                 if (!jobDays) return false;
                 return checkedPublished.some(selectedCategory => {
-                    switch(selectedCategory) {
-                        case "Last 3 Days": return jobDays <= 3;
-                        case "Last 7 Days": return jobDays <= 7;
-                        case "Last 14 Days": return jobDays <= 14;
-                        case "Last 28 Days": return jobDays <= 28;
-                        case "More than 28 Days": return true;
-                        default: return false;
-                    }
-                });
+    switch(selectedCategory) {
+        case "Last 3 Days": return jobDays <= 3;
+        case "Last 7 Days": return jobDays <= 7;
+        case "Last 14 Days": return jobDays <= 14;
+        case "Last 28 Days": return jobDays <= 28;
+        case "More than 28 Days": return jobDays > 28; // Only jobs older than 28 days
+        default: return false;
+    }
+});
             });
         }
 
@@ -2268,15 +2292,15 @@ function handleKeywordKeydown(event, keyword, index) {
                 const jobDays = parseDaysFromPublished(job.published);
                 if (!jobDays) return false;
                 return checkedPublished.some(selectedCategory => {
-                    switch(selectedCategory) {
-                        case "Last 3 Days": return jobDays <= 3;
-                        case "Last 7 Days": return jobDays <= 7;
-                        case "Last 14 Days": return jobDays <= 14;
-                        case "Last 28 Days": return jobDays <= 28;
-                        case "More than 28 Days": return true;
-                        default: return false;
-                    }
-                });
+    switch(selectedCategory) {
+        case "Last 3 Days": return jobDays <= 3;
+        case "Last 7 Days": return jobDays <= 7;
+        case "Last 14 Days": return jobDays <= 14;
+        case "Last 28 Days": return jobDays <= 28;
+        case "More than 28 Days": return jobDays > 28; // Only jobs older than 28 days
+        default: return false;
+    }
+});
             });
         }
 
@@ -2350,69 +2374,81 @@ function handleKeywordKeydown(event, keyword, index) {
     }
 
     function calculateFilterCounts() {
-        filterData = {
-            published: {},
-            profession: {},
-            grade: {},
-            location: {}
-        };
+    // Initialize as empty arrays, not objects
+    filterData = {
+        published: [],
+        profession: [],
+        grade: [],
+        location: []
+    };
 
-        const activeJobs = filterActiveJobs(allJobsData);
+    const activeJobs = filterActiveJobs(allJobsData);
 
-        if (activeJobs.length === 0) return;
+    if (activeJobs.length === 0) return;
 
-        buildDynamicHierarchies();
+    buildDynamicHierarchies();
 
-        let publishedCounts = {};
-        let gradeCounts = {};
+    let publishedCounts = {};
+    let gradeCounts = {};
 
-        activeJobs.forEach(job => {
-            if (job.published) {
-                const category = categorizePublishedString(job.published);
-                if (category) {
-                    publishedCounts[category] = (publishedCounts[category] || 0) + 1;
-                }
+    activeJobs.forEach(job => {
+        if (job.published) {
+            const category = categorizePublishedString(job.published);
+            if (category) {
+                publishedCounts[category] = (publishedCounts[category] || 0) + 1;
             }
+        }
 
-            if (job.grade) {
-                gradeCounts[job.grade] = (gradeCounts[job.grade] || 0) + 1;
-            }
-        });
+        if (job.grade) {
+            gradeCounts[job.grade] = (gradeCounts[job.grade] || 0) + 1;
+        }
+    });
 
-        const publishedOrder = [
-            "Last 3 Days",
-            "Last 7 Days",
-            "Last 14 Days",
-            "Last 28 Days",
-            "More than 28 Days"
-        ];
+    const publishedOrder = [
+        "Last 7 Days",
+        "Last 14 Days",
+        "Last 28 Days",
+        "More than 28 Days"
+    ];
 
-        filterData.published = publishedOrder
-            .filter(category => publishedCounts[category] > 0)
-            .map(category => ({
-                name: category,
-                count: countJobsForPublishedFilter(category, activeJobs)
-            }));
+    // Set published data
+    filterData.published = publishedOrder
+        .filter(category => publishedCounts[category] > 0)
+        .map(category => ({
+            name: category,
+            count: countJobsForPublishedFilter(category, activeJobs)
+        }));
 
-        filterData.grade = Object.entries(gradeCounts)
-            .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => b.count - a.count);
+    // Set grade data
+    filterData.grade = Object.entries(gradeCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
 
-       filterData.profession = buildProfessionHierarchy();
-       filterData.location = buildLocationHierarchy();
-   }
+    // Set profession data
+    filterData.profession = buildProfessionHierarchy();
 
-   function renderLocationFilters(locationData) {
+    // Set location data
+    filterData.location = buildLocationHierarchy();
+
+    // Debug log to verify structure
+    console.log('FilterData structure:', {
+        published: filterData.published.length,
+        profession: filterData.profession.length,
+        grade: filterData.grade.length,
+        location: filterData.location.length
+    });
+}
+
+ function renderLocationFilters(locationData) {
     return `
         <div class="filter-group" role="region" aria-labelledby="location-header">
-            <div class="filter-header" onclick="toggleFilterGroup('location')" id="location-header">
-                <span class="filter-arrow" id="locationArrow">▶</span>
+            <button class="filter-header" onclick="toggleFilterGroup('location')" onkeydown="handleFilterHeaderKeydown(event, 'location')" id="location-header" aria-expanded="true" tabindex="0">
+                <span class="filter-arrow" id="locationArrow">▼</span>
                 <span>Location</span>
-            </div>
-            <div class="filter-options" id="locationOptions" style="display: none;">
+            </button>
+            <div class="filter-options" id="locationOptions" style="display: block;">
                 ${locationData.map(parent => {
                     const hasSubcategories = parent.subcategories && parent.subcategories.length > 0;
-
                     if (!hasSubcategories) {
                         return `
                             <div class="filter-item">
@@ -2425,13 +2461,13 @@ function handleKeywordKeydown(event, keyword, index) {
                     } else {
                         return `
                             <div class="profession-parent-group">
-                                <div class="profession-parent-header" onclick="toggleParentCategory('location', '${parent.name}')">
+                                <button class="profession-parent-header" onclick="toggleParentCategory('location', '${parent.name}')" onkeydown="handleParentCategoryKeydown(event, 'location', '${parent.name}')" aria-expanded="false" tabindex="0">
                                     <input type="checkbox" class="profession-parent-checkbox" id="location_parent_${parent.name.replace(/\s+/g, '_')}"
-                                           onchange="handleParentCategoryChange('location', '${parent.name}')" onclick="event.stopPropagation()" aria-label="${parent.name} location category">
+                                           onchange="handleParentCategoryChange('location', '${parent.name}')" onclick="event.stopPropagation()" aria-label="${parent.name} location category" tabindex="-1">
                                     <label class="profession-parent-label" for="location_parent_${parent.name.replace(/\s+/g, '_')}">${parent.name}</label>
                                     <span class="filter-count">${parent.count}</span>
-                                    <span class="profession-parent-arrow collapsed" id="location_parent_arrow_${parent.name.replace(/\s+/g, '_')}">▶</span>
-                                </div>
+                                    <span class="profession-parent-arrow" id="location_parent_arrow_${parent.name.replace(/\s+/g, '_')}">▶</span>
+                                </button>
                                 <div class="profession-subcategories collapsed" id="location_subcategories_${parent.name.replace(/\s+/g, '_')}" style="display: none;">
                                     ${parent.subcategories.map(sub => `
                                         <div class="profession-sub-item">
@@ -2454,20 +2490,20 @@ function handleKeywordKeydown(event, keyword, index) {
   function renderProfessionFilters(professionData) {
     return `
         <div class="filter-group" role="region" aria-labelledby="profession-header">
-            <div class="filter-header" onclick="toggleFilterGroup('profession')" id="profession-header">
-                <span class="filter-arrow" id="professionArrow">▶</span>
+            <button class="filter-header" onclick="toggleFilterGroup('profession')" onkeydown="handleFilterHeaderKeydown(event, 'profession')" id="profession-header" aria-expanded="true" tabindex="0">
+                <span class="filter-arrow" id="professionArrow">▼</span>
                 <span>Profession</span>
-            </div>
-            <div class="filter-options" id="professionOptions" style="display: none;">
+            </button>
+            <div class="filter-options" id="professionOptions" style="display: block;">
                 ${professionData.map(parent => `
                     <div class="profession-parent-group">
-                        <div class="profession-parent-header" onclick="toggleProfessionParent('${parent.name}')">
+                        <button class="profession-parent-header" onclick="toggleProfessionParent('${parent.name}')" onkeydown="handleParentCategoryKeydown(event, 'profession', '${parent.name}')" aria-expanded="false" tabindex="0">
                             <input type="checkbox" class="profession-parent-checkbox" id="profession_parent_${parent.name.replace(/\s+/g, '_')}"
-                                   onchange="handleParentProfessionChange('${parent.name}')" onclick="event.stopPropagation()" aria-label="${parent.name} profession category">
+                                   onchange="handleParentProfessionChange('${parent.name}')" onclick="event.stopPropagation()" aria-label="${parent.name} profession category" tabindex="-1">
                             <label class="profession-parent-label" for="profession_parent_${parent.name.replace(/\s+/g, '_')}">${parent.name}</label>
                             <span class="filter-count">${parent.count}</span>
                             <span class="profession-parent-arrow collapsed" id="profession_parent_arrow_${parent.name.replace(/\s+/g, '_')}">▶</span>
-                        </div>
+                        </button>
                         <div class="profession-subcategories collapsed" id="profession_subcategories_${parent.name.replace(/\s+/g, '_')}" style="display: none;">
                             ${parent.subcategories.map(sub => renderSubProfession(sub, parent.name)).join('')}
                         </div>
@@ -2482,13 +2518,13 @@ function renderSubProfession(sub, parentName) {
     if (sub.subcategories) {
         return `
             <div class="profession-parent-group" style="margin-left: 20px;">
-                <div class="profession-parent-header" onclick="toggleProfessionParent('${sub.name}')">
+                <button class="profession-parent-header" onclick="toggleProfessionParent('${sub.name}')" onkeydown="handleParentCategoryKeydown(event, 'profession', '${sub.name}')" aria-expanded="false" tabindex="0">
                     <input type="checkbox" class="profession-parent-checkbox" id="profession_parent_${sub.name.replace(/\s+/g, '_')}"
-                           onchange="handleParentProfessionChange('${sub.name}')" onclick="event.stopPropagation()" aria-label="${sub.name} profession subcategory">
+                           onchange="handleParentProfessionChange('${sub.name}')" onclick="event.stopPropagation()" aria-label="${sub.name} profession subcategory" tabindex="-1">
                     <label class="profession-parent-label" for="profession_parent_${sub.name.replace(/\s+/g, '_')}">${sub.name}</label>
                     <span class="filter-count">${sub.count}</span>
                     <span class="profession-parent-arrow collapsed" id="profession_parent_arrow_${sub.name.replace(/\s+/g, '_')}">▶</span>
-                </div>
+                </button>
                 <div class="profession-subcategories collapsed" id="profession_subcategories_${sub.name.replace(/\s+/g, '_')}" style="display: none;">
                     ${sub.subcategories.map(nestedSub => `
                         <div class="profession-sub-item">
@@ -2515,42 +2551,72 @@ function renderSubProfession(sub, parentName) {
 
    function renderFilters() {
     const filtersContainer = document.getElementById('filtersContainer');
+    let filterHTML = '';
 
-    const filterHTML = Object.entries(filterData).map(([category, items]) => {
-        if (category === 'profession') {
-            return renderProfessionFilters(items);
-        } else if (category === 'location') {
-            return renderLocationFilters(items);
-        } else {
-            const displayName = category === 'published' ? 'Date Published' : category.charAt(0).toUpperCase() + category.slice(1);
-            return `
-                <div class="filter-group" role="region" aria-labelledby="${category}-header">
-                    <div class="filter-header" onclick="toggleFilterGroup('${category}')" id="${category}-header">
-                        <span class="filter-arrow" id="${category}Arrow">▶</span>
-                        <span>${displayName}</span>
-                    </div>
-                    <div class="filter-options" id="${category}Options" style="display: none;">
-                        ${items.map(item => {
-                            const checkboxId = `${category}_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-                            return `
-                                <div class="filter-item">
-                                    <input type="checkbox" class="filter-checkbox" id="${checkboxId}"
-                                           onchange="handleFilterChange('${category}', '${item.name}')"
-                                           aria-label="${item.name} ${category} filter">
-                                    <label class="filter-label" for="${checkboxId}">${item.name}</label>
-                                    <span class="filter-count">${item.count}</span>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
+    // Render Date Published filter - EXPANDED by default
+    if (filterData.published && filterData.published.length > 0) {
+        filterHTML += `
+            <div class="filter-group" role="region" aria-labelledby="published-header">
+                <button class="filter-header" onclick="toggleFilterGroup('published')" onkeydown="handleFilterHeaderKeydown(event, 'published')" id="published-header" aria-expanded="true" tabindex="0">
+                    <span class="filter-arrow" id="publishedArrow">▼</span>
+                    <span>Date Published</span>
+                </button>
+                <div class="filter-options" id="publishedOptions" style="display: block;">
+                    ${filterData.published.map(item => {
+                        const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+                        return `
+                            <div class="filter-item">
+                                <input type="checkbox" class="filter-checkbox" id="${checkboxId}"
+                                       onchange="handleFilterChange('published', '${item.name}')"
+                                       aria-label="${item.name} published filter">
+                                <label class="filter-label" for="${checkboxId}">${item.name}</label>
+                                <span class="filter-count">${item.count}</span>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
-            `;
-        }
-    }).join('');
+            </div>
+        `;
+    }
+
+    // Render Profession filter - EXPANDED by default, subcategories COLLAPSED
+    if (filterData.profession && filterData.profession.length > 0) {
+        filterHTML += renderProfessionFilters(filterData.profession);
+    }
+
+    // Render Grade filter - EXPANDED by default
+    if (filterData.grade && filterData.grade.length > 0) {
+        filterHTML += `
+            <div class="filter-group" role="region" aria-labelledby="grade-header">
+                <button class="filter-header" onclick="toggleFilterGroup('grade')" onkeydown="handleFilterHeaderKeydown(event, 'grade')" id="grade-header" aria-expanded="true" tabindex="0">
+                    <span class="filter-arrow" id="gradeArrow">▼</span>
+                    <span>Grade</span>
+                </button>
+                <div class="filter-options" id="gradeOptions" style="display: block;">
+                    ${filterData.grade.map(item => {
+                        const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+                        return `
+                            <div class="filter-item">
+                                <input type="checkbox" class="filter-checkbox" id="${checkboxId}"
+                                       onchange="handleFilterChange('grade', '${item.name}')"
+                                       aria-label="${item.name} grade filter">
+                                <label class="filter-label" for="${checkboxId}">${item.name}</label>
+                                <span class="filter-count">${item.count}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Render Location filter - EXPANDED by default, subcategories COLLAPSED
+    if (filterData.location && filterData.location.length > 0) {
+        filterHTML += renderLocationFilters(filterData.location);
+    }
 
     filtersContainer.innerHTML = filterHTML;
 }
-
 
   function applyFilters(shouldScroll = true) {
         const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
@@ -2678,23 +2744,22 @@ function renderSubProfession(sub, parentName) {
                         const jobDays = parseDaysFromPublished(job.published);
                         if (!jobDays) return false;
 
-                        const matchesPublished = selectedValues.some(selectedCategory => {
-                            switch(selectedCategory) {
-                                case "Last 3 Days":
-                                    return jobDays <= 3;
-                                case "Last 7 Days":
-                                    return jobDays <= 7;
-                                case "Last 14 Days":
-                                    return jobDays <= 14;
-                                case "Last 28 Days":
-                                    return jobDays <= 28;
-                                case "More than 28 Days":
-                                    return true;
-                                default:
-                                    return false;
-                            }
-                        });
-
+    const matchesPublished = selectedValues.some(selectedCategory => {
+    switch(selectedCategory) {
+        case "Last 3 Days":
+            return jobDays <= 3;
+        case "Last 7 Days":
+            return jobDays <= 7;
+        case "Last 14 Days":
+            return jobDays <= 14;
+        case "Last 28 Days":
+            return jobDays <= 28;
+        case "More than 28 Days":
+            return jobDays > 28;
+        default:
+            return false;
+    }
+});
                         if (!matchesPublished) return false;
                     }
                 }
@@ -2814,19 +2879,18 @@ function renderSubProfession(sub, parentName) {
                if (!job.published) return false;
                const jobDays = parseDaysFromPublished(job.published);
                if (!jobDays) return false;
-               const matchesPublished = activeFilters.published.some(selectedCategory => {
-                   switch(selectedCategory) {
-                       case "Last 3 Days": return jobDays <= 3;
-                       case "Last 7 Days": return jobDays <= 7;
-                       case "Last 14 Days": return jobDays <= 14;
-                       case "Last 28 Days": return jobDays <= 28;
-                       case "More than 28 Days": return true;
-                       default: return false;
-                   }
-               });
-               if (!matchesPublished) return false;
+const matchesPublished = activeFilters.published.some(selectedCategory => {
+    switch(selectedCategory) {
+        case "Last 3 Days": return jobDays <= 3;
+        case "Last 7 Days": return jobDays <= 7;
+        case "Last 14 Days": return jobDays <= 14;
+        case "Last 28 Days": return jobDays <= 28;
+        case "More than 28 Days": return jobDays > 28;
+        default: return false;
+    }
+});
+if (!matchesPublished) return false;
            }
-
            return true;
        }
 
@@ -3025,7 +3089,7 @@ function renderSubProfession(sub, parentName) {
                            </ul>
                        </div>
                        <div class="job-description">${job.short_description}</div>
-                       <button class="apply-btn" onclick="applyToJob(${job.id})">View Details on BMJ Careers</button>
+                       <button class="apply-btn" onclick="applyToJob(${job.id})" aria-label="View details of ${job.job_title.replace(/"/g, '&quot;')} at ${employer.replace(/"/g, '&quot;')} on BMJ Careers">View Details on BMJ Careers</button>
                    </div>
                </div>
            `;
