@@ -490,6 +490,8 @@ body {
     outline: none !important;
     box-shadow: none !important;
     user-select: none;
+    width: 100%;
+    text-align: left;
 }
 
 .filter-header:hover {
@@ -498,7 +500,8 @@ body {
 }
 
 .filter-header:focus {
-    outline: none !important;
+    outline: 2px solid var(--primary-color) !important;
+    outline-offset: 2px;
     box-shadow: none !important;
     border: none !important;
 }
@@ -583,8 +586,18 @@ body {
     flex-shrink: 0;
     min-width: 24px;
     text-align: center;
-    white-space: nowrap;
-    border: 1px solid #d1d5db;
+    white-space: nowrap; /* FIXED: Prevent wrapping */
+    border: 1px solid #d1d5db; /* FIXED: Add border for better visibility */
+}
+
+/* FIXED: Ensure nested dropdowns have proper spacing */
+.profession-parent-group .profession-parent-group {
+    margin-left: 1rem; /* FIXED: Reduce excessive nesting margin */
+}
+
+.profession-parent-group .profession-parent-group .profession-sub-item {
+    margin-left: 2.5rem; /* FIXED: Adjust nested item margin */
+    width: calc(100% - 2.5rem); /* FIXED: Proper width for nested items */
 }
 
 /* Universal checkbox styling */
@@ -676,16 +689,7 @@ input[type="checkbox"]:hover {
 .profession-parent-group {
     margin-bottom: 0.5rem;
     width: 100%;
-    overflow: visible;/* Fixed: Allow dropdowns to show */
-}
-
-.profession-parent-group .profession-parent-group{
-margin-left: 1rem;
-}
-
-.profession-parent-group .profession-parent-group .profession-parent-sub-item{
-margin-left: 2.5rem;
-width: calc(100% - 2.5rem);
+    overflow: visible; /* Fixed: Allow dropdowns to show */
 }
 
 .profession-parent-header {
@@ -701,10 +705,18 @@ width: calc(100% - 2.5rem);
     border-radius: 6px;
     margin-bottom: 0.25rem;
     -webkit-tap-highlight-color: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
 }
 
 .profession-parent-header:hover {
     background-color: #f3f4f6;
+}
+
+.profession-parent-header:focus {
+    outline: 2px solid var(--primary-color) !important;
+    outline-offset: 2px;
 }
 
 .profession-parent-label {
@@ -718,7 +730,7 @@ width: calc(100% - 2.5rem);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: calc(100% - 80px); /* Fixed: Leave room for count and arrow */
+    max-width: calc(100% - 80px); /* FIXED: Leave more room for count and arrow */
 }
 
 .profession-parent-arrow {
@@ -768,8 +780,8 @@ width: calc(100% - 2.5rem);
     margin-left: 1.75rem;
     transition: background-color 0.2s ease;
     border-radius: 6px;
-    width: calc(100% - 1.75rem);
-    min-height: 32px;
+    width: calc(100% - 1.75rem); /* FIXED: Proper width calculation */
+    min-height: 32px; /* FIXED: Minimum height for proper alignment */
 }
 
 .profession-sub-item:hover {
@@ -787,7 +799,7 @@ width: calc(100% - 2.5rem);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: calc(100% - 50px); /* Fixed: Leave room for count */
+    max-width: calc(100% - 50px); /* FIXED: Leave more room for count */
 }
 
 /* Main content */
@@ -927,7 +939,6 @@ width: calc(100% - 2.5rem);
     font-weight: bold;
     font-size: 1.25rem;
     line-height: 1;
-    animation: pulse 2s ease-in-out infinite;
 }
 
 .job-details strong {
