@@ -1,4 +1,4 @@
-// server.js - Fixed version with proper DynamoDB sync and admin restrictions
+//server.js - Fixed version with proper DynamoDB sync and admin restrictions
 
 const express = require('express');
 const cors = require('cors');
@@ -27,8 +27,29 @@ const app = express();
 const PORT = 3000;
 
 // Enable CORS for all origins during development
-app.use(cors());
+// Configure CORS properly
+app.use(cors({
+    credentials: true,
+    origin: function(origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc)
+        if (!origin) return callback(null, true);
+        // Allow all origins for widget embedding
+        return callback(null, true);
+    },
+    optionsSuccessStatus: 200
+}));
+
 app.use(express.json());
+
+// Security headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minute cache
+    next();
+});
 
 // Serve static files from public folder (for CSS)
 app.use(express.static('public'));
@@ -2336,6 +2357,11 @@ async function initializeServer() {
 
 // Main page with UTM tracking
 app.get('/', (req, res) => {
+
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
   // Track page load
   const clientInfo = getClientFromRequest(req);
 
@@ -2363,165 +2389,79 @@ app.get('/', (req, res) => {
       html = html.replace(allJobsDataPattern, 'window.allJobsData = [];');
     }
 
-    // Add notification styles before </head>
-    const notificationStyles = `
-    <style>
-    /* Notification Styles */
-    .notification-container {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 1000;
-        max-width: 350px;
-    }
+  // Add notification styles before </head>
+  const notificationStyles = `
+  <style>
+  /* CRITICAL CSS - INLINE TO PREVENT FOUC */
+  body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      visibility: hidden; /* Hide until CSS loads */
+  }
 
-    .notification {
-        background: #ffffff;
-        border: 2px solid #2166ac;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        animation: slideIn 0.3s ease-out;
-        cursor: pointer;
-        transition: transform 0.2s, opacity 0.3s;
-    }
+  body.loaded {
+      visibility: visible; /* Show when loaded */
+  }
 
-    .notification:hover {
-        transform: translateX(-5px);
-    }
+  .main-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+  }
 
-    .notification.fade-out {
-        opacity: 0;
-        transform: translateX(100%);
-    }
+  /* Load external CSS safely */
+  ${(() => {
+      try {
+          const cssPath = path.join(__dirname, 'styles.css');
+          if (fs.existsSync(cssPath)) {
+              return fs.readFileSync(cssPath, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+          }
+      } catch (e) {
+          console.warn('Could not load styles.css:', e.message);
+      }
+      return '/* External CSS not loaded */';
+  })()}
 
-    .notification-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 8px;
-        font-weight: 600;
-        color: #2166ac;
-    }
+  /* Notification styles */
+  .notification-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      max-width: 350px;
+  }
 
-    .notification-icon {
-        font-size: 24px;
-        margin-right: 10px;
-    }
+  .notification {
+      background: #ffffff;
+      border: 2px solid #2166ac;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      animation: slideIn 0.3s ease-out;
+  }
 
-    .notification-body {
-        color: #333;
-        font-size: 14px;
-    }
+  .loading-spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2166ac;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+  }
 
-    .notification-close {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        background: none;
-        border: none;
-        font-size: 20px;
-        cursor: pointer;
-        color: #666;
-        padding: 0;
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+  @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+  }
 
-    .notification-close:hover {
-        color: #2166ac;
-    }
-
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    /* Updated job indicator */
-    .job-updated-badge {
-        position: absolute;
-        top: -10px;
-        right: 20px;
-        background: #f59e0b;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 600;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        z-index: 10;
-    }
-
-    .job-updated-badge::before {
-        content: '';
-        position: absolute;
-        bottom: -6px;
-        right: 20px;
-        width: 0;
-        height: 0;
-        border-left: 6px solid transparent;
-        border-right: 6px solid transparent;
-        border-top: 6px solid #f59e0b;
-    }
-
-    .job-card {
-        position: relative;
-    }
-
-    .job-card.new-job {
-        border: 2px solid #10b981;
-        animation: pulse 2s ease-in-out infinite;
-    }
-
-    .loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(255, 255, 255, 0.9);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-    }
-
-    .loading-spinner {
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #2166ac;
-        border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    @keyframes pulse {
-        0% {
-            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-        }
-        50% {
-            box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-        }
-        100% {
-            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-        }
-    }
-    </style>
-    `;
+  @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+  }
+  </style>
+  `;
 
     html = html.replace('</head>', notificationStyles + '</head>');
 
@@ -2576,274 +2516,293 @@ app.get('/', (req, res) => {
     `;
 
     // Enhanced integration script with click tracking
-    const integrationScript = `
+   const integrationScript = `
+   // API Integration for BMJ Careers - OPTIMIZED LOADING
+   console.log('Starting BMJ Careers API integration...');
 
-    // API Integration for BMJ Careers with Click Tracking
-    console.log('Starting BMJ Careers API integration with tracking...');
+   // Generate session ID for this page load
+   const sessionId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
-// Generate session ID for this page load
-const sessionId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+   // Track time spent on page
+   let startTime = Date.now();
+   let lastActivityTime = Date.now();
 
-// Track time spent on page
-let startTime = Date.now();
-let lastActivityTime = Date.now();
+   // Send time updates every 30 seconds
+   setInterval(() => {
+     const timeSpent = Math.floor((Date.now() - lastActivityTime) / 1000);
+     if (timeSpent > 0) {
+       fetch('/api/track/time', {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+           'x-session-id': sessionId
+         },
+         body: JSON.stringify({ timeSpent })
+       }).catch(err => console.error('Time tracking failed:', err));
+       lastActivityTime = Date.now();
+     }
+   }, 30000);
 
-// Send time updates every 30 seconds
-setInterval(() => {
-  const timeSpent = Math.floor((Date.now() - lastActivityTime) / 1000);
-  if (timeSpent > 0) {
-    fetch('/api/track/time', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-session-id': sessionId
-      },
-      body: JSON.stringify({ timeSpent })
-    }).catch(err => console.error('Time tracking failed:', err));
-    lastActivityTime = Date.now();
-  }
-}, 30000);
+   // Track activity
+   document.addEventListener('click', () => {
+     lastActivityTime = Date.now();
+   });
 
-// Track activity
-document.addEventListener('click', () => {
-  lastActivityTime = Date.now();
-});
+   document.addEventListener('scroll', () => {
+     lastActivityTime = Date.now();
+   });
 
-document.addEventListener('scroll', () => {
-  lastActivityTime = Date.now();
-});
-
-// Send session ID with all requests
-const originalFetch = window.fetch;
-window.fetch = function(...args) {
-  if (args[0] && args[0].startsWith('/')) {
-    if (!args[1]) args[1] = {};
-    if (!args[1].headers) args[1].headers = {};
-    args[1].headers['x-session-id'] = sessionId;
-  }
-  return originalFetch.apply(this, args);
-};
-
-    // Track click events
+   // Track click events
    window.applyToJob = function(jobId) {
-       // Track the click
-       fetch('/api/track/click', {
-           method: 'POST',
-           headers: {
-               'Content-Type': 'application/json'
-           },
-           body: JSON.stringify({
-               jobId: jobId,
-               jobTitle: 'Job ' + jobId
-           })
-       }).catch(err => console.error('Click tracking failed:', err));
+      // Track the click
+      fetch('/api/track/click', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+              jobId: jobId,
+              jobTitle: 'Job ' + jobId
+          })
+      }).catch(err => console.error('Click tracking failed:', err));
 
-       // Get job details
-       const job = window.allJobsData.find(j => j.id === jobId);
-       if (job && job.job_url) {
-           window.open(job.job_url, '_blank', 'noopener,noreferrer');
-       } else {
-           window.open('https://www.bmj.com/careers/job/' + jobId, '_blank', 'noopener,noreferrer');
-       }
+      // Get job details
+      const job = window.allJobsData.find(j => j.id === jobId);
+      if (job && job.job_url) {
+          window.open(job.job_url, '_blank', 'noopener,noreferrer');
+      } else {
+          window.open('https://www.bmj.com/careers/job/' + jobId, '_blank', 'noopener,noreferrer');
+      }
    };
 
-    // Show/hide loading overlay
-    function showLoading() {
-        document.getElementById('loadingOverlay').style.display = 'flex';
-    }
+   // Show/hide loading overlay
+   function showLoading() {
+       document.getElementById('loadingOverlay').style.display = 'flex';
+   }
 
-    function hideLoading() {
-        document.getElementById('loadingOverlay').style.display = 'none';
-    }
+   function hideLoading() {
+       document.getElementById('loadingOverlay').style.display = 'none';
+   }
 
-    // Notification system
-    function showNotification(type, count) {
-        const container = document.getElementById('notificationContainer');
-        const notification = document.createElement('div');
-        notification.className = 'notification';
+   // Notification system
+   function showNotification(type, count) {
+       const container = document.getElementById('notificationContainer');
+       const notification = document.createElement('div');
+       notification.className = 'notification';
 
-        let icon, title, message;
-        if (type === 'new') {
-            icon = '🎉';
-            title = 'New Jobs Alert!';
-            message = count === 1 ? '1 new job has been posted' : count + ' new jobs have been posted';
-        } else if (type === 'updated') {
-            icon = '🔄';
-            title = 'Jobs Updated!';
-            message = count === 1 ? '1 job has been updated' : count + ' jobs have been updated';
-        }
+       let icon, title, message;
+       if (type === 'new') {
+           icon = '🎉';
+           title = 'New Jobs Alert!';
+           message = count === 1 ? '1 new job has been posted' : count + ' new jobs have been posted';
+       } else if (type === 'updated') {
+           icon = '📄';
+           title = 'Jobs Updated!';
+           message = count === 1 ? '1 job has been updated' : count + ' jobs have been updated';
+       }
 
-        notification.innerHTML = \`
-            <button class="notification-close" onclick="closeNotification(this)">×</button>
-            <div class="notification-header">
-                <span class="notification-icon">\${icon}</span>
-                <span>\${title}</span>
-            </div>
-            <div class="notification-body">\${message}</div>
-        \`;
+       notification.innerHTML = \`
+           <button class="notification-close" onclick="closeNotification(this)">×</button>
+           <div class="notification-header">
+               <span class="notification-icon">\${icon}</span>
+               <span>\${title}</span>
+           </div>
+           <div class="notification-body">\${message}</div>
+       \`;
 
-        container.appendChild(notification);
+       container.appendChild(notification);
 
-        // Auto-remove after 10 seconds
-        setTimeout(() => {
-            notification.classList.add('fade-out');
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, 10000);
-    }
+       // Auto-remove after 10 seconds
+       setTimeout(() => {
+           notification.classList.add('fade-out');
+           setTimeout(() => {
+               if (notification.parentNode) {
+                   notification.parentNode.removeChild(notification);
+               }
+           }, 300);
+       }, 10000);
+   }
 
-    window.closeNotification = function(button) {
-        const notification = button.parentElement;
-        notification.classList.add('fade-out');
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    };
+   window.closeNotification = function(button) {
+       const notification = button.parentElement;
+       notification.classList.add('fade-out');
+       setTimeout(() => {
+           if (notification.parentNode) {
+               notification.parentNode.removeChild(notification);
+           }
+       }, 300);
+   };
 
-    // OPTIMIZED: Function to load jobs from API with browser caching
-    function loadJobsFromAPI(showNotifications = false) {
-        console.log('Loading jobs from API...');
+   // FIXED: Function to load jobs from API - ALWAYS FETCH, NO BROWSER CACHE
+   function loadJobsFromAPI(showNotifications = false) {
+       console.log('Loading jobs from API...');
 
-        // Check sessionStorage for cached data first
-        const cachedData = sessionStorage.getItem('bmj_jobs_cache');
-        const cacheTimestamp = sessionStorage.getItem('bmj_jobs_cache_timestamp');
+       // Always show loading for better UX
+       showLoading();
 
-        if (cachedData && cacheTimestamp) {
-            try {
-                const parsedCache = JSON.parse(cachedData);
-                console.log('Using browser cached data, cached at:', new Date(parseInt(cacheTimestamp)));
+       // Always fetch fresh data from server - no browser caching
+       fetch('/api/jobs?' + new Date().getTime(), {
+           credentials: 'same-origin',
+           headers: {
+               'Content-Type': 'application/json',
+               'Cache-Control': 'no-cache, no-store, must-revalidate',
+               'Pragma': 'no-cache',
+               'Expires': '0'
+           }
+       })
+       .then(response => {
+           console.log('API Response status:', response.status);
+           if (!response.ok) {
+               throw new Error('API response not ok: ' + response.status);
+           }
+           return response.json();
+       })
+       .then(data => {
+           console.log('API Response received:', {
+               jobsCount: data.jobs?.length || 0,
+               source: data.source,
+               fromCache: data.fromCache,
+               newJobs: data.newJobsCount || 0,
+               updatedJobs: data.updatedJobsCount || 0
+           });
 
-                // Update the global allJobsData
-                window.allJobsData = parsedCache;
-                allJobsData = parsedCache;
+           if (data.jobs && Array.isArray(data.jobs)) {
+               console.log('Processing ' + data.jobs.length + ' jobs');
 
-                // Initialize the app
-                if (typeof initApp === 'function') {
-                    console.log('Initializing app with cached data...');
-                    initApp();
-                }
+               // Show notifications if enabled and there are new/updated jobs
+               if (showNotifications && !data.fromCache) {
+                   if (data.newJobsCount > 0) {
+                       showNotification('new', data.newJobsCount);
+                   }
+                   if (data.updatedJobsCount > 0) {
+                       showNotification('updated', data.updatedJobsCount);
+                   }
+               }
 
-                // Don't show loading spinner or fetch from server
-                return;
-            } catch (e) {
-                console.error('Error parsing cached data:', e);
-                // Clear invalid cache
-                sessionStorage.removeItem('bmj_jobs_cache');
-                sessionStorage.removeItem('bmj_jobs_cache_timestamp');
-            }
-        }
+               // Update the global allJobsData IMMEDIATELY
+               window.allJobsData = data.jobs;
+               if (typeof allJobsData !== 'undefined') {
+                   allJobsData = data.jobs;
+               }
 
-        // Show loading only if no jobs are already loaded
-        if (!window.allJobsData || window.allJobsData.length === 0) {
-            showLoading();
-        }
+               console.log('Updated global allJobsData with', data.jobs.length, 'jobs');
 
-        fetch('/api/jobs')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('API Response:', data);
-                console.log('Source:', data.source, 'From Cache:', data.fromCache);
+               // Initialize the app IMMEDIATELY
+               if (typeof initApp === 'function') {
+                   console.log('Calling initApp with job data...');
+                   try {
+                       initApp();
+                       console.log('initApp completed successfully');
+                   } catch (error) {
+                       console.error('Error in initApp:', error);
+                   }
+               } else {
+                   console.error('initApp function not found!');
+               }
 
-                if (data.jobs && Array.isArray(data.jobs)) {
-                    console.log('Received ' + data.jobs.length + ' jobs');
+               // Dispatch custom event to notify app
+               window.dispatchEvent(new CustomEvent('jobsDataLoaded', {
+                   detail: { jobs: data.jobs, count: data.jobs.length }
+               }));
 
-                    // Store in sessionStorage for browser caching
-                    try {
-                        sessionStorage.setItem('bmj_jobs_cache', JSON.stringify(data.jobs));
-                        sessionStorage.setItem('bmj_jobs_cache_timestamp', Date.now().toString());
-                        console.log('Stored jobs in browser cache');
-                    } catch (e) {
-                        console.warn('Could not cache jobs in sessionStorage:', e);
-                    }
+           } else {
+               console.error('Invalid data format from API:', data);
+               // Initialize with empty data
+               window.allJobsData = [];
+               if (typeof initApp === 'function') {
+                   initApp();
+               }
+           }
+       })
+       .catch(error => {
+           console.error('Failed to fetch jobs:', error);
+           // Initialize with empty data on error
+           window.allJobsData = [];
+           if (typeof initApp === 'function') {
+               try {
+                   initApp();
+               } catch (initError) {
+                   console.error('Error initializing app with empty data:', initError);
+               }
+           }
+       })
+       .finally(() => {
+           console.log('Hiding loading overlay');
+           hideLoading();
+       });
+   }
 
-                    // Show notifications if enabled and there are new/updated jobs
-                    if (showNotifications && !data.fromCache) {
-                        if (data.newJobsCount > 0) {
-                            showNotification('new', data.newJobsCount);
-                        }
-                        if (data.updatedJobsCount > 0) {
-                            showNotification('updated', data.updatedJobsCount);
-                        }
-                    }
+   ${renderJobsListUpdate}
 
-                    // Update the global allJobsData
-                    window.allJobsData = data.jobs;
-                    allJobsData = data.jobs;
+   // IMMEDIATE LOADING - No delays, no idle callbacks
+   console.log('Document ready state:', document.readyState);
 
-                    // Initialize the app
-                    if (typeof initApp === 'function') {
-                        console.log('Initializing app with job data...');
-                        initApp();
-                    } else {
-                        console.error('initApp function not found!');
-                    }
-                } else {
-                    console.error('Invalid data format from API:', data);
-                }
-            })
-            .catch(error => {
-                console.error('Failed to fetch jobs:', error);
-                // Initialize with empty data on error
-                window.allJobsData = [];
-                if (typeof initApp === 'function') {
-                    initApp();
-                }
-            })
-            .finally(() => {
-                hideLoading();
-            });
-    }
+   function immediateLoadJobs() {
+       console.log('Starting immediate job load...');
+       loadJobsFromAPI(false);
+   }
 
-    ${renderJobsListUpdate}
+   // Load immediately regardless of document state
+   if (document.readyState === 'loading') {
+       document.addEventListener('DOMContentLoaded', immediateLoadJobs);
+   } else {
+       // Document already loaded, start immediately
+       immediateLoadJobs();
+   }
 
-    // Load jobs immediately when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => loadJobsFromAPI(false));
-    } else {
-        loadJobsFromAPI(false);
-    }
+   // Expose functions for debugging
+   window.loadJobsFromAPI = loadJobsFromAPI;
+   window.refreshJobs = function() {
+       console.log('Manual refresh triggered');
+       showLoading();
+       fetch('/api/jobs/refresh', {
+           method: 'POST',
+           headers: {
+               'Cache-Control': 'no-cache, no-store, must-revalidate'
+           }
+       })
+       .then(res => res.json())
+       .then(data => {
+           console.log('Refresh result:', data);
+           if (data.newJobsCount > 0) {
+               showNotification('new', data.newJobsCount);
+           }
+           if (data.updatedJobsCount > 0) {
+               showNotification('updated', data.updatedJobsCount);
+           }
+           loadJobsFromAPI(false);
+       })
+       .catch(err => {
+           console.error('Refresh failed:', err);
+           hideLoading();
+       });
+   };
+   `;
 
-    // Expose functions for debugging
-    window.loadJobsFromAPI = loadJobsFromAPI;
-    window.refreshJobs = function() {
-        // Clear browser cache on manual refresh
-        sessionStorage.removeItem('bmj_jobs_cache');
-        sessionStorage.removeItem('bmj_jobs_cache_timestamp');
-        console.log('Cleared browser cache for refresh');
-
-        showLoading();
-        fetch('/api/jobs/refresh', { method: 'POST' })
-            .then(res => res.json())
-            .then(data => {
-                console.log('Refresh result:', data);
-                if (data.newJobsCount > 0) {
-                    showNotification('new', data.newJobsCount);
-                }
-                if (data.updatedJobsCount > 0) {
-                    showNotification('updated', data.updatedJobsCount);
-                }
-                loadJobsFromAPI(false);
-            })
-            .catch(err => console.error('Refresh failed:', err))
-            .finally(() => hideLoading());
-    };
-    `;
 
     // Insert integration script before closing </script> tag
     const lastScriptIndex = html.lastIndexOf('</script>');
     if (lastScriptIndex !== -1) {
       html = html.slice(0, lastScriptIndex) + integrationScript + html.slice(lastScriptIndex);
     }
+
+
+// Add this script before closing </body>
+const showContentScript = `
+<script>
+// Show content immediately when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    document.body.classList.add('loaded');
+});
+
+// Fallback to show content after 500ms
+setTimeout(function() {
+    document.body.classList.add('loaded');
+}, 500);
+</script>
+`;
+
+html = html.replace('</body>', showContentScript + '</body>');
 
     res.send(html);
   });
