@@ -1,5 +1,3 @@
-//server.js - Fixed version with proper DynamoDB sync and admin restrictions
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -65,6 +63,20 @@ app.use((req, res, next) => {
     res.setHeader('Set-Cookie', 'SameSite=None; Secure');
 
     next();
+});
+
+// Add this error handling wrapper in server.js
+app.use((err, req, res, next) => {
+    console.error('Server Error:', err);
+    res.status(500).json({
+        error: 'Internal Server Error',
+        message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    });
+});
+
+// Add this to prevent unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 // ========================================================================
@@ -2389,81 +2401,56 @@ app.get('/', (req, res) => {
       html = html.replace(allJobsDataPattern, 'window.allJobsData = [];');
     }
 
-  // Add notification styles before </head>
-  const notificationStyles = `
-  <style>
-  /* CRITICAL CSS - INLINE TO PREVENT FOUC */
-  body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-      visibility: hidden; /* Hide until CSS loads */
-  }
+// Critical CSS inline, defer non-critical
+const criticalCSS = `
+<style>
+/* Only critical above-the-fold styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f0f4f8;
+    visibility: visible;
+}
+.main-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+.loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0066cc;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+/* Prevent FOUC */
+.jobs-section { min-height: 200px; background: white; border-radius: 8px; }
+</style>`;
 
-  body.loaded {
-      visibility: visible; /* Show when loaded */
-  }
+// Non-critical CSS loading
+const deferredCSS = `
+<link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="styles.css"></noscript>`;
 
-  .main-wrapper {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 2rem;
-  }
-
-  /* Load external CSS safely */
-  ${(() => {
-      try {
-          const cssPath = path.join(__dirname, 'styles.css');
-          if (fs.existsSync(cssPath)) {
-              return fs.readFileSync(cssPath, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-          }
-      } catch (e) {
-          console.warn('Could not load styles.css:', e.message);
-      }
-      return '/* External CSS not loaded */';
-  })()}
-
-  /* Notification styles */
-  .notification-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
-      max-width: 350px;
-  }
-
-  .notification {
-      background: #ffffff;
-      border: 2px solid #2166ac;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 10px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      animation: slideIn 0.3s ease-out;
-  }
-
-  .loading-spinner {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #2166ac;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-  }
-
-  @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-  }
-  </style>
-  `;
-
-    html = html.replace('</head>', notificationStyles + '</head>');
+html = html.replace('</head>', criticalCSS + deferredCSS + '</head>');
 
     // Add notification container and loading overlay after <body>
     const notificationHTML = `
@@ -2476,308 +2463,178 @@ app.get('/', (req, res) => {
     html = html.replace('<body>', '<body>' + notificationHTML);
 
     // Update renderJobsList function to show updated badge
-    const renderJobsListUpdate = `
-    // Update renderJobsList to show badges
-    const originalRenderJobsList = renderJobsList;
-    renderJobsList = function() {
-        const jobsList = document.getElementById('jobsList');
-        const pageJobs = getCurrentPageJobs();
+        const renderJobsListUpdate = `
+        // Update renderJobsList to show badges
+        const originalRenderJobsList = renderJobsList;
+        renderJobsList = function() {
+            const jobsList = document.getElementById('jobsList');
+            const pageJobs = getCurrentPageJobs();
 
-        if (pageJobs.length === 0) {
-            jobsList.innerHTML = '<div class="no-jobs-message">No jobs found matching your criteria.</div>';
-            return;
-        }
+            if (pageJobs.length === 0) {
+                jobsList.innerHTML = '<div class="no-jobs-message">No jobs found matching your criteria.</div>';
+                return;
+            }
 
-        jobsList.innerHTML = pageJobs.map(job => {
-            const employer = job.alternate_recruiter_name || job.recruiter_name || 'Unknown Employer';
-            const isNew = job.is_new;
-            const isUpdated = job.is_updated;
+            jobsList.innerHTML = pageJobs.map(job => {
+                const employer = job.alternate_recruiter_name || job.recruiter_name || 'Unknown Employer';
+                const isNew = job.is_new;
+                const isUpdated = job.is_updated;
 
-            return \`
-                <div class="job-card \${isNew ? 'new-job' : ''}">
-                    \${isUpdated ? '<div class="job-updated-badge">Updated</div>' : ''}
-                    <div class="job-header">\${job.job_title}</div>
-                    <div class="job-body">
-                        \${job.logo_url ? \`<img src="\${job.logo_url}" alt="\${employer} Logo" class="nhs-logo">\` : ''}
-                        <div class="job-details">
-                            <ul>
-                                <li><strong>Location:</strong> \${job.location_description}</li>
-                                <li><strong>Salary:</strong> \${job.salary || 'Competitive'}</li>
-                                <li><strong>Employer:</strong> \${employer}</li>
-                            </ul>
-                        </div>
-                        <div class="job-description">\${job.short_description}</div>
-                        <button class="apply-btn" onclick="applyToJob(\${job.id})">View Details on BMJ Careers</button>
-                    </div>
-                </div>
-            \`;
-        }).join('');
-    };
-    `;
+                return '<div class="job-card ' + (isNew ? 'new-job' : '') + '">' +
+                    (isUpdated ? '<div class="job-updated-badge">Updated</div>' : '') +
+                    '<div class="job-header">' + job.job_title + '</div>' +
+                    '<div class="job-body">' +
+                        (job.logo_url ? '<img src="' + job.logo_url + '" alt="' + employer + ' Logo" class="nhs-logo">' : '') +
+                        '<div class="job-details">' +
+                            '<ul>' +
+                                '<li><strong>Location:</strong> ' + job.location_description + '</li>' +
+                                '<li><strong>Salary:</strong> ' + (job.salary || 'Competitive') + '</li>' +
+                                '<li><strong>Employer:</strong> ' + employer + '</li>' +
+                            '</ul>' +
+                        '</div>' +
+                        '<div class="job-description">' + job.short_description + '</div>' +
+                        '<button class="apply-btn" onclick="applyToJob(' + job.id + ')">View Details on BMJ Careers</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        };
+        `;
 
-    // Enhanced integration script with click tracking
-   const integrationScript = `
-   // API Integration for BMJ Careers - OPTIMIZED LOADING
-   console.log('Starting BMJ Careers API integration...');
+  // Enhanced integration script with click tracking
+  const integrationScript = `
+  // BMJ Careers API Integration - Fixed Version
+  (function() {
+      'use strict';
 
-   // Generate session ID for this page load
-   const sessionId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+      console.log('Starting BMJ Careers integration...');
 
-   // Track time spent on page
-   let startTime = Date.now();
-   let lastActivityTime = Date.now();
+      // Show loading immediately
+      const showLoading = () => {
+          const overlay = document.getElementById('loadingOverlay');
+          if (overlay) {
+              overlay.style.display = 'flex';
+              console.log('Loading overlay shown');
+          }
+      };
 
-   // Send time updates every 30 seconds
-   setInterval(() => {
-     const timeSpent = Math.floor((Date.now() - lastActivityTime) / 1000);
-     if (timeSpent > 0) {
-       fetch('/api/track/time', {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-           'x-session-id': sessionId
-         },
-         body: JSON.stringify({ timeSpent })
-       }).catch(err => console.error('Time tracking failed:', err));
-       lastActivityTime = Date.now();
-     }
-   }, 30000);
+      const hideLoading = () => {
+          const overlay = document.getElementById('loadingOverlay');
+          if (overlay) {
+              overlay.style.display = 'none';
+              console.log('Loading overlay hidden');
+          }
+      };
 
-   // Track activity
-   document.addEventListener('click', () => {
-     lastActivityTime = Date.now();
-   });
+      // Enhanced job loading function
+      function loadJobsFromAPI() {
+          console.log('Loading jobs from API...');
+          showLoading();
 
-   document.addEventListener('scroll', () => {
-     lastActivityTime = Date.now();
-   });
+          const startTime = Date.now();
 
-   // Track click events
-   window.applyToJob = function(jobId) {
-      // Track the click
-      fetch('/api/track/click', {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-              jobId: jobId,
-              jobTitle: 'Job ' + jobId
+          return fetch('/api/jobs', {
+              method: 'GET',
+              credentials: 'same-origin',
+              headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json'
+              }
           })
-      }).catch(err => console.error('Click tracking failed:', err));
+          .then(response => {
+              console.log('API Response status:', response.status);
+              if (!response.ok) {
+                  throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+              }
+              return response.json();
+          })
+          .then(data => {
+              const loadTime = Date.now() - startTime;
+              console.log('Jobs loaded in ' + loadTime + 'ms:', data);
 
-      // Get job details
-      const job = window.allJobsData.find(j => j.id === jobId);
-      if (job && job.job_url) {
-          window.open(job.job_url, '_blank', 'noopener,noreferrer');
-      } else {
-          window.open('https://www.bmj.com/careers/job/' + jobId, '_blank', 'noopener,noreferrer');
+              if (data && data.jobs && Array.isArray(data.jobs)) {
+                  window.allJobsData = data.jobs;
+                  console.log('Set window.allJobsData with ' + data.jobs.length + ' jobs');
+
+                  // Initialize app immediately
+                  if (typeof window.initApp === 'function') {
+                      console.log('Calling initApp...');
+                      window.initApp();
+                  } else {
+                      console.error('initApp function not found');
+                      // Try calling it after a short delay
+                      setTimeout(() => {
+                          if (typeof window.initApp === 'function') {
+                              console.log('Calling initApp after delay...');
+                              window.initApp();
+                          }
+                      }, 100);
+                  }
+
+                  // Dispatch custom event
+                  window.dispatchEvent(new CustomEvent('jobsDataLoaded', {
+                      detail: { jobs: data.jobs, count: data.jobs.length }
+                  }));
+
+                  return data;
+              } else {
+                  throw new Error('Invalid data structure received from API');
+              }
+          })
+          .catch(error => {
+              console.error('Failed to load jobs:', error);
+
+              // Initialize with empty data to show the interface
+              window.allJobsData = [];
+              if (typeof window.initApp === 'function') {
+                  window.initApp();
+              }
+
+              // Show error message
+              const jobsList = document.getElementById('jobsList');
+              if (jobsList) {
+                  jobsList.innerHTML = '<div class="no-jobs-message" style="text-align: center; padding: 2rem; color: #e74c3c;"><h3>Unable to load jobs</h3><p>Error: ' + error.message + '</p><button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry</button></div>';
+              }
+
+              throw error;
+          })
+          .finally(() => {
+              hideLoading();
+          });
       }
-   };
 
-   // Show/hide loading overlay
-   function showLoading() {
-       document.getElementById('loadingOverlay').style.display = 'flex';
-   }
+      // Enhanced initialization
+      function initializeWidget() {
+          console.log('Initializing widget...');
+          console.log('Document ready state:', document.readyState);
 
-   function hideLoading() {
-       document.getElementById('loadingOverlay').style.display = 'none';
-   }
+          // Check if DOM is ready
+          if (document.readyState === 'loading') {
+              console.log('Waiting for DOM to load...');
+              document.addEventListener('DOMContentLoaded', () => {
+                  console.log('DOM loaded, starting job load...');
+                  setTimeout(loadJobsFromAPI, 100);
+              });
+          } else {
+              console.log('DOM already loaded, starting job load immediately...');
+              setTimeout(loadJobsFromAPI, 100);
+          }
+      }
 
-   // Notification system
-   function showNotification(type, count) {
-       const container = document.getElementById('notificationContainer');
-       const notification = document.createElement('div');
-       notification.className = 'notification';
+      // Expose functions globally
+      window.loadJobsFromAPI = loadJobsFromAPI;
+      window.refreshJobs = function() {
+          console.log('Manual refresh triggered');
+          return fetch('/api/jobs/refresh', { method: 'POST' })
+              .then(response => response.json())
+              .then(() => loadJobsFromAPI())
+              .catch(console.error);
+      };
 
-       let icon, title, message;
-       if (type === 'new') {
-           icon = '🎉';
-           title = 'New Jobs Alert!';
-           message = count === 1 ? '1 new job has been posted' : count + ' new jobs have been posted';
-       } else if (type === 'updated') {
-           icon = '📄';
-           title = 'Jobs Updated!';
-           message = count === 1 ? '1 job has been updated' : count + ' jobs have been updated';
-       }
+      // Start initialization
+      initializeWidget();
 
-       notification.innerHTML = \`
-           <button class="notification-close" onclick="closeNotification(this)">×</button>
-           <div class="notification-header">
-               <span class="notification-icon">\${icon}</span>
-               <span>\${title}</span>
-           </div>
-           <div class="notification-body">\${message}</div>
-       \`;
-
-       container.appendChild(notification);
-
-       // Auto-remove after 10 seconds
-       setTimeout(() => {
-           notification.classList.add('fade-out');
-           setTimeout(() => {
-               if (notification.parentNode) {
-                   notification.parentNode.removeChild(notification);
-               }
-           }, 300);
-       }, 10000);
-   }
-
-   window.closeNotification = function(button) {
-       const notification = button.parentElement;
-       notification.classList.add('fade-out');
-       setTimeout(() => {
-           if (notification.parentNode) {
-               notification.parentNode.removeChild(notification);
-           }
-       }, 300);
-   };
-
-   // FIXED: Function to load jobs from API - ALWAYS FETCH, NO BROWSER CACHE
-   function loadJobsFromAPI(showNotifications = false) {
-       console.log('Loading jobs from API...');
-
-       // Always show loading for better UX
-       showLoading();
-
-       // Always fetch fresh data from server - no browser caching
-       fetch('/api/jobs?' + new Date().getTime(), {
-           credentials: 'same-origin',
-           headers: {
-               'Content-Type': 'application/json',
-               'Cache-Control': 'no-cache, no-store, must-revalidate',
-               'Pragma': 'no-cache',
-               'Expires': '0'
-           }
-       })
-       .then(response => {
-           console.log('API Response status:', response.status);
-           if (!response.ok) {
-               throw new Error('API response not ok: ' + response.status);
-           }
-           return response.json();
-       })
-       .then(data => {
-           console.log('API Response received:', {
-               jobsCount: data.jobs?.length || 0,
-               source: data.source,
-               fromCache: data.fromCache,
-               newJobs: data.newJobsCount || 0,
-               updatedJobs: data.updatedJobsCount || 0
-           });
-
-           if (data.jobs && Array.isArray(data.jobs)) {
-               console.log('Processing ' + data.jobs.length + ' jobs');
-
-               // Show notifications if enabled and there are new/updated jobs
-               if (showNotifications && !data.fromCache) {
-                   if (data.newJobsCount > 0) {
-                       showNotification('new', data.newJobsCount);
-                   }
-                   if (data.updatedJobsCount > 0) {
-                       showNotification('updated', data.updatedJobsCount);
-                   }
-               }
-
-               // Update the global allJobsData IMMEDIATELY
-               window.allJobsData = data.jobs;
-               if (typeof allJobsData !== 'undefined') {
-                   allJobsData = data.jobs;
-               }
-
-               console.log('Updated global allJobsData with', data.jobs.length, 'jobs');
-
-               // Initialize the app IMMEDIATELY
-               if (typeof initApp === 'function') {
-                   console.log('Calling initApp with job data...');
-                   try {
-                       initApp();
-                       console.log('initApp completed successfully');
-                   } catch (error) {
-                       console.error('Error in initApp:', error);
-                   }
-               } else {
-                   console.error('initApp function not found!');
-               }
-
-               // Dispatch custom event to notify app
-               window.dispatchEvent(new CustomEvent('jobsDataLoaded', {
-                   detail: { jobs: data.jobs, count: data.jobs.length }
-               }));
-
-           } else {
-               console.error('Invalid data format from API:', data);
-               // Initialize with empty data
-               window.allJobsData = [];
-               if (typeof initApp === 'function') {
-                   initApp();
-               }
-           }
-       })
-       .catch(error => {
-           console.error('Failed to fetch jobs:', error);
-           // Initialize with empty data on error
-           window.allJobsData = [];
-           if (typeof initApp === 'function') {
-               try {
-                   initApp();
-               } catch (initError) {
-                   console.error('Error initializing app with empty data:', initError);
-               }
-           }
-       })
-       .finally(() => {
-           console.log('Hiding loading overlay');
-           hideLoading();
-       });
-   }
-
-   ${renderJobsListUpdate}
-
-   // IMMEDIATE LOADING - No delays, no idle callbacks
-   console.log('Document ready state:', document.readyState);
-
-   function immediateLoadJobs() {
-       console.log('Starting immediate job load...');
-       loadJobsFromAPI(false);
-   }
-
-   // Load immediately regardless of document state
-   if (document.readyState === 'loading') {
-       document.addEventListener('DOMContentLoaded', immediateLoadJobs);
-   } else {
-       // Document already loaded, start immediately
-       immediateLoadJobs();
-   }
-
-   // Expose functions for debugging
-   window.loadJobsFromAPI = loadJobsFromAPI;
-   window.refreshJobs = function() {
-       console.log('Manual refresh triggered');
-       showLoading();
-       fetch('/api/jobs/refresh', {
-           method: 'POST',
-           headers: {
-               'Cache-Control': 'no-cache, no-store, must-revalidate'
-           }
-       })
-       .then(res => res.json())
-       .then(data => {
-           console.log('Refresh result:', data);
-           if (data.newJobsCount > 0) {
-               showNotification('new', data.newJobsCount);
-           }
-           if (data.updatedJobsCount > 0) {
-               showNotification('updated', data.updatedJobsCount);
-           }
-           loadJobsFromAPI(false);
-       })
-       .catch(err => {
-           console.error('Refresh failed:', err);
-           hideLoading();
-       });
-   };
-   `;
+  })();
+  `;
 
 
     // Insert integration script before closing </script> tag
@@ -3227,14 +3084,16 @@ app.get('/api/v1/jobs', async (req, res) => {
   }
 });
 
-// Main API endpoint with caching
 app.get('/api/jobs', async (req, res) => {
   try {
+    console.log('API /jobs called');
+
     // Track API call
     await trackAPICall('/api/jobs');
 
     // Get jobs from cache or load if needed
     const result = await loadJobsWithCaching(req.query.refresh === 'true');
+    console.log(`API returning ${result.jobs.length} jobs from ${result.source}`);
 
     // Sort jobs: updated first, then new, then by created date
     const jobs = [...result.jobs].sort((a, b) => {
@@ -3245,25 +3104,38 @@ app.get('/api/jobs', async (req, res) => {
       return new Date(b.created_date) - new Date(a.created_date);
     });
 
-    res.json({
+    const responseData = {
+      success: true,
       jobs: jobs,
       total: jobs.length,
       newJobsCount: jobs.filter(j => j.is_new).length,
       updatedJobsCount: jobs.filter(j => j.is_updated).length,
-      lastFetch: new Date(jobsCache.lastFetch).toISOString(),
+      lastFetch: jobsCache.lastFetch ? new Date(jobsCache.lastFetch).toISOString() : null,
       source: result.source,
       fromCache: result.fromCache,
+      timestamp: new Date().toISOString(),
       dynamodbStatus: {
         connected: dynamoDBConnectionStatus.isConnected,
         lastChecked: dynamoDBConnectionStatus.lastChecked,
         lastError: dynamoDBConnectionStatus.lastError
       }
+    };
+
+    console.log('Sending response:', {
+      jobsCount: responseData.jobs.length,
+      source: responseData.source,
+      success: responseData.success
     });
+
+    res.json(responseData);
   } catch (error) {
     console.error('Error in /api/jobs:', error);
     res.status(500).json({
+      success: false,
       error: 'Failed to fetch jobs',
       message: error.message,
+      jobs: [], // Always provide jobs array even on error
+      total: 0,
       dynamodbStatus: {
         connected: dynamoDBConnectionStatus.isConnected,
         lastChecked: dynamoDBConnectionStatus.lastChecked,
@@ -3272,6 +3144,7 @@ app.get('/api/jobs', async (req, res) => {
     });
   }
 });
+
 
 // Public API endpoint - Get job listings
 app.get('/jobs', async (req, res) => {
