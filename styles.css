@@ -1,4 +1,46 @@
 /* Performance optimizations */
+* {
+    box-sizing: border-box;
+}
+
+/* Reduce paint and layout thrashing */
+.job-card,
+.category-btn,
+.filter-item,
+.pagination-btn {
+    will-change: transform;
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* Optimize animations */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* GPU acceleration for smooth scrolling */
+.filter-options {
+    transform: translateZ(0);
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Optimize image loading */
+.nhs-logo {
+    content-visibility: auto;
+    contain-intrinsic-size: 100px 50px;
+}
+
+/* Reduce repaints */
+.job-card:hover {
+    transform: translateY(-4px) translateZ(0);
+}
+
+
+/* Performance optimizations */
 @media (prefers-reduced-motion: reduce) {
     * {
         animation-duration: 0.01ms !important;
@@ -278,17 +320,15 @@ body {
     box-shadow: 0 8px 24px rgba(0, 102, 204, 0.35) !important;
 }
 
-/* FIXED: Main content container - proper layout with sidebar taking less width */
 .content-container {
     display: grid;
-    grid-template-columns: 280px 1fr; /* Fixed: Sidebar takes less width, main content takes remaining */
+    grid-template-columns: 320px 1fr; /* Increased sidebar width */
     gap: 2rem;
     flex: 1;
     align-items: start;
     animation: fadeIn 1s ease-out;
 }
 
-/* FIXED: Sidebar styling - remove sticky positioning so it scrolls with content */
 .sidebar {
     background: var(--card-bg);
     border-radius: 8px;
@@ -296,11 +336,11 @@ body {
     animation: slideInFromLeft 0.8s ease-out;
     transition: all 0.3s ease;
     border: 1px solid rgba(0, 102, 204, 0.1);
-    width: 280px;
-    max-width: 280px;
+    width: 320px;
+    max-width: 320px;
     height: fit-content;
-    /* Removed position: sticky and top: 2rem to allow natural scrolling */
 }
+
 
 .sidebar:hover {
     box-shadow: 0 8px 24px rgba(0, 102, 204, 0.12);
@@ -524,9 +564,13 @@ body {
     background: transparent;
     border: none;
     padding: 0;
-    overflow-x: hidden; /* Prevent horizontal scrollbars */
-    max-height: 300px; /* Add max height to trigger scrolling */
-    overflow-y: auto; /* Add vertical scrollbar when needed */
+    overflow-x: visible;
+    max-height: 300px;
+    overflow-y: auto;
+    position: relative;
+    z-index: 5;
+    padding-right: 12px;
+    margin-right: -12px;
 }
 
 .filter-options.collapsed {
@@ -543,6 +587,27 @@ body {
     padding: 0.5rem 0;
     overflow-y: auto; /* Ensure scrollbar appears when content exceeds height */
     overflow-x: hidden; /* Prevent horizontal scrollbars */
+}
+
+.filter-options::-webkit-scrollbar {
+    width: 6px;
+    position: absolute;
+    right: -8px;
+}
+
+.filter-options::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+
+.filter-options::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #cbd5e0 0%, #9ca3af 100%);
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+.filter-options::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
 }
 
 /* Filter items */
@@ -580,14 +645,18 @@ body {
     color: #6b7280;
     font-size: 0.75rem;
     font-weight: 500;
-    padding: 0.125rem 0.5rem;
+    padding: 0.25rem 0.5rem;
     border-radius: 12px;
     margin-left: auto;
     flex-shrink: 0;
-    min-width: 24px;
+    min-width: 28px;
     text-align: center;
-    white-space: nowrap; /* FIXED: Prevent wrapping */
-    border: 1px solid #d1d5db; /* FIXED: Add border for better visibility */
+    white-space: nowrap;
+    border: 1px solid #d1d5db;
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    margin-right: 4px;
 }
 
 /* FIXED: Ensure nested dropdowns have proper spacing */
@@ -746,15 +815,17 @@ input[type="checkbox"]:hover {
     transform: rotate(-90deg);
 }
 
-/* FIXED: Profession subcategories - NO scrollbars, inherit from parent */
 .profession-subcategories {
     width: 100%;
     transition: all 0.3s ease-in-out;
     background: transparent;
     margin-bottom: 0.5rem;
     padding: 0;
-    overflow: visible; /* No scrollbars - use parent's scroll */
-    max-height: none; /* Remove height limits */
+    overflow: visible;
+    max-height: none;
+    position: relative;
+    z-index: 10;
+    padding-right: 8px;
 }
 
 .profession-subcategories.collapsed {
@@ -774,14 +845,17 @@ input[type="checkbox"]:hover {
 .profession-sub-item {
     display: flex;
     align-items: center;
-    padding: 0.5rem 0.5rem;
+    padding: 0.5rem 0.75rem;
     font-size: 0.8125rem;
     cursor: pointer;
-    margin-left: 1.75rem;
+    margin-left: 0.5rem;
     transition: background-color 0.2s ease;
     border-radius: 6px;
-    width: calc(100% - 1.75rem); /* FIXED: Proper width calculation */
-    min-height: 32px; /* FIXED: Minimum height for proper alignment */
+    width: calc(100% - 1rem);
+    min-height: 36px;
+    overflow: visible;
+    position: relative;
+    margin-right: 8px;
 }
 
 .profession-sub-item:hover {
@@ -794,12 +868,12 @@ input[type="checkbox"]:hover {
     cursor: pointer;
     font-size: 0.8125rem;
     color: var(--text-color);
-    word-break: break-word;
-    margin-right: 0.5rem;
+    margin-right: 0.75rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: calc(100% - 50px); /* FIXED: Leave more room for count */
+    max-width: calc(100% - 70px); /* More room for count circle */
+    min-width: 0; /* Allow proper flexbox shrinking */
 }
 
 /* Main content */
@@ -1289,13 +1363,13 @@ input[type="checkbox"]:hover {
     }
 
     .content-container {
-        grid-template-columns: 260px 1fr; /* Slightly smaller sidebar */
+        grid-template-columns: 300px 1fr; /* Maintain wider sidebar */
         gap: 1.5rem;
     }
 
     .sidebar {
-        width: 260px;
-        max-width: 260px;
+        width: 300px;
+        max-width: 300px;
     }
 
     .category-btn {
@@ -1305,13 +1379,13 @@ input[type="checkbox"]:hover {
 
 @media (max-width: 1024px) {
     .content-container {
-        grid-template-columns: 240px 1fr;
+        grid-template-columns: 280px 1fr; /* Still wider than before */
         gap: 1.5rem;
     }
 
     .sidebar {
-        width: 240px;
-        max-width: 240px;
+        width: 280px;
+        max-width: 280px;
     }
 
     .category-btn {
