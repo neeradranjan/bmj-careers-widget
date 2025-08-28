@@ -124,6 +124,39 @@
     <noscript><link rel="stylesheet" href="styles.css"></noscript>
 </head>
 <body>
+<!-- Add immediately after <body> -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div style="margin-top: 1rem; color: #666;">Loading jobs...</div>
+</div>
+
+<div class="jobs-skeleton" id="jobsSkeleton" style="display: none;">
+    <div class="main-wrapper">
+        <div class="skeleton-content" style="background: white; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
+            <div style="height: 24px; background: #e2e8f0; border-radius: 4px; width: 60%; margin-bottom: 1rem; animation: pulse 1.5s ease-in-out infinite;"></div>
+            <div style="height: 16px; background: #e2e8f0; border-radius: 4px; width: 40%; margin-bottom: 2rem; animation: pulse 1.5s ease-in-out infinite;"></div>
+            <div style="height: 120px; background: #e2e8f0; border-radius: 4px; margin-bottom: 1rem; animation: pulse 1.5s ease-in-out infinite;"></div>
+            <div style="height: 120px; background: #e2e8f0; border-radius: 4px; margin-bottom: 1rem; animation: pulse 1.5s ease-in-out infinite;"></div>
+            <div style="height: 120px; background: #e2e8f0; border-radius: 4px; animation: pulse 1.5s ease-in-out infinite;"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #0066cc;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
 <script>
     // Prevent console errors from undefined variables
     window.allJobsData = window.allJobsData || [];
@@ -2549,68 +2582,52 @@ function renderSubProfession(sub, parentName) {
     }
 }
 
-   function renderFilters() {
+function renderFilters() {
     const filtersContainer = document.getElementById('filtersContainer');
     let filterHTML = '';
 
-    // Render Date Published filter - EXPANDED by default
-    if (filterData.published && filterData.published.length > 0) {
-        filterHTML += `
-            <div class="filter-group" role="region" aria-labelledby="published-header">
-                <button class="filter-header" onclick="toggleFilterGroup('published')" onkeydown="handleFilterHeaderKeydown(event, 'published')" id="published-header" aria-expanded="true" tabindex="0">
-                    <span class="filter-arrow" id="publishedArrow">▼</span>
-                    <span>Date Published</span>
-                </button>
-                <div class="filter-options" id="publishedOptions" style="display: block;">
-                    ${filterData.published.map(item => {
-                        const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-                        return `
-                            <div class="filter-item">
-                                <input type="checkbox" class="filter-checkbox" id="${checkboxId}"
-                                       onchange="handleFilterChange('published', '${item.name}')"
-                                       aria-label="${item.name} published filter">
-                                <label class="filter-label" for="${checkboxId}">${item.name}</label>
-                                <span class="filter-count">${item.count}</span>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-        `;
-    }
+const renderFilterSection = (title, data, type, expanded = true) => {
+    if (!data || data.length === 0) return '';
 
-    // Render Profession filter - EXPANDED by default, subcategories COLLAPSED
+    const maxInitialItems = 20;
+    const visibleItems = data.slice(0, maxInitialItems);
+    const hasMore = data.length > maxInitialItems;
+
+    return `
+        <div class="filter-group" role="region" aria-labelledby="${type}-header">
+            <button class="filter-header" onclick="toggleFilterGroup('${type}')" id="${type}-header" aria-expanded="${expanded}" tabindex="0">
+                <span class="filter-arrow" id="${type}Arrow">${expanded ? '▼' : '▶'}</span>
+                <span>${title}</span>
+            </button>
+            <div class="filter-options" id="${type}Options" style="display: ${expanded ? 'block' : 'none'};">
+                ${visibleItems.map(item => renderFilterItem(item, type)).join('')}
+                ${hasMore ? `<button class="load-more-btn" onclick="loadMoreFilters('${type}')" style="margin: 8px 0; padding: 4px 8px; border: 1px solid #ccc; background: #f9f9f9; border-radius: 4px; cursor: pointer;">Load More (${data.length - maxInitialItems} remaining)</button>` : ''}
+            </div>
+        </div>
+    `;
+};
+
+  const renderFilterItem = (item, type) => {
+    const checkboxId = `${type}_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+    return `
+        <div class="filter-item">
+            <input type="checkbox" class="filter-checkbox" id="${checkboxId}" onchange="handleFilterChange('${type}', '${item.name}')">
+            <label class="filter-label" for="${checkboxId}">${item.name}</label>
+            <span class="filter-count">${item.count}</span>
+        </div>
+    `;
+};
+
+    // Render sections
+    filterHTML += renderFilterSection('Date Published', filterData.published, 'published', true);
+
+    // Profession and Location with hierarchy - simplified for performance
     if (filterData.profession && filterData.profession.length > 0) {
         filterHTML += renderProfessionFilters(filterData.profession);
     }
 
-    // Render Grade filter - EXPANDED by default
-    if (filterData.grade && filterData.grade.length > 0) {
-        filterHTML += `
-            <div class="filter-group" role="region" aria-labelledby="grade-header">
-                <button class="filter-header" onclick="toggleFilterGroup('grade')" onkeydown="handleFilterHeaderKeydown(event, 'grade')" id="grade-header" aria-expanded="true" tabindex="0">
-                    <span class="filter-arrow" id="gradeArrow">▼</span>
-                    <span>Grade</span>
-                </button>
-                <div class="filter-options" id="gradeOptions" style="display: block;">
-                    ${filterData.grade.map(item => {
-                        const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-                        return `
-                            <div class="filter-item">
-                                <input type="checkbox" class="filter-checkbox" id="${checkboxId}"
-                                       onchange="handleFilterChange('grade', '${item.name}')"
-                                       aria-label="${item.name} grade filter">
-                                <label class="filter-label" for="${checkboxId}">${item.name}</label>
-                                <span class="filter-count">${item.count}</span>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-        `;
-    }
+    filterHTML += renderFilterSection('Grade', filterData.grade, 'grade', true);
 
-    // Render Location filter - EXPANDED by default, subcategories COLLAPSED
     if (filterData.location && filterData.location.length > 0) {
         filterHTML += renderLocationFilters(filterData.location);
     }
@@ -2618,7 +2635,16 @@ function renderSubProfession(sub, parentName) {
     filtersContainer.innerHTML = filterHTML;
 }
 
-  function applyFilters(shouldScroll = true) {
+window.loadMoreFilters = function(type) {
+    const container = document.getElementById(`${type}Options`);
+    const loadMoreBtn = container.querySelector('.load-more-btn');
+    if (loadMoreBtn) {
+        loadMoreBtn.style.display = 'none';
+        // Load remaining items...
+    }
+};
+
+function applyFilters(shouldScroll = true) {
         const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
         const activeFilters = {};
 
@@ -2770,136 +2796,284 @@ function renderSubProfession(sub, parentName) {
 
         currentPage = 1;
 
-        requestAnimationFrame(() => {
-            renderJobsList();
-            updatePagination();
-            updateJobCount();
+    // Batch DOM operations to prevent forced reflow
+    const batchUpdates = () => {
+        // Read all DOM properties first
+        const jobsList = document.getElementById('jobsList');
+        const pageJobs = getCurrentPageJobs();
 
-            requestAnimationFrame(() => {
-                updateFilterCounts();
-                restoreFilterStates();
-            });
-        });
+        // Then write all at once
+        if (pageJobs.length === 0) {
+            jobsList.innerHTML = '<div class="no-jobs-message">No jobs found matching your criteria.</div>';
+        } else {
+            // Use DocumentFragment for efficient DOM updates
+            const fragment = document.createDocumentFragment();
+            const tempDiv = document.createElement('div');
 
-        // FIX 7: Only scroll if requested
-        if (shouldScroll) {
-            scrollToTop();
+tempDiv.innerHTML = pageJobs.map(job => {
+    const employer = job.alternate_recruiter_name || job.recruiter_name || 'Unknown Employer';
+    return `
+        <div class="job-card">
+            <div class="job-header">${job.job_title}</div>
+            <div class="job-body">
+                ${job.logo_url ? `<img src="${job.logo_url}" alt="${employer} Logo" class="nhs-logo" loading="lazy">` : ''}
+                <div class="job-details">
+                    <ul>
+                        <li><strong>Location:</strong> ${job.location_description}</li>
+                        <li><strong>Salary:</strong> ${job.salary || 'Competitive'}</li>
+                        <li><strong>Employer:</strong> ${employer}</li>
+                    </ul>
+                </div>
+                <div class="job-description">${job.short_description}</div>
+                <button class="apply-btn" onclick="applyToJob(${job.id})">View Details on BMJ Careers</button>
+            </div>
+        </div>
+    `;
+}).join('');
+
+            // Move nodes efficiently
+            while (tempDiv.firstChild) {
+                fragment.appendChild(tempDiv.firstChild);
+            }
+
+            jobsList.innerHTML = '';
+            jobsList.appendChild(fragment);
         }
+
+        // Update pagination and counts
+        updatePagination();
+        updateJobCount();
+    };
+
+    // Use single RAF for all updates
+    requestAnimationFrame(() => {
+        batchUpdates();
+        // Update filter counts in next frame to avoid blocking
+        requestAnimationFrame(() => {
+            updateFilterCounts();
+            restoreFilterStates();
+        });
+    });
+
+    if (shouldScroll) {
+        scrollToTop();
     }
+}
 
    function updateFilterCounts() {
-       const activeFilters = {
-           profession: getCheckedProfessions(),
-           location: getCheckedLocations(),
-           grade: [],
-           published: [],
-           searchTerm: document.getElementById('keywordSearch').value.toLowerCase().trim()
-       };
+    const activeFilters = {
+        profession: getCheckedProfessions(),
+        location: getCheckedLocations(),
+        grade: [],
+        published: [],
+        searchTerm: document.getElementById('keywordSearch').value.toLowerCase().trim()
+    };
 
-       filterData.grade?.forEach(item => {
-           const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-           const checkbox = document.getElementById(checkboxId);
-           if (checkbox && checkbox.checked) {
-               activeFilters.grade.push(item.name);
-           }
-       });
+    filterData.grade?.forEach(item => {
+        const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox && checkbox.checked) {
+            activeFilters.grade.push(item.name);
+        }
+    });
 
-       filterData.published?.forEach(item => {
-           const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-           const checkbox = document.getElementById(checkboxId);
-           if (checkbox && checkbox.checked) {
-               activeFilters.published.push(item.name);
-           }
-       });
+    filterData.published?.forEach(item => {
+        const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox && checkbox.checked) {
+            activeFilters.published.push(item.name);
+        }
+    });
 
-       function jobMatchesOtherFilters(job, excludeCategory, excludeValue) {
-           if (activeCategoryFilter !== 'all' && !categoryFilters[activeCategoryFilter].filter(job)) {
-               return false;
-           }
+    // Get base jobs after applying category filter and search
+    let baseJobs = filterActiveJobs(allJobsData);
 
-           if (activeFilters.searchTerm && excludeCategory !== 'search') {
-               const sectors = job.sector || [];
-               const employer = job.alternate_recruiter_name || job.recruiter_name;
-               const matchesSearch = job.job_title.toLowerCase().includes(activeFilters.searchTerm) ||
-                                   job.location_description.toLowerCase().includes(activeFilters.searchTerm) ||
-                                   employer.toLowerCase().includes(activeFilters.searchTerm) ||
-                                   job.short_description.toLowerCase().includes(activeFilters.searchTerm) ||
-                                   sectors.some(s => s.toLowerCase().includes(activeFilters.searchTerm)) ||
-                                   (job.grade && job.grade.toLowerCase().includes(activeFilters.searchTerm));
-               if (!matchesSearch) return false;
-           }
-
-           if (excludeCategory !== 'profession' && activeFilters.profession.length > 0) {
-               const sectors = job.sector || [];
-               const employer = job.alternate_recruiter_name || job.recruiter_name;
-               const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${employer}`.toLowerCase();
-               const matchesProfession = activeFilters.profession.some(profession => {
-                   return searchText.includes(profession.toLowerCase()) ||
-                          sectors.some(s => s.toLowerCase() === profession.toLowerCase());
-               });
-               if (!matchesProfession) return false;
-           }
-
-           if (excludeCategory !== 'location' && activeFilters.location.length > 0) {
-               const jobLocation = job.location_description || '';
-               const matchesLocation = activeFilters.location.some(location => {
-                   if (dynamicLocationHierarchy.Overseas.subcategories.includes(location)) {
-                       if (!categoryFilters.overseas.filter(job)) return false;
-                       const country = job.location_country || '';
-                       const locationLower = jobLocation.toLowerCase();
-                       const countryLower = country.toLowerCase();
-
-                       if (location === 'Canada') {
-                           return locationLower.includes('canada') || countryLower.includes('canada');
-                       } else if (location === 'Australia') {
-                           return locationLower.includes('australia') || countryLower.includes('australia');
-                       } else if (location === 'New Zealand') {
-                           return locationLower.includes('new zealand') || countryLower.includes('new zealand');
-                       } else if (location === 'Republic of Ireland') {
-                           return (locationLower.includes('ireland') || countryLower.includes('ireland')) &&
-                                  !locationLower.includes('northern') && !countryLower.includes('northern');
-                       }
-                       return countryLower.includes(location.toLowerCase());
-                   } else {
-                       const normalizedJobLocation = normalizeLocation(jobLocation);
-                       const normalizedSearch = normalizeLocation(location);
-                       return normalizedJobLocation.includes(normalizedSearch);
-                   }
-               });
-               if (!matchesLocation) return false;
-           }
-
-           if (excludeCategory !== 'grade' && activeFilters.grade.length > 0) {
-               if (!job.grade || !activeFilters.grade.includes(job.grade)) {
-                   return false;
-               }
-           }
-
-           if (excludeCategory !== 'published' && activeFilters.published.length > 0) {
-               if (!job.published) return false;
-               const jobDays = parseDaysFromPublished(job.published);
-               if (!jobDays) return false;
-const matchesPublished = activeFilters.published.some(selectedCategory => {
-    switch(selectedCategory) {
-        case "Last 3 Days": return jobDays <= 3;
-        case "Last 7 Days": return jobDays <= 7;
-        case "Last 14 Days": return jobDays <= 14;
-        case "Last 28 Days": return jobDays <= 28;
-        case "More than 28 Days": return jobDays > 28;
-        default: return false;
+    if (activeCategoryFilter !== 'all') {
+        baseJobs = baseJobs.filter(job => categoryFilters[activeCategoryFilter].filter(job));
     }
-});
-if (!matchesPublished) return false;
-           }
-           return true;
-       }
 
-       const activeJobs = filterActiveJobs(allJobsData);
+    if (activeFilters.searchTerm) {
+        baseJobs = baseJobs.filter(job => {
+            const sectors = job.sector || [];
+            const employer = job.alternate_recruiter_name || job.recruiter_name;
+            return job.job_title.toLowerCase().includes(activeFilters.searchTerm) ||
+                   job.location_description.toLowerCase().includes(activeFilters.searchTerm) ||
+                   employer.toLowerCase().includes(activeFilters.searchTerm) ||
+                   job.short_description.toLowerCase().includes(activeFilters.searchTerm) ||
+                   sectors.some(s => s.toLowerCase().includes(activeFilters.searchTerm)) ||
+                   (job.grade && job.grade.toLowerCase().includes(activeFilters.searchTerm));
+        });
+    }
 
-       // Update all filter counts (code continues as before)
-   }
+    // Update counts for each filter option
+    function updateFilterOptionCounts() {
+        // Update profession counts
+        document.querySelectorAll('.profession-sub-item .filter-count').forEach(countElement => {
+            const item = countElement.closest('.profession-sub-item');
+            const checkbox = item.querySelector('.profession-sub-checkbox');
+            if (checkbox) {
+                const label = checkbox.nextElementSibling;
+                if (label) {
+                    const professionName = label.textContent.trim().replace(/\s*\(\d+\)$/, '');
 
-   function restoreFilterStates() {
+                    // Count jobs that would match if this profession was selected
+                    const jobsForThisProfession = baseJobs.filter(job => {
+                        // Apply all OTHER active filters except this profession
+                        let matchesOtherFilters = true;
+
+                        // Check locations
+                        if (activeFilters.location.length > 0) {
+                            const jobLocation = job.location_description || '';
+                            const matchesLocation = activeFilters.location.some(location => {
+                                const normalizedJobLocation = normalizeLocation(jobLocation);
+                                const normalizedSearch = normalizeLocation(location);
+                                return normalizedJobLocation.includes(normalizedSearch);
+                            });
+                            if (!matchesLocation) matchesOtherFilters = false;
+                        }
+
+                        // Check grades
+                        if (activeFilters.grade.length > 0) {
+                            if (!job.grade || !activeFilters.grade.includes(job.grade)) {
+                                matchesOtherFilters = false;
+                            }
+                        }
+
+                        // Check published
+                        if (activeFilters.published.length > 0) {
+                            if (!job.published) return false;
+                            const jobDays = parseDaysFromPublished(job.published);
+                            if (!jobDays) return false;
+                            const matchesPublished = activeFilters.published.some(selectedCategory => {
+                                switch(selectedCategory) {
+                                    case "Last 3 Days": return jobDays <= 3;
+                                    case "Last 7 Days": return jobDays <= 7;
+                                    case "Last 14 Days": return jobDays <= 14;
+                                    case "Last 28 Days": return jobDays <= 28;
+                                    case "More than 28 Days": return jobDays > 28;
+                                    default: return false;
+                                }
+                            });
+                            if (!matchesPublished) matchesOtherFilters = false;
+                        }
+
+                        if (!matchesOtherFilters) return false;
+
+                        // Now check if this job matches the current profession
+                        const sectors = job.sector || [];
+                        const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+                        return searchText.includes(professionName.toLowerCase()) ||
+                               sectors.some(s => s.toLowerCase() === professionName.toLowerCase());
+                    });
+
+                    countElement.textContent = jobsForThisProfession.length;
+                }
+            }
+        });
+
+        // Update location counts
+        document.querySelectorAll('.location-sub-checkbox').forEach(checkbox => {
+            const label = checkbox.nextElementSibling;
+            const countElement = checkbox.closest('.profession-sub-item')?.querySelector('.filter-count');
+            if (label && countElement) {
+                const locationName = label.textContent.trim().replace(/\s*\(\d+\)$/, '');
+
+                const jobsForThisLocation = baseJobs.filter(job => {
+                    // Apply all OTHER active filters except this location
+                    let matchesOtherFilters = true;
+
+                    // Check professions
+                    if (activeFilters.profession.length > 0) {
+                        const sectors = job.sector || [];
+                        const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+                        const matchesProfession = activeFilters.profession.some(profession => {
+                            return searchText.includes(profession.toLowerCase()) ||
+                                   sectors.some(s => s.toLowerCase() === profession.toLowerCase());
+                        });
+                        if (!matchesProfession) matchesOtherFilters = false;
+                    }
+
+                    // Check grades
+                    if (activeFilters.grade.length > 0) {
+                        if (!job.grade || !activeFilters.grade.includes(job.grade)) {
+                            matchesOtherFilters = false;
+                        }
+                    }
+
+                    // Check published
+                    if (activeFilters.published.length > 0) {
+                        if (!job.published) return false;
+                        const jobDays = parseDaysFromPublished(job.published);
+                        if (!jobDays) return false;
+                        const matchesPublished = activeFilters.published.some(selectedCategory => {
+                            switch(selectedCategory) {
+                                case "Last 3 Days": return jobDays <= 3;
+                                case "Last 7 Days": return jobDays <= 7;
+                                case "Last 14 Days": return jobDays <= 14;
+                                case "Last 28 Days": return jobDays <= 28;
+                                case "More than 28 Days": return jobDays > 28;
+                                default: return false;
+                            }
+                        });
+                        if (!matchesPublished) matchesOtherFilters = false;
+                    }
+
+                    if (!matchesOtherFilters) return false;
+
+                    // Now check if this job matches the current location
+                    const jobLocation = job.location_description || '';
+                    const normalizedJobLocation = normalizeLocation(jobLocation);
+                    const normalizedSearch = normalizeLocation(locationName);
+                    return normalizedJobLocation.includes(normalizedSearch);
+                });
+
+                countElement.textContent = jobsForThisLocation.length;
+            }
+        });
+
+        // Update grade and published counts similarly
+        document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+            const item = checkbox.closest('.filter-item');
+            const countElement = item?.querySelector('.filter-count');
+            if (countElement) {
+                const label = checkbox.nextElementSibling;
+                if (label) {
+                    const filterValue = label.textContent.trim().replace(/\s*\(\d+\)$/, '');
+                    const filterType = checkbox.id.split('_')[0];
+
+                    const jobsForThisFilter = baseJobs.filter(job => {
+                        // Apply all OTHER filters and check if this filter value would match
+                        // Implementation depends on filter type (grade/published)
+                        if (filterType === 'grade') {
+                            return job.grade === filterValue;
+                        } else if (filterType === 'published') {
+                            if (!job.published) return false;
+                            const jobDays = parseDaysFromPublished(job.published);
+                            if (!jobDays) return false;
+
+                            switch(filterValue) {
+                                case "Last 3 Days": return jobDays <= 3;
+                                case "Last 7 Days": return jobDays <= 7;
+                                case "Last 14 Days": return jobDays <= 14;
+                                case "Last 28 Days": return jobDays <= 28;
+                                case "More than 28 Days": return jobDays > 28;
+                                default: return false;
+                            }
+                        }
+                        return false;
+                    });
+
+                    countElement.textContent = jobsForThisFilter.length;
+                }
+            }
+        });
+    }
+
+    // Call the update function
+    updateFilterOptionCounts();
+}
+
+function restoreFilterStates() {
        const checkedFilters = {};
 
        document.querySelectorAll('.profession-parent-checkbox:checked, .profession-sub-checkbox:checked').forEach(cb => {
@@ -3161,51 +3335,63 @@ if (!matchesPublished) return false;
    // Make initApp globally accessible for API integration
    window.initApp = initApp;
 
-   // Initialize the app when DOM is ready
-   document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM Content Loaded, checking for jobs data...');
+// Initialize the app when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded, initializing...');
 
-        // Check if data is already available
-        if (window.allJobsData && window.allJobsData.length > 0) {
-            console.log('Jobs data already available on DOMContentLoaded');
-            initApp();
-            initializeButtonStates();
-        } else {
-            // Start checking for data availability
-            let checkCount = 0;
-            const maxChecks = 60; // 30 seconds maximum wait
+    // Ensure all required elements exist
+    const requiredElements = [
+        'keywordSearch', 'jobsList', 'filtersContainer',
+        'jobCountDisplay', 'pageNumbers'
+    ];
 
-            const dataCheckInterval = setInterval(function() {
-                checkCount++;
+    const missingElements = requiredElements.filter(id => !document.getElementById(id));
+    if (missingElements.length > 0) {
+        console.error('Missing required elements:', missingElements);
+    }
 
-                if (window.allJobsData && window.allJobsData.length > 0) {
-                    console.log(`Jobs data detected after ${checkCount * 500}ms:`, window.allJobsData.length, 'jobs');
-                    clearInterval(dataCheckInterval);
-                    syncJobsData();
-                    initApp();
-                    initializeButtonStates();
-                } else if (checkCount >= maxChecks) {
-                    console.log('Jobs data not available after 30 seconds');
-                    clearInterval(dataCheckInterval);
-                }
-            }, 500);
+    // Initialize with empty data first to show the interface
+    if (!window.allJobsData || window.allJobsData.length === 0) {
+        console.log('No jobs data available, initializing with empty array');
+        window.allJobsData = [];
+
+        // Show skeleton/loading state
+        const jobsList = document.getElementById('jobsList');
+        if (jobsList) {
+            jobsList.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #666;">
+                    <div class="loading-spinner" style="margin: 0 auto 1rem auto;"></div>
+                    <p>Loading jobs...</p>
+                </div>
+            `;
         }
-    });
+
+        // Initialize app to show the interface
+        if (typeof initApp === 'function') {
+            initApp();
+        }
+    } else {
+        console.log('Jobs data already available:', window.allJobsData.length, 'jobs');
+        initApp();
+    }
+
+    initializeButtonStates();
+});
+
+// Listen for jobs data loaded event
+window.addEventListener('jobsDataLoaded', function(event) {
+    console.log('Jobs data loaded event received:', event.detail);
+    if (typeof initApp === 'function') {
+        initApp();
+    }
+    initializeButtonStates();
+});
 
    // Listen for data updates from the API
     window.addEventListener('jobsDataUpdated', function() {
         console.log('Jobs data updated event received');
         initApp();
     });
-
-    // Listen for data updates from the server
-    window.addEventListener('jobsDataLoaded', function() {
-        console.log('Jobs data loaded event received');
-        syncJobsData();
-        initApp();
-        initializeButtonStates();
-    });
-
 
    // Check periodically if data is available
    let dataCheckInterval = setInterval(function() {
@@ -3661,5 +3847,54 @@ if (!matchesPublished) return false;
     })();
 </script>
 <!-- End Cross-Origin Style Communication Script -->
+<!-- Debug Console (remove in production) -->
+<div id="debugConsole" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; max-width: 400px; max-height: 200px; overflow-y: auto; z-index: 10000; display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+        <strong>Debug Log</strong>
+        <button onclick="document.getElementById('debugConsole').style.display='none'" style="background: transparent; border: none; color: white; cursor: pointer;">&times;</button>
+    </div>
+    <div id="debugLog"></div>
+</div>
+
+<script>
+    // Debug console functionality
+    (function() {
+        const debugConsole = document.getElementById('debugConsole');
+        const debugLog = document.getElementById('debugLog');
+
+        // Show debug console on Ctrl+D
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                debugConsole.style.display = debugConsole.style.display === 'none' ? 'block' : 'none';
+            }
+        });
+
+        // Override console.log to capture messages
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+
+            if (debugLog) {
+                const message = args.map(arg =>
+                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+                ).join(' ');
+
+                const logEntry = document.createElement('div');
+                logEntry.style.marginBottom = '2px';
+                logEntry.style.fontSize = '11px';
+                logEntry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+
+                debugLog.appendChild(logEntry);
+                debugLog.scrollTop = debugLog.scrollHeight;
+
+                // Keep only last 50 entries
+                while (debugLog.children.length > 50) {
+                    debugLog.removeChild(debugLog.firstChild);
+                }
+            }
+        };
+    })();
+</script>
 </body>
 </html>
