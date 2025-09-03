@@ -1844,94 +1844,131 @@ window.handleParentCategoryKeydown = function(event, category, parentName) {
         return checkedGrades;
     }
 
-    // Rest of the count functions remain the same but with updated published filter logic
-    function countJobsForLocationCategoryWithFilters(categoryName, subcategories, currentFilters) {
-        let jobs = filterActiveJobs(allJobsData);
+function countJobsForLocationCategoryWithFilters(categoryName, subcategories, currentFilters) {
+    let jobs = filterActiveJobs(allJobsData);
 
-        if (activeCategoryFilter !== 'all') {
-            jobs = jobs.filter(job => categoryFilters[activeCategoryFilter].filter(job));
-        }
-
-        const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
-        if (searchTerm) {
-            jobs = jobs.filter(job => {
-                const sectors = job.sector || [];
-                const employer = job.alternate_recruiter_name || job.recruiter_name;
-                return job.job_title.toLowerCase().includes(searchTerm) ||
-                       job.location_description.toLowerCase().includes(searchTerm) ||
-                       employer.toLowerCase().includes(searchTerm) ||
-                       job.short_description.toLowerCase().includes(searchTerm) ||
-                       sectors.some(s => s.toLowerCase().includes(searchTerm)) ||
-                       (job.grade && job.grade.toLowerCase().includes(searchTerm));
-            });
-        }
-
-        const checkedProfessions = getCheckedProfessions();
-        if (checkedProfessions.length > 0) {
-            jobs = jobs.filter(job => {
-                const sectors = job.sector || [];
-                const employer = job.alternate_recruiter_name || job.recruiter_name;
-                const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${employer}`.toLowerCase();
-                return checkedProfessions.some(profession => {
-                    return searchText.includes(profession.toLowerCase()) ||
-                           sectors.some(s => s.toLowerCase() === profession.toLowerCase());
-                });
-            });
-        }
-
-        const checkedGrades = [];
-        filterData.grade?.forEach(item => {
-            const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-            const checkbox = document.getElementById(checkboxId);
-            if (checkbox && checkbox.checked) {
-                checkedGrades.push(item.name);
-            }
-        });
-        if (checkedGrades.length > 0) {
-            jobs = jobs.filter(job => job.grade && checkedGrades.includes(job.grade));
-        }
-
-        const checkedPublished = [];
-        filterData.published?.forEach(item => {
-            const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-            const checkbox = document.getElementById(checkboxId);
-            if (checkbox && checkbox.checked) {
-                checkedPublished.push(item.name);
-            }
-        });
-        if (checkedPublished.length > 0) {
-            jobs = jobs.filter(job => {
-                if (!job.published) return false;
-                const jobDays = parseDaysFromPublished(job.published);
-                if (!jobDays) return false;
-                return checkedPublished.some(selectedCategory => {
-    switch(selectedCategory) {
-        case "Last 3 Days": return jobDays <= 3;
-        case "Last 7 Days": return jobDays <= 7;
-        case "Last 14 Days": return jobDays <= 14;
-        case "Last 28 Days": return jobDays <= 28;
-        case "More than 28 Days": return jobDays > 28; // Only jobs older than 28 days
-        default: return false;
+    if (activeCategoryFilter !== 'all') {
+        jobs = jobs.filter(job => categoryFilters[activeCategoryFilter].filter(job));
     }
-});
+
+    const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
+    if (searchTerm) {
+        jobs = jobs.filter(job => {
+            const sectors = job.sector || [];
+            const employer = job.alternate_recruiter_name || job.recruiter_name;
+            return job.job_title.toLowerCase().includes(searchTerm) ||
+                   job.location_description.toLowerCase().includes(searchTerm) ||
+                   employer.toLowerCase().includes(searchTerm) ||
+                   job.short_description.toLowerCase().includes(searchTerm) ||
+                   sectors.some(s => s.toLowerCase().includes(searchTerm)) ||
+                   (job.grade && job.grade.toLowerCase().includes(searchTerm));
+        });
+    }
+
+    const checkedProfessions = getCheckedProfessions();
+    if (checkedProfessions.length > 0) {
+        jobs = jobs.filter(job => {
+            const sectors = job.sector || [];
+            const employer = job.alternate_recruiter_name || job.recruiter_name;
+            const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${employer}`.toLowerCase();
+            return checkedProfessions.some(profession => {
+                return searchText.includes(profession.toLowerCase()) ||
+                       sectors.some(s => s.toLowerCase() === profession.toLowerCase());
             });
+        });
+    }
+
+    const checkedGrades = [];
+    filterData.grade?.forEach(item => {
+        const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox && checkbox.checked) {
+            checkedGrades.push(item.name);
         }
+    });
+    if (checkedGrades.length > 0) {
+        jobs = jobs.filter(job => job.grade && checkedGrades.includes(job.grade));
+    }
 
-        return jobs.filter(job => {
+    const checkedPublished = [];
+    filterData.published?.forEach(item => {
+        const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox && checkbox.checked) {
+            checkedPublished.push(item.name);
+        }
+    });
+    if (checkedPublished.length > 0) {
+        jobs = jobs.filter(job => {
+            if (!job.published) return false;
+            const jobDays = parseDaysFromPublished(job.published);
+            if (!jobDays) return false;
+            return checkedPublished.some(selectedCategory => {
+                switch(selectedCategory) {
+                    case "Last 3 Days": return jobDays <= 3;
+                    case "Last 7 Days": return jobDays <= 7;
+                    case "Last 14 Days": return jobDays <= 14;
+                    case "Last 28 Days": return jobDays <= 28;
+                    case "More than 28 Days": return jobDays > 28;
+                    default: return false;
+                }
+            });
+        });
+    }
+
+    // NEW LOGIC: Only count jobs that match available subcategories
+    let totalCount = 0;
+
+    subcategories.forEach(subcategory => {
+        const subcategoryCount = jobs.filter(job => {
             const location = job.location_description || '';
-            const categorized = categorizeLocation(location);
 
-            if (categorized.region === categoryName) {
-                return true;
-            }
+            if (categoryName === 'Overseas' && dynamicLocationHierarchy.Overseas.subcategories.includes(subcategory)) {
+                if (!categoryFilters.overseas.filter(job)) {
+                    return false;
+                }
 
-            return subcategories.some(subcat => {
-                const normalizedSubcat = normalizeLocation(subcat);
+                const country = job.location_country || '';
+                const locationLower = location.toLowerCase();
+                const countryLower = country.toLowerCase();
+
+                if (subcategory === 'Canada') {
+                    return locationLower.includes('canada') || countryLower.includes('canada');
+                } else if (subcategory === 'Australia') {
+                    return locationLower.includes('australia') || countryLower.includes('australia');
+                } else if (subcategory === 'New Zealand') {
+                    return locationLower.includes('new zealand') || countryLower.includes('new zealand');
+                } else if (subcategory === 'Republic of Ireland') {
+                    return (locationLower.includes('ireland') || countryLower.includes('ireland')) &&
+                           !locationLower.includes('northern') && !countryLower.includes('northern');
+                } else if (subcategory === 'United States') {
+                    return locationLower.includes('usa') || locationLower.includes('united states') ||
+                           countryLower.includes('usa') || countryLower.includes('united states');
+                } else if (subcategory === 'UAE') {
+                    return locationLower.includes('dubai') || locationLower.includes('uae') ||
+                           countryLower.includes('dubai') || countryLower.includes('uae');
+                } else if (subcategory === country) {
+                    return true;
+                }
+                return false;
+            } else {
+                const categorized = categorizeLocation(location);
+                if (categorized.region === categoryName) {
+                    return true;
+                }
+                const normalizedSubcat = normalizeLocation(subcategory);
                 const normalizedLocation = normalizeLocation(location);
                 return normalizedLocation.includes(normalizedSubcat);
-            });
+            }
         }).length;
-    }
+
+        if (subcategoryCount > 0) {
+            totalCount += subcategoryCount;
+        }
+    });
+
+    return totalCount;
+}
 
     function countJobsForSpecificLocationWithFilters(locationName, currentFilters) {
         let jobs = filterActiveJobs(allJobsData);
@@ -2116,123 +2153,133 @@ window.handleParentCategoryKeydown = function(event, category, parentName) {
     }
 
     function countJobsForProfessionCategoryWithFilters(categoryName, subcategories, currentFilters) {
-        let jobs = filterActiveJobs(allJobsData);
+    let jobs = filterActiveJobs(allJobsData);
 
-        if (activeCategoryFilter !== 'all') {
-            jobs = jobs.filter(job => categoryFilters[activeCategoryFilter].filter(job));
-        }
-
-        const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
-        if (searchTerm) {
-            jobs = jobs.filter(job => {
-                const sectors = job.sector || [];
-                const employer = job.alternate_recruiter_name || job.recruiter_name;
-                return job.job_title.toLowerCase().includes(searchTerm) ||
-                       job.location_description.toLowerCase().includes(searchTerm) ||
-                       employer.toLowerCase().includes(searchTerm) ||
-                       job.short_description.toLowerCase().includes(searchTerm) ||
-                       sectors.some(s => s.toLowerCase().includes(searchTerm)) ||
-                       (job.grade && job.grade.toLowerCase().includes(searchTerm));
-            });
-        }
-
-        const checkedLocations = getCheckedLocations();
-        if (checkedLocations.length > 0) {
-            jobs = jobs.filter(job => {
-                const jobLocation = job.location_description || '';
-
-                return checkedLocations.some(location => {
-                    if (dynamicLocationHierarchy.Overseas.subcategories.includes(location)) {
-                        if (!categoryFilters.overseas.filter(job)) {
-                            return false;
-                        }
-
-                        const country = job.location_country || '';
-                        const locationLower = jobLocation.toLowerCase();
-                        const countryLower = country.toLowerCase();
-
-                        if (location === 'Canada') {
-                            return locationLower.includes('canada') || countryLower.includes('canada');
-                        } else if (location === 'Australia') {
-                            return locationLower.includes('australia') || countryLower.includes('australia');
-                        } else if (location === 'New Zealand') {
-                            return locationLower.includes('new zealand') || countryLower.includes('new zealand');
-                        } else if (location === 'Republic of Ireland') {
-                            return (locationLower.includes('ireland') || countryLower.includes('ireland')) &&
-                                   !locationLower.includes('northern') && !countryLower.includes('northern');
-                        } else if (location === 'North America') {
-                            return locationLower.includes('usa') || locationLower.includes('united states') ||
-                                   countryLower.includes('usa') || countryLower.includes('united states');
-                        } else if (location === 'Middle East') {
-                            return locationLower.includes('dubai') || locationLower.includes('uae') ||
-                                   countryLower.includes('dubai') || countryLower.includes('uae');
-                        } else if (location === country) {
-                            return true;
-                        }
-
-                        return false;
-                    } else {
-                        const normalizedJobLocation = normalizeLocation(jobLocation);
-                        const normalizedSearch = normalizeLocation(location);
-                        return normalizedJobLocation.includes(normalizedSearch);
-                    }
-                });
-            });
-        }
-
-        const checkedGrades = [];
-        filterData.grade?.forEach(item => {
-            const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-            const checkbox = document.getElementById(checkboxId);
-            if (checkbox && checkbox.checked) {
-                checkedGrades.push(item.name);
-            }
-        });
-        if (checkedGrades.length > 0) {
-            jobs = jobs.filter(job => job.grade && checkedGrades.includes(job.grade));
-        }
-
-        const checkedPublished = [];
-        filterData.published?.forEach(item => {
-            const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-            const checkbox = document.getElementById(checkboxId);
-            if (checkbox && checkbox.checked) {
-                checkedPublished.push(item.name);
-            }
-        });
-        if (checkedPublished.length > 0) {
-            jobs = jobs.filter(job => {
-                if (!job.published) return false;
-                const jobDays = parseDaysFromPublished(job.published);
-                if (!jobDays) return false;
-                return checkedPublished.some(selectedCategory => {
-    switch(selectedCategory) {
-        case "Last 3 Days": return jobDays <= 3;
-        case "Last 7 Days": return jobDays <= 7;
-        case "Last 14 Days": return jobDays <= 14;
-        case "Last 28 Days": return jobDays <= 28;
-        case "More than 28 Days": return jobDays > 28; // Only jobs older than 28 days
-        default: return false;
+    if (activeCategoryFilter !== 'all') {
+        jobs = jobs.filter(job => categoryFilters[activeCategoryFilter].filter(job));
     }
-});
-            });
-        }
 
-        return jobs.filter(job => {
+    const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
+    if (searchTerm) {
+        jobs = jobs.filter(job => {
+            const sectors = job.sector || [];
+            const employer = job.alternate_recruiter_name || job.recruiter_name;
+            return job.job_title.toLowerCase().includes(searchTerm) ||
+                   job.location_description.toLowerCase().includes(searchTerm) ||
+                   employer.toLowerCase().includes(searchTerm) ||
+                   job.short_description.toLowerCase().includes(searchTerm) ||
+                   sectors.some(s => s.toLowerCase().includes(searchTerm)) ||
+                   (job.grade && job.grade.toLowerCase().includes(searchTerm));
+        });
+    }
+
+    const checkedLocations = getCheckedLocations();
+    if (checkedLocations.length > 0) {
+        jobs = jobs.filter(job => {
+            const jobLocation = job.location_description || '';
+
+            return checkedLocations.some(location => {
+                if (dynamicLocationHierarchy.Overseas.subcategories.includes(location)) {
+                    if (!categoryFilters.overseas.filter(job)) {
+                        return false;
+                    }
+
+                    const country = job.location_country || '';
+                    const locationLower = jobLocation.toLowerCase();
+                    const countryLower = country.toLowerCase();
+
+                    if (location === 'Canada') {
+                        return locationLower.includes('canada') || countryLower.includes('canada');
+                    } else if (location === 'Australia') {
+                        return locationLower.includes('australia') || countryLower.includes('australia');
+                    } else if (location === 'New Zealand') {
+                        return locationLower.includes('new zealand') || countryLower.includes('new zealand');
+                    } else if (location === 'Republic of Ireland') {
+                        return (locationLower.includes('ireland') || countryLower.includes('ireland')) &&
+                               !locationLower.includes('northern') && !countryLower.includes('northern');
+                    } else if (location === 'North America') {
+                        return locationLower.includes('usa') || locationLower.includes('united states') ||
+                               countryLower.includes('usa') || countryLower.includes('united states');
+                    } else if (location === 'Middle East') {
+                        return locationLower.includes('dubai') || locationLower.includes('uae') ||
+                               countryLower.includes('dubai') || countryLower.includes('uae');
+                    } else if (location === country) {
+                        return true;
+                    }
+
+                    return false;
+                } else {
+                    const normalizedJobLocation = normalizeLocation(jobLocation);
+                    const normalizedSearch = normalizeLocation(location);
+                    return normalizedJobLocation.includes(normalizedSearch);
+                }
+            });
+        });
+    }
+
+    const checkedGrades = [];
+    filterData.grade?.forEach(item => {
+        const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox && checkbox.checked) {
+            checkedGrades.push(item.name);
+        }
+    });
+    if (checkedGrades.length > 0) {
+        jobs = jobs.filter(job => job.grade && checkedGrades.includes(job.grade));
+    }
+
+    const checkedPublished = [];
+    filterData.published?.forEach(item => {
+        const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox && checkbox.checked) {
+            checkedPublished.push(item.name);
+        }
+    });
+    if (checkedPublished.length > 0) {
+        jobs = jobs.filter(job => {
+            if (!job.published) return false;
+            const jobDays = parseDaysFromPublished(job.published);
+            if (!jobDays) return false;
+            return checkedPublished.some(selectedCategory => {
+                switch(selectedCategory) {
+                    case "Last 3 Days": return jobDays <= 3;
+                    case "Last 7 Days": return jobDays <= 7;
+                    case "Last 14 Days": return jobDays <= 14;
+                    case "Last 28 Days": return jobDays <= 28;
+                    case "More than 28 Days": return jobDays > 28;
+                    default: return false;
+                }
+            });
+        });
+    }
+
+    // NEW LOGIC: Only count jobs that match available subcategories
+    let totalCount = 0;
+
+    subcategories.forEach(subcat => {
+        const subcategoryCount = jobs.filter(job => {
             const sectors = job.sector || [];
             const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
 
-            return subcategories.some(subcat => {
-                if (typeof subcat === 'string') {
-                    return searchText.includes(subcat.toLowerCase()) || sectors.some(s => s.toLowerCase() === subcat.toLowerCase());
-                } else if (typeof subcat === 'object' && subcat.subcategories) {
-                    return searchText.includes(subcat.name.toLowerCase()) ||
-                           subcat.subcategories.some(nested => searchText.includes(nested.toLowerCase()));
-                }
-                return false;
-            });
+            if (typeof subcat === 'string') {
+                return searchText.includes(subcat.toLowerCase()) || sectors.some(s => s.toLowerCase() === subcat.toLowerCase());
+            } else if (typeof subcat === 'object' && subcat.subcategories) {
+                return searchText.includes(subcat.name.toLowerCase()) ||
+                       subcat.subcategories.some(nested => searchText.includes(nested.toLowerCase()));
+            }
+            return false;
         }).length;
-    }
+
+        if (subcategoryCount > 0) {
+            totalCount += subcategoryCount;
+        }
+    });
+
+    return totalCount;
+}
+
 
     function countJobsForSpecificProfessionWithFilters(professionName, currentFilters) {
         let jobs = filterActiveJobs(allJobsData);
@@ -2499,7 +2546,7 @@ window.handleParentCategoryKeydown = function(event, category, parentName) {
                                            onchange="handleParentCategoryChange('location', '${parent.name}')" onclick="event.stopPropagation()" aria-label="${parent.name} location category" tabindex="-1">
                                     <label class="profession-parent-label" for="location_parent_${parent.name.replace(/\s+/g, '_')}">${parent.name}</label>
                                     <span class="filter-count">${parent.count}</span>
-                                    <span class="profession-parent-arrow" id="location_parent_arrow_${parent.name.replace(/\s+/g, '_')}">▶</span>
+                                    <span class="profession-parent-arrow collapsed" id="location_parent_arrow_${parent.name.replace(/\s+/g, '_')}">▶</span>
                                 </button>
                                 <div class="profession-subcategories collapsed" id="location_subcategories_${parent.name.replace(/\s+/g, '_')}" style="display: none;">
                                     ${parent.subcategories.map(sub => `
@@ -2620,13 +2667,12 @@ const renderFilterSection = (title, data, type, expanded = true) => {
 
     // Render sections
     filterHTML += renderFilterSection('Date Published', filterData.published, 'published', true);
+    filterHTML += renderFilterSection('Grade', filterData.grade, 'grade', true);
 
     // Profession and Location with hierarchy - simplified for performance
     if (filterData.profession && filterData.profession.length > 0) {
         filterHTML += renderProfessionFilters(filterData.profession);
     }
-
-    filterHTML += renderFilterSection('Grade', filterData.grade, 'grade', true);
 
     if (filterData.location && filterData.location.length > 0) {
         filterHTML += renderLocationFilters(filterData.location);
@@ -3847,53 +3893,293 @@ window.addEventListener('jobsDataLoaded', function(event) {
     })();
 </script>
 <!-- End Cross-Origin Style Communication Script -->
-<!-- Debug Console (remove in production) -->
-<div id="debugConsole" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; max-width: 400px; max-height: 200px; overflow-y: auto; z-index: 10000; display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-        <strong>Debug Log</strong>
-        <button onclick="document.getElementById('debugConsole').style.display='none'" style="background: transparent; border: none; color: white; cursor: pointer;">&times;</button>
-    </div>
-    <div id="debugLog"></div>
-</div>
-
 <script>
-    // Debug console functionality
+    // Enhanced Cross-Origin Communication & Custom Category Fix - v3.1
     (function() {
-        const debugConsole = document.getElementById('debugConsole');
-        const debugLog = document.getElementById('debugLog');
+        'use strict';
 
-        // Show debug console on Ctrl+D
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'd') {
-                e.preventDefault();
-                debugConsole.style.display = debugConsole.style.display === 'none' ? 'block' : 'none';
+        const WIDGET_CONFIG = {
+            widgetId: 'bmj-careers-widget',
+            version: '3.1.0'
+        };
+
+        const isInIframe = window.self !== window.top;
+        let customConfig = null;
+        let configReceived = false;
+
+        function waitForElement(selector, callback, maxAttempts = 20) {
+            let attempts = 0;
+            const checkElement = () => {
+                const element = document.querySelector(selector);
+                if (element) {
+                    callback(element);
+                } else if (attempts < maxAttempts) {
+                    attempts++;
+                    setTimeout(checkElement, 500);
+                } else {
+                    console.warn('[Widget] Element not found after max attempts:', selector);
+                }
+            };
+            checkElement();
+        }
+
+        function applyCustomCategories(categories) {
+            if (!categories || typeof categories !== 'object') return;
+
+            customConfig = categories;
+            configReceived = true;
+            console.log('[Widget] Received custom categories:', Object.keys(categories));
+
+            // Wait for category buttons container to be available
+            waitForElement('.category-buttons', (categoryButtonsWrapper) => {
+                console.log('[Widget] Category buttons wrapper found, creating buttons...');
+
+                // Handle existing category buttons first
+                Object.entries(categories).forEach(([key, config]) => {
+                    const btnId = `btn-${key}`;
+                    const btn = document.getElementById(btnId);
+
+                    if (btn) {
+                        if (config.enabled === false) {
+                            btn.style.display = 'none';
+                            console.log('[Widget] Disabled existing button:', key);
+                        } else {
+                            btn.style.display = '';
+                            if (config.label) {
+                                const textSpan = btn.querySelector('span:last-child');
+                                if (textSpan) {
+                                    textSpan.textContent = config.label;
+                                    console.log('[Widget] Updated label for button:', key, config.label);
+                                }
+                            }
+                            if (config.icon !== undefined) {
+                                const emojiSpan = btn.querySelector('.emoji');
+                                if (emojiSpan) {
+                                    if (config.icon === null) {
+                                        emojiSpan.style.display = 'none';
+                                    } else {
+                                        emojiSpan.innerHTML = config.icon;
+                                        emojiSpan.style.display = '';
+                                    }
+                                    console.log('[Widget] Updated icon for button:', key);
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Create new custom category buttons
+                Object.entries(categories).forEach(([key, config]) => {
+                    const btnId = `btn-${key}`;
+
+                    if (!document.getElementById(btnId) && config.enabled !== false) {
+                        console.log('[Widget] Creating new button for:', key, config);
+
+                        const newButton = document.createElement('button');
+                        newButton.className = 'category-btn';
+                        newButton.id = btnId;
+
+                        // Create click handler function
+                        newButton.addEventListener('click', function() {
+                            console.log('[Widget] Custom category button clicked:', key);
+
+                            // Wait for applyCategoryFilter to be available
+                            if (window.applyCategoryFilter) {
+                                window.applyCategoryFilter(key);
+                            } else {
+                                console.warn('[Widget] applyCategoryFilter not available yet');
+                            }
+                        });
+
+                        const iconSpan = document.createElement('span');
+                        iconSpan.className = 'emoji';
+                        iconSpan.setAttribute('aria-hidden', 'true');
+                        if (config.icon && config.icon !== null) {
+                            iconSpan.innerHTML = config.icon;
+                        } else {
+                            iconSpan.style.display = 'none';
+                        }
+
+                        const textSpan = document.createElement('span');
+                        textSpan.textContent = config.label || key;
+
+                        newButton.appendChild(iconSpan);
+                        newButton.appendChild(textSpan);
+                        categoryButtonsWrapper.appendChild(newButton);
+
+                        console.log('[Widget] Successfully created button:', key);
+                    }
+                });
+
+                // Setup the filtering system
+                setupCustomFiltering(categories);
+            });
+        }
+
+        function setupCustomFiltering(categories) {
+            console.log('[Widget] Setting up custom filtering...');
+
+            // Wait for the widget's filtering system to be ready
+            const setupFilters = () => {
+                if (!window.categoryFilters || !window.applyCategoryFilter) {
+                    setTimeout(setupFilters, 500);
+                    return;
+                }
+
+                console.log('[Widget] Adding custom filters to categoryFilters...');
+
+                // Add custom filters to categoryFilters
+                Object.entries(categories).forEach(([key, config]) => {
+                    if (config.enabled !== false && config.keywords && config.keywords.length > 0) {
+                        window.categoryFilters[key] = {
+                            name: config.label || key,
+                            keywords: config.keywords,
+                            filter: function(job) {
+                                let searchText = '';
+                                const searchIn = config.searchIn || ['title', 'description', 'sector', 'grade'];
+
+                                searchIn.forEach(field => {
+                                    switch(field) {
+                                        case 'title':
+                                            searchText += ' ' + (job.job_title || '');
+                                            break;
+                                        case 'description':
+                                            searchText += ' ' + (job.short_description || '');
+                                            break;
+                                        case 'sector':
+                                            if (job.sector && Array.isArray(job.sector)) {
+                                                searchText += ' ' + job.sector.join(' ');
+                                            }
+                                            break;
+                                        case 'grade':
+                                            searchText += ' ' + (job.grade || '');
+                                            break;
+                                        case 'location':
+                                            searchText += ' ' + (job.location_description || '');
+                                            break;
+                                        case 'employer':
+                                            searchText += ' ' + (job.recruiter_name || '') + ' ' + (job.alternate_recruiter_name || '');
+                                            break;
+                                    }
+                                });
+
+                                searchText = searchText.toLowerCase().trim();
+
+                                return config.keywords.some(keyword => {
+                                    const keywordLower = keyword.toLowerCase().trim();
+                                    return searchText.includes(keywordLower);
+                                });
+                            }
+                        };
+
+                        console.log(`[Widget] Added custom filter: ${key} with keywords:`, config.keywords);
+                    }
+                });
+
+                console.log('[Widget] Custom filtering setup complete');
+            };
+
+            setupFilters();
+        }
+
+        function generateCustomCSS(styles) {
+            return `
+                :root {
+                    --bmj-primary: ${styles.primaryColor || '#0066cc'};
+                    --bmj-secondary: ${styles.secondaryColor || '#FFC000'};
+                    --bmj-bg: ${styles.backgroundColor || '#f0f4f8'};
+                    --bmj-card-bg: ${styles.cardBackgroundColor || '#ffffff'};
+                    --bmj-text: ${styles.textColor || '#1d1d1b'};
+                }
+
+                .category-btn {
+                    background: ${styles.categoryButtonInactiveColor || '#ffffff'} !important;
+                    color: ${styles.primaryColor || '#0066cc'} !important;
+                    border: 2px solid ${styles.borderColor || '#e5e7eb'} !important;
+                }
+                .category-btn:hover {
+                    background: ${styles.categoryButtonHoverColor || '#0066cc'} !important;
+                    color: ${styles.buttonTextColor || '#ffffff'} !important;
+                }
+                .category-btn.active {
+                    background: ${styles.categoryButtonActiveColor || '#0066cc'} !important;
+                    color: ${styles.buttonTextColor || '#ffffff'} !important;
+                }
+                .job-header {
+                    background: ${styles.jobCardHeaderColor || '#0066cc'} !important;
+                    color: ${styles.jobCardHeaderTextColor || '#ffffff'} !important;
+                }
+            `;
+        }
+
+        function applyCustomStyles(styles) {
+            if (!styles || typeof styles !== 'object') return;
+
+            let styleSheet = document.getElementById('bmj-custom-styles');
+            if (!styleSheet) {
+                styleSheet = document.createElement('style');
+                styleSheet.id = 'bmj-custom-styles';
+                document.head.appendChild(styleSheet);
+            }
+
+            const css = generateCustomCSS(styles);
+            styleSheet.textContent = css;
+            console.log('[Widget] Custom styles applied');
+        }
+
+        // Message handler
+        window.addEventListener('message', function(event) {
+            if (!event.data || typeof event.data !== 'object') return;
+
+            switch (event.data.type) {
+                case 'bmj-careers-config':
+                    console.log('[Widget] Received configuration:', event.data);
+                    if (event.data.styles) applyCustomStyles(event.data.styles);
+                    if (event.data.categories) applyCustomCategories(event.data.categories);
+                    break;
+                case 'bmj-careers-request-config':
+                    break;
             }
         });
 
-        // Override console.log to capture messages
-        const originalLog = console.log;
-        console.log = function(...args) {
-            originalLog.apply(console, args);
+        // Send ready message
+        function sendReadyMessage() {
+            if (isInIframe) {
+                window.parent.postMessage({
+                    type: 'bmj-careers-ready',
+                    widgetId: WIDGET_CONFIG.widgetId,
+                    version: WIDGET_CONFIG.version
+                }, '*');
 
-            if (debugLog) {
-                const message = args.map(arg =>
-                    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-                ).join(' ');
-
-                const logEntry = document.createElement('div');
-                logEntry.style.marginBottom = '2px';
-                logEntry.style.fontSize = '11px';
-                logEntry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
-
-                debugLog.appendChild(logEntry);
-                debugLog.scrollTop = debugLog.scrollHeight;
-
-                // Keep only last 50 entries
-                while (debugLog.children.length > 50) {
-                    debugLog.removeChild(debugLog.firstChild);
-                }
+                // Request configuration
+                setTimeout(() => {
+                    window.parent.postMessage({
+                        type: 'bmj-careers-request-config',
+                        widgetId: WIDGET_CONFIG.widgetId
+                    }, '*');
+                }, 100);
             }
+        }
+
+        // Initialize when ready
+        if (document.readyState === 'complete') {
+            sendReadyMessage();
+        } else {
+            window.addEventListener('load', sendReadyMessage);
+            document.addEventListener('DOMContentLoaded', sendReadyMessage);
+        }
+
+        // Debug function
+        window.debugCustomCategories = function() {
+            console.log('=== CUSTOM CATEGORIES DEBUG ===');
+            console.log('Config received:', configReceived);
+            console.log('customConfig:', customConfig);
+            console.log('categoryFilters:', window.categoryFilters);
+            console.log('Category buttons:', document.querySelectorAll('.category-btn'));
+            console.log('=== END DEBUG ===');
         };
+
+        console.log('[Widget] Enhanced BMJ Careers Widget v3.1 initialized');
     })();
 </script>
 </body>
