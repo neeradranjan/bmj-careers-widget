@@ -15,7 +15,8 @@ const {
   PutCommand,
   GetCommand,
   UpdateCommand,
-  ScanCommand
+  ScanCommand,
+  QueryCommand
 } = require('@aws-sdk/lib-dynamodb');
 
 // Import credential provider for AWS Profile support
@@ -111,23 +112,70 @@ console.log(`AWS Region: ${AWS_REGION}`);
 console.log(`DynamoDB Table: ${TABLE_NAME}`);
 
 // AWS COGNITO CONFIGURATION
-const USE_COGNITO = process.env.USE_COGNITO === 'true';
-const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
-const COGNITO_CLIENT_ID = process.env.COGNITO_CLIENT_ID;
-const COGNITO_DOMAIN = process.env.COGNITO_DOMAIN;
-const COGNITO_REDIRECT_URI = process.env.COGNITO_REDIRECT_URI || 'http://localhost:3000/auth/callback';
+// AWS COGNITO CONFIGURATION - Update these values
+const USE_COGNITO = true; // Enable Cognito
+const COGNITO_USER_POOL_ID = 'eu-west-1_mTE89jch7';
+const COGNITO_CLIENT_ID = 'okofc02vcimo4cc4hq70pcl1d'; // You need to get this from AWS Console
+const COGNITO_REGION = 'eu-west-1';
+const COGNITO_DOMAIN = process.env.COGNITO_DOMAIN; // Optional: your-domain.auth.eu-west-1.amazoncognito.com
+const COGNITO_REDIRECT_URI = process.env.COGNITO_REDIRECT_URI || 'http://localhost:3000/auth/callback' || 'https://bmj-careers-widget.onrender.com/auth/callback';
+
+// Import JWT verification library
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
 
 // Add AWS Cognito SDK imports at the top
-const { CognitoIdentityProviderClient, InitiateAuthCommand, GetUserCommand } = require('@aws-sdk/client-cognito-identity-provider');
+const { CognitoIdentityProviderClient, InitiateAuthCommand, GetUserCommand, ListUsersCommand } = require('@aws-sdk/client-cognito-identity-provider');
+
 
 // Initialize Cognito client if configured
 let cognitoClient = null;
 if (USE_COGNITO) {
   cognitoClient = new CognitoIdentityProviderClient({
-    region: AWS_REGION,
+    region: COGNITO_REGION,
     credentials: fromIni({ profile: AWS_PROFILE })
   });
+  console.log(`[COGNITO] Client initialized for region ${COGNITO_REGION}`);
 }
+
+// JWKS client for token verification
+const jwksClientInstance = jwksClient({
+  jwksUri: 'https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_mTE89jch7/.well-known/jwks.json',
+  cache: true,
+  cacheMaxEntries: 5,
+  cacheMaxAge: 600000 // 10 minutes
+});
+
+// Function to get signing key
+function getKey(header, callback) {
+  jwksClientInstance.getSigningKey(header.kid, (err, key) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    const signingKey = key.publicKey || key.rsaPublicKey;
+    callback(null, signingKey);
+  });
+}
+
+// Function to verify JWT token
+function verifyToken(token) {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, getKey, {
+      audience: COGNITO_CLIENT_ID,
+      issuer: `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/${COGNITO_USER_POOL_ID}`,
+      algorithms: ['RS256']
+    }, (err, decoded) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(decoded);
+      }
+    });
+  });
+}
+
+
 
 // BMJ Careers XML Feed URL
 const BMJ_XML_FEED_URL = 'https://www.bmj.com/careers/feeds/CompactJobBoard.xml';
@@ -238,7 +286,26 @@ function validateEmail(email) {
 
 function isAuthenticated(req) {
   const sessionToken = req.headers['x-session-token'] || req.query.session;
-  return sessionToken && userSessions[sessionToken];
+
+  if (!sessionToken || !userSessions[sessionToken]) {
+    return false;
+  }
+
+  const session = userSessions[sessionToken];
+
+  // Check if Cognito session is expired
+  if (session.authMethod === 'cognito' && session.cognitoTokens) {
+    const tokenExpiry = new Date(session.cognitoTokens.expiresAt);
+    const now = new Date();
+
+    if (now >= tokenExpiry) {
+      // Session expired, remove it
+      delete userSessions[sessionToken];
+      return false;
+    }
+  }
+
+  return session;
 }
 
 function getClientFromRequest(req) {
@@ -247,7 +314,7 @@ function getClientFromRequest(req) {
   const utm_campaign = req.query.utm_campaign || 'default';
   const referer = req.headers.referer || 'unknown';
 
-  // Generate a unique session ID for each page load
+  // Generate a unique session ID for each page load (but keep same client)
   const sessionId = req.headers['x-session-id'] ||
                    req.query.session_id ||
                    `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -274,15 +341,12 @@ function getClientFromRequest(req) {
     }
   }
 
-  // Create unique client ID for each session
-  const uniqueClientId = `${clientId}_${sessionId}`;
-
   return {
-    clientId: uniqueClientId,
-    baseClientId: clientId,
+    clientId: clientId, // This will be used for tracking (one entry per client)
+    baseClientId: clientId, // Same as clientId for consistency
     clientName: clientName,
     clientDomain: referer,
-    sessionId,
+    sessionId, // Unique per page load
     utm_source: clientId !== 'direct' ? clientId : (isIframe ? 'iframe_' + clientName : clientId),
     utm_medium: isIframe ? 'iframe' : utm_medium,
     utm_campaign,
@@ -292,6 +356,7 @@ function getClientFromRequest(req) {
     ipAddress: req.ip || req.connection.remoteAddress || 'Unknown'
   };
 }
+
 
 // Add these functions to persist tracking data
 async function saveTrackingData() {
@@ -419,18 +484,21 @@ process.on('SIGINT', async () => {
 });
 
 
-// Track client usage
 function trackClientUsage(clientInfo, action, metadata = {}) {
-  const { clientId, baseClientId, sessionId, utm_source, utm_medium, utm_campaign, referer } = clientInfo;
+  const { baseClientId, sessionId, utm_source, utm_medium, utm_campaign, referer } = clientInfo;
   const now = new Date();
   const dateKey = now.toISOString().split('T')[0];
   const hourKey = `${dateKey}-${now.getHours()}`;
+  const trackingKey = baseClientId;
 
-  // Initialize client session if not exists
-  if (!clientTracking[clientId]) {
-    clientTracking[clientId] = {
+  // Update daily billing cache
+  updateDailyBilling(baseClientId, action, sessionId);
+
+  // Initialize client if not exists
+  if (!clientTracking[trackingKey]) {
+    clientTracking[trackingKey] = {
+      clientId: baseClientId,
       name: baseClientId,
-      sessionId: sessionId,
       domain: referer,
       utm_source,
       utm_medium,
@@ -439,10 +507,12 @@ function trackClientUsage(clientInfo, action, metadata = {}) {
       lastSeen: now.toISOString(),
       userAgent: metadata.userAgent || 'Unknown',
       ipAddress: metadata.ipAddress || 'Unknown',
+      sessions: new Set(),
       metrics: {
         totalLoads: 0,
         totalClicks: 0,
         totalApiCalls: 0,
+        totalSessions: 0,
         totalTime: 0,
         daily: {},
         hourly: {}
@@ -450,88 +520,77 @@ function trackClientUsage(clientInfo, action, metadata = {}) {
     };
   }
 
-  // Update client info
-  clientTracking[clientId].lastSeen = now.toISOString();
+  // Always update last seen
+  clientTracking[trackingKey].lastSeen = now.toISOString();
 
-  // Initialize daily/hourly metrics if not exists
-  if (!clientTracking[clientId].metrics.daily[dateKey]) {
-    clientTracking[clientId].metrics.daily[dateKey] = {
+  // Track unique sessions
+  if (sessionId && !clientTracking[trackingKey].sessions.has(sessionId)) {
+    clientTracking[trackingKey].sessions.add(sessionId);
+    clientTracking[trackingKey].metrics.totalSessions = clientTracking[trackingKey].sessions.size;
+  }
+
+  // Initialize daily/hourly metrics
+  if (!clientTracking[trackingKey].metrics.daily[dateKey]) {
+    clientTracking[trackingKey].metrics.daily[dateKey] = {
       loads: 0,
       clicks: 0,
       apiCalls: 0,
+      sessions: new Set(),
       time: 0
     };
   }
 
-  if (!clientTracking[clientId].metrics.hourly[hourKey]) {
-    clientTracking[clientId].metrics.hourly[hourKey] = {
+  if (!clientTracking[trackingKey].metrics.hourly[hourKey]) {
+    clientTracking[trackingKey].metrics.hourly[hourKey] = {
       loads: 0,
       clicks: 0,
       apiCalls: 0,
+      sessions: new Set(),
       time: 0
     };
   }
 
-  // Track action
+  // Track daily/hourly sessions
+  if (sessionId) {
+    clientTracking[trackingKey].metrics.daily[dateKey].sessions.add(sessionId);
+    clientTracking[trackingKey].metrics.hourly[hourKey].sessions.add(sessionId);
+  }
+
+  // Track action and increment counters
   switch (action) {
     case 'load':
-      clientTracking[clientId].metrics.totalLoads++;
-      clientTracking[clientId].metrics.daily[dateKey].loads++;
-      clientTracking[clientId].metrics.hourly[hourKey].loads++;
+      clientTracking[trackingKey].metrics.totalLoads++;
+      clientTracking[trackingKey].metrics.daily[dateKey].loads++;
+      clientTracking[trackingKey].metrics.hourly[hourKey].loads++;
+      console.log(`[TRACKING] Page load for ${baseClientId}. Total loads: ${clientTracking[trackingKey].metrics.totalLoads}`);
       break;
     case 'click':
-      clientTracking[clientId].metrics.totalClicks++;
-      clientTracking[clientId].metrics.daily[dateKey].clicks++;
-      clientTracking[clientId].metrics.hourly[hourKey].clicks++;
+      clientTracking[trackingKey].metrics.totalClicks++;
+      clientTracking[trackingKey].metrics.daily[dateKey].clicks++;
+      clientTracking[trackingKey].metrics.hourly[hourKey].clicks++;
+      console.log(`[TRACKING] Click for ${baseClientId}. Total clicks: ${clientTracking[trackingKey].metrics.totalClicks}`);
       break;
     case 'api':
-      clientTracking[clientId].metrics.totalApiCalls++;
-      clientTracking[clientId].metrics.daily[dateKey].apiCalls++;
-      clientTracking[clientId].metrics.hourly[hourKey].apiCalls++;
-      break;
-    case 'time':
-      const timeSpent = metadata.timeSpent || 0;
-      clientTracking[clientId].metrics.totalTime += timeSpent;
-      clientTracking[clientId].metrics.daily[dateKey].time += timeSpent;
-      clientTracking[clientId].metrics.hourly[hourKey].time += timeSpent;
+      clientTracking[trackingKey].metrics.totalApiCalls++;
+      clientTracking[trackingKey].metrics.daily[dateKey].apiCalls++;
+      clientTracking[trackingKey].metrics.hourly[hourKey].apiCalls++;
       break;
   }
 
-  // Store in UTM tracking for easier daily aggregation
-  if (!utmTracking[dateKey]) {
-    utmTracking[dateKey] = {};
-  }
-
-  if (!utmTracking[dateKey][clientId]) {
-    utmTracking[dateKey][clientId] = {
-      loads: 0,
-      clicks: 0,
-      apiCalls: 0,
-      time: 0,
-      utm_source,
-      utm_medium,
-      utm_campaign,
-      sessionId
-    };
-  }
-
-  utmTracking[dateKey][clientId][action === 'load' ? 'loads' : action === 'click' ? 'clicks' : action === 'api' ? 'apiCalls' : 'time'] += action === 'time' ? (metadata.timeSpent || 0) : 1;
-
-  // Persist to DynamoDB if available (fire and forget)
-  if (dynamoDBConnectionStatus.isConnected) {
-    const trackingParams = {
-      TableName: TABLE_NAME,
-      Item: {
-        id: `CLIENT_SESSION_${clientId}`,
-        type: 'client_session',
-        clientData: clientTracking[clientId],
-        lastUpdated: now.toISOString()
+  // Broadcast real-time update to admin consoles
+  if (activeAdminConnections.size > 0) {
+    const updateData = {
+      type: 'client_activity',
+      clientId: baseClientId,
+      action: action,
+      timestamp: now.toISOString(),
+      currentMetrics: {
+        totalLoads: clientTracking[trackingKey].metrics.totalLoads,
+        totalClicks: clientTracking[trackingKey].metrics.totalClicks,
+        totalSessions: clientTracking[trackingKey].metrics.totalSessions
       }
     };
-
-    dynamodb.send(new PutCommand(trackingParams)).catch(err => {
-      console.error('Failed to persist client tracking:', err.message);
-    });
+    broadcastToAdminConsoles(updateData);
   }
 }
 
@@ -795,6 +854,115 @@ async function fetchJobsFromDynamoDB() {
     return [];
   }
 }
+
+
+// ========================================================================
+// DAILY BILLING SYNC FUNCTIONALITY
+// ========================================================================
+
+// New table configuration for daily billing
+const BILLING_TABLE_NAME = 'bmj-careers-job-widget-admin';
+
+// Daily billing sync functionality
+let dailyBillingCache = {}; // Store daily data in memory
+
+function initializeDailyBilling(clientId) {
+    const today = new Date().toISOString().split('T')[0];
+    const key = `${clientId}_${today}`;
+
+    if (!dailyBillingCache[key]) {
+        dailyBillingCache[key] = {
+            clientId: clientId,
+            date: today,
+            clicks: 0,
+            pageViews: 0,
+            sessions: new Set(),
+            apiCalls: 0,
+            lastUpdated: new Date().toISOString(),
+            synced: false
+        };
+    }
+    return dailyBillingCache[key];
+}
+
+function updateDailyBilling(clientId, action, sessionId = null) {
+    const billingData = initializeDailyBilling(clientId);
+
+    switch(action) {
+        case 'load':
+            billingData.pageViews++;
+            if (sessionId) billingData.sessions.add(sessionId);
+            break;
+        case 'click':
+            billingData.clicks++;
+            break;
+        case 'api':
+            billingData.apiCalls++;
+            break;
+    }
+
+    billingData.lastUpdated = new Date().toISOString();
+    console.log(`[DAILY BILLING] Updated ${clientId} - ${action}:`, {
+        clicks: billingData.clicks,
+        pageViews: billingData.pageViews,
+        sessions: billingData.sessions.size
+    });
+}
+
+async function syncDailyBillingToDynamoDB(clientId, date) {
+    if (!dynamoDBConnectionStatus.isConnected) return false;
+
+    const key = `${clientId}_${date}`;
+    const billingData = dailyBillingCache[key];
+
+    if (!billingData || billingData.synced) return false;
+
+    try {
+        const params = {
+            TableName: BILLING_TABLE_NAME,
+            Item: {
+                clientId: clientId,
+                date: date,
+                clicks: billingData.clicks,
+                pageViews: billingData.pageViews,
+                sessions: billingData.sessions.size,
+                apiCalls: billingData.apiCalls,
+                sessionIds: Array.from(billingData.sessions),
+                lastUpdated: billingData.lastUpdated,
+                syncedAt: new Date().toISOString()
+            }
+        };
+
+        await dynamodb.send(new PutCommand(params));
+        billingData.synced = true;
+        console.log(`[DAILY BILLING] Synced ${clientId} data for ${date} to DynamoDB`);
+        return true;
+    } catch (error) {
+        console.error(`[DAILY BILLING] Failed to sync ${clientId} for ${date}:`, error);
+        return false;
+    }
+}
+
+// Schedule daily sync at midnight
+function scheduleDailySyncs() {
+    setInterval(() => {
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        // Sync all yesterday's data
+        Object.keys(dailyBillingCache).forEach(key => {
+            if (key.includes(yesterdayStr)) {
+                const clientId = key.split('_')[0];
+                syncDailyBillingToDynamoDB(clientId, yesterdayStr);
+            }
+        });
+    }, 60 * 60 * 1000); // Check every hour
+}
+
+// Initialize daily sync scheduler
+scheduleDailySyncs();
 
 // Sync jobs between XML feed and DynamoDB
 async function syncJobsWithDynamoDB() {
@@ -1150,6 +1318,129 @@ app.get('/admin-dashboard', async (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
+// ========================================================================
+// BILLING REPORT ENDPOINTS
+// ========================================================================
+
+// Generate billing report endpoint
+app.post('/api/admin/billing/generate-report', async (req, res) => {
+    if (!isAuthenticated(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        const { clientId, startDate, endDate } = req.body;
+
+        // First sync any pending data for the client
+        const today = new Date().toISOString().split('T')[0];
+        await syncDailyBillingToDynamoDB(clientId, today);
+
+        // Query DynamoDB for the date range
+        if (!dynamoDBConnectionStatus.isConnected) {
+            return res.status(503).json({ error: 'Database not available' });
+        }
+
+        const params = {
+            TableName: BILLING_TABLE_NAME,
+            KeyConditionExpression: 'clientId = :clientId AND #date BETWEEN :startDate AND :endDate',
+            ExpressionAttributeNames: {
+                '#date': 'date'
+            },
+            ExpressionAttributeValues: {
+                ':clientId': clientId,
+                ':startDate': startDate,
+                ':endDate': endDate
+            }
+        };
+
+        const command = new QueryCommand(params);
+        const result = await dynamodb.send(command);
+
+        res.json({
+            success: true,
+            clientId: clientId,
+            period: { startDate, endDate },
+            data: result.Items || [],
+            totalDays: result.Items ? result.Items.length : 0
+        });
+
+    } catch (error) {
+        console.error('Billing report error:', error);
+        res.status(500).json({ error: 'Failed to generate billing report' });
+    }
+});
+
+// Client analytics report endpoint
+app.post('/api/admin/analytics/generate-report', async (req, res) => {
+    if (!isAuthenticated(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        const { clientId, startDate, endDate } = req.body;
+
+        // First sync any pending data for the client
+        const today = new Date().toISOString().split('T')[0];
+        await syncDailyBillingToDynamoDB(clientId, today);
+
+        // Query DynamoDB for analytics data
+        if (!dynamoDBConnectionStatus.isConnected) {
+            return res.status(503).json({ error: 'Database not available' });
+        }
+
+        const params = {
+            TableName: BILLING_TABLE_NAME,
+            KeyConditionExpression: 'clientId = :clientId AND #date BETWEEN :startDate AND :endDate',
+            ExpressionAttributeNames: {
+                '#date': 'date'
+            },
+            ExpressionAttributeValues: {
+                ':clientId': clientId,
+                ':startDate': startDate,
+                ':endDate': endDate
+            }
+        };
+
+        const command = new QueryCommand(params);
+        const result = await dynamodb.send(command);
+
+        // Calculate analytics metrics
+        const analytics = calculateAnalyticsMetrics(result.Items || []);
+
+        res.json({
+            success: true,
+            clientId: clientId,
+            period: { startDate, endDate },
+            analytics: analytics,
+            rawData: result.Items || []
+        });
+
+    } catch (error) {
+        console.error('Analytics report error:', error);
+        res.status(500).json({ error: 'Failed to generate analytics report' });
+    }
+});
+
+function calculateAnalyticsMetrics(dailyData) {
+    const totals = dailyData.reduce((acc, day) => {
+        acc.clicks += day.clicks || 0;
+        acc.pageViews += day.pageViews || 0;
+        acc.sessions += day.sessions || 0;
+        acc.apiCalls += day.apiCalls || 0;
+        return acc;
+    }, { clicks: 0, pageViews: 0, sessions: 0, apiCalls: 0 });
+
+    return {
+        totals,
+        averages: {
+            clicksPerDay: dailyData.length ? (totals.clicks / dailyData.length).toFixed(2) : 0,
+            pageViewsPerDay: dailyData.length ? (totals.pageViews / dailyData.length).toFixed(2) : 0,
+            sessionsPerDay: dailyData.length ? (totals.sessions / dailyData.length).toFixed(2) : 0
+        },
+        conversionRate: totals.pageViews ? ((totals.clicks / totals.pageViews) * 100).toFixed(2) : 0,
+        totalDays: dailyData.length
+    };
+}
 
 app.get('/api/admin/api-key/:clientId', async (req, res) => {
   if (!isAuthenticated(req)) {
@@ -1181,20 +1472,26 @@ app.get('/api/admin/api-key/:clientId', async (req, res) => {
 
 // Cognito configuration endpoint
 app.get('/api/auth/cognito-config', (req, res) => {
-  if (USE_COGNITO && COGNITO_DOMAIN && COGNITO_CLIENT_ID) {
-    const hostedUIUrl = `https://${COGNITO_DOMAIN}.auth.${AWS_REGION}.amazoncognito.com/login?client_id=${COGNITO_CLIENT_ID}&response_type=code&scope=email+openid+profile&redirect_uri=${encodeURIComponent(COGNITO_REDIRECT_URI)}`;
+  if (USE_COGNITO && COGNITO_USER_POOL_ID) {
+    let hostedUIUrl = null;
+
+    if (COGNITO_DOMAIN && COGNITO_CLIENT_ID) {
+      hostedUIUrl = `https://${COGNITO_DOMAIN}/login?client_id=${COGNITO_CLIENT_ID}&response_type=code&scope=email+openid+profile&redirect_uri=${encodeURIComponent(COGNITO_REDIRECT_URI)}`;
+    }
 
     res.json({
       configured: true,
+      useDirectAuth: !!COGNITO_CLIENT_ID,
       useHostedUI: !!COGNITO_DOMAIN,
-      useDirectAuth: true,
       hostedUIUrl: hostedUIUrl,
-      clientId: COGNITO_CLIENT_ID
+      clientId: COGNITO_CLIENT_ID,
+      userPoolId: COGNITO_USER_POOL_ID,
+      region: COGNITO_REGION
     });
   } else {
     res.json({
       configured: false,
-      message: 'AWS Cognito is not configured'
+      message: 'AWS Cognito is not fully configured. Missing User Pool ID or Client ID.'
     });
   }
 });
@@ -1230,14 +1527,77 @@ app.get('/api/auth/cognito-callback', async (req, res) => {
     }
 });
 
-// Direct Cognito authentication endpoint
+// Test Cognito connection endpoint
+app.get('/api/debug/test-cognito', async (req, res) => {
+  try {
+    console.log('[DEBUG] Testing Cognito configuration...');
+
+    if (!cognitoClient) {
+      return res.json({
+        error: 'Cognito client not initialized',
+        config: {
+          USE_COGNITO,
+          COGNITO_USER_POOL_ID,
+          COGNITO_CLIENT_ID: COGNITO_CLIENT_ID ? 'Set' : 'Missing'
+        }
+      });
+    }
+
+    // Try to list users (tests connection and permissions)
+    const listParams = {
+      UserPoolId: COGNITO_USER_POOL_ID,
+      Limit: 1
+    };
+
+    const listCommand = new ListUsersCommand(listParams);
+    const result = await cognitoClient.send(listCommand);
+
+    res.json({
+      success: true,
+      message: 'Cognito connection successful',
+      config: {
+        userPoolId: COGNITO_USER_POOL_ID,
+        clientId: COGNITO_CLIENT_ID ? 'Configured' : 'Missing',
+        region: COGNITO_REGION
+      },
+      userCount: result.Users ? result.Users.length : 0,
+      users: result.Users ? result.Users.map(u => u.Username) : []
+    });
+
+  } catch (error) {
+    console.error('[DEBUG] Cognito test failed:', error);
+    res.json({
+      error: 'Cognito test failed',
+      message: error.message,
+      name: error.name,
+      config: {
+        USE_COGNITO,
+        COGNITO_USER_POOL_ID,
+        COGNITO_CLIENT_ID: COGNITO_CLIENT_ID ? 'Set' : 'Missing',
+        COGNITO_REGION
+      }
+    });
+  }
+});
+
 app.post('/api/auth/cognito-login', async (req, res) => {
-  if (!USE_COGNITO || !cognitoClient) {
-    return res.status(503).json({ error: 'Cognito authentication not configured' });
+  console.log('[COGNITO] Login attempt started');
+
+  if (!USE_COGNITO) {
+    return res.status(503).json({ error: 'Cognito not enabled' });
+  }
+
+  if (!cognitoClient) {
+    return res.status(503).json({ error: 'Cognito client not initialized' });
+  }
+
+  if (!COGNITO_CLIENT_ID) {
+    return res.status(503).json({ error: 'Cognito Client ID not configured' });
   }
 
   try {
     const { username, password } = req.body;
+    console.log(`[COGNITO] Attempting auth for: ${username}`);
 
     const authParams = {
       AuthFlow: 'USER_PASSWORD_AUTH',
@@ -1248,48 +1608,91 @@ app.post('/api/auth/cognito-login', async (req, res) => {
       }
     };
 
+    console.log('[COGNITO] Sending auth request to AWS...');
     const authCommand = new InitiateAuthCommand(authParams);
     const authResult = await cognitoClient.send(authCommand);
 
-    if (authResult.AuthenticationResult) {
-      // Get user details
-      const getUserCommand = new GetUserCommand({
-        AccessToken: authResult.AuthenticationResult.AccessToken
-      });
-      const userResult = await cognitoClient.send(getUserCommand);
+    console.log('[COGNITO] Raw auth result:', JSON.stringify(authResult, null, 2));
 
-      // Extract email from attributes
-      const emailAttr = userResult.UserAttributes.find(attr => attr.Name === 'email');
-      const email = emailAttr ? emailAttr.Value : `${username}@cognito.local`;
+    // Simple check for any authentication result
+    if (authResult && (authResult.AuthenticationResult || authResult.ChallengeName)) {
 
-      // Create session
+      if (authResult.ChallengeName) {
+        return res.status(400).json({
+          error: `Challenge required: ${authResult.ChallengeName}`,
+          challengeName: authResult.ChallengeName
+        });
+      }
+
+      // Create a simple session without token verification for now
       const sessionToken = generateToken();
       userSessions[sessionToken] = {
-        email,
+        email: `${username}@cognito.local`,
         username: username,
         role: 'admin',
         createdAt: new Date().toISOString(),
-        authMethod: 'cognito',
-        cognitoTokens: authResult.AuthenticationResult
+        authMethod: 'cognito'
       };
+
+      console.log(`[COGNITO] Session created successfully for ${username}`);
 
       res.json({
         success: true,
         sessionToken,
         user: {
-          username,
-          email,
+          username: username,
+          email: `${username}@cognito.local`,
           role: 'admin'
         }
       });
     } else {
-      throw new Error('Authentication failed');
+      console.log('[COGNITO] No authentication result received');
+      res.status(401).json({ error: 'No authentication result from Cognito' });
     }
   } catch (error) {
-    console.error('Cognito login error:', error);
-    res.status(401).json({ error: error.message || 'Invalid credentials' });
+    console.error('[COGNITO] Detailed error:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+
+    res.status(401).json({
+      error: error.message || 'Cognito authentication failed',
+      errorType: error.name
+    });
   }
 });
+
+// Token refresh endpoint for long-lived sessions
+app.post('/api/auth/refresh-token', async (req, res) => {
+  try {
+    const sessionToken = req.headers['x-session-token'];
+    const session = userSessions[sessionToken];
+
+    if (!session || session.authMethod !== 'cognito') {
+      return res.status(401).json({ error: 'Invalid session' });
+    }
+
+    // Check if token is still valid
+    const tokenExpiry = new Date(session.cognitoTokens.expiresAt);
+    const now = new Date();
+
+    if (now < tokenExpiry) {
+      // Token still valid
+      return res.json({ success: true, message: 'Token still valid' });
+    }
+
+    // Token expired, would need refresh token implementation
+    // For now, require re-login
+    delete userSessions[sessionToken];
+    res.status(401).json({ error: 'Session expired, please login again' });
+
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({ error: 'Token refresh failed' });
+  }
+});
+
 
 // 4. Update the generate API key endpoint to support regeneration
 app.post('/api/admin/generate-api-key', async (req, res) => {
@@ -1588,47 +1991,54 @@ app.get('/api/admin/dashboard', async (req, res) => {
       last30Days.push(dateKey);
     }
 
-    // Aggregate client metrics with revenue calculations
-    const clientSummary = Object.entries(clientTracking).map(([clientId, data]) => {
-      const last7DaysMetrics = { loads: 0, clicks: 0, apiCalls: 0 };
-      const last30DaysMetrics = { loads: 0, clicks: 0, apiCalls: 0 };
+// Aggregate client metrics
+const clientSummary = Object.entries(clientTracking).map(([clientId, data]) => {
+  const last7DaysMetrics = { loads: 0, clicks: 0, apiCalls: 0, sessions: 0 };
+  const last30DaysMetrics = { loads: 0, clicks: 0, apiCalls: 0, sessions: 0 };
 
-      last7Days.forEach(date => {
-        if (data.metrics.daily[date]) {
-          last7DaysMetrics.loads += data.metrics.daily[date].loads;
-          last7DaysMetrics.clicks += data.metrics.daily[date].clicks;
-          last7DaysMetrics.apiCalls += data.metrics.daily[date].apiCalls;
-        }
-      });
+  last7Days.forEach(date => {
+    if (data.metrics.daily[date]) {
+      last7DaysMetrics.loads += data.metrics.daily[date].loads;
+      last7DaysMetrics.clicks += data.metrics.daily[date].clicks;
+      last7DaysMetrics.apiCalls += data.metrics.daily[date].apiCalls;
+      last7DaysMetrics.sessions += data.metrics.daily[date].sessions ? data.metrics.daily[date].sessions.size : 0;
+    }
+  });
 
-      last30Days.forEach(date => {
-        if (data.metrics.daily[date]) {
-          last30DaysMetrics.loads += data.metrics.daily[date].loads;
-          last30DaysMetrics.clicks += data.metrics.daily[date].clicks;
-          last30DaysMetrics.apiCalls += data.metrics.daily[date].apiCalls;
-        }
-      });
+  last30Days.forEach(date => {
+    if (data.metrics.daily[date]) {
+      last30DaysMetrics.loads += data.metrics.daily[date].loads;
+      last30DaysMetrics.clicks += data.metrics.daily[date].clicks;
+      last30DaysMetrics.apiCalls += data.metrics.daily[date].apiCalls;
+      last30DaysMetrics.sessions += data.metrics.daily[date].sessions ? data.metrics.daily[date].sessions.size : 0;
+    }
+  });
 
-      return {
-        clientId,
-        name: data.name,
-        domain: data.domain,
-        utm_source: data.utm_source,
-        utm_medium: data.utm_medium,
-        utm_campaign: data.utm_campaign,
-        firstSeen: data.firstSeen,
-        lastSeen: data.lastSeen,
-        metrics: data.metrics, // Include full metrics for detailed view
-        totalMetrics: {
-          loads: data.metrics.totalLoads,
-          clicks: data.metrics.totalClicks,
-          apiCalls: data.metrics.totalApiCalls
-        },
-        last7Days: last7DaysMetrics,
-        last30Days: last30DaysMetrics,
-        todayMetrics: data.metrics.daily[today] || { loads: 0, clicks: 0, apiCalls: 0 }
-      };
-    });
+  return {
+    clientId,
+    name: data.name,
+    domain: data.domain,
+    utm_source: data.utm_source,
+    utm_medium: data.utm_medium,
+    utm_campaign: data.utm_campaign,
+    firstSeen: data.firstSeen,
+    lastSeen: data.lastSeen,
+    totalMetrics: {
+      loads: data.metrics.totalLoads,
+      clicks: data.metrics.totalClicks,
+      apiCalls: data.metrics.totalApiCalls,
+      sessions: data.metrics.totalSessions
+    },
+    last7Days: last7DaysMetrics,
+    last30Days: last30DaysMetrics,
+    todayMetrics: {
+      loads: data.metrics.daily[today]?.loads || 0,
+      clicks: data.metrics.daily[today]?.clicks || 0,
+      apiCalls: data.metrics.daily[today]?.apiCalls || 0,
+      sessions: data.metrics.daily[today]?.sessions ? data.metrics.daily[today].sessions.size : 0
+    }
+  };
+});
 
     // Sort by total usage
     clientSummary.sort((a, b) =>
@@ -1876,7 +2286,20 @@ app.get('/api/admin/metrics/:clientId', async (req, res) => {
 // Enhanced tracking endpoint for beacon API (for reliable tracking on page unload)
 app.post('/api/track/beacon', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
-    const data = JSON.parse(req.body.toString());
+   let data;
+   try {
+       // Handle different content types
+       if (typeof req.body === 'string') {
+           data = JSON.parse(req.body);
+       } else if (Buffer.isBuffer(req.body)) {
+           data = JSON.parse(req.body.toString());
+       } else {
+           data = req.body; // Already parsed
+       }
+   } catch (parseError) {
+       console.error('Failed to parse beacon data:', parseError);
+       return res.status(400).json({ error: 'Invalid JSON data' });
+   }
 
     // Extract tracking data
     const { eventType, sessionId, clientId, clientName, timestamp, data: eventData } = data;
@@ -2367,41 +2790,38 @@ async function initializeServer() {
 }
 
 
-// Main page with UTM tracking
 app.get('/', (req, res) => {
-
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
 
-  // Track page load
-  const clientInfo = getClientFromRequest(req);
+    const clientInfo = getClientFromRequest(req);
+    console.log(`[PAGE LOAD] Tracking page load for client: ${clientInfo.baseClientId}, session: ${clientInfo.sessionId}`);
 
-  // Skip tracking for localhost if configured
-  if (clientInfo && !clientInfo.isLocalhost) {
     trackClientUsage(clientInfo, 'load', {
-      userAgent: clientInfo.userAgent,
-      ipAddress: clientInfo.ipAddress
+        userAgent: clientInfo.userAgent,
+        ipAddress: clientInfo.ipAddress,
+        url: req.url,
+        timestamp: new Date().toISOString()
     });
-  }
 
-  trackClientUsage(clientInfo, 'load');
+    const htmlPath = path.join(__dirname, 'index.html');
 
-  const htmlPath = path.join(__dirname, 'index.html');
+    fs.readFile(htmlPath, 'utf8', (err, html) => {
+        if (err) {
+            console.error('Error reading HTML file:', err);
+            return res.status(404).send('HTML file not found');
+        }
 
-  fs.readFile(htmlPath, 'utf8', (err, html) => {
-    if (err) {
-      console.error('Error reading HTML file:', err);
-      return res.status(404).send('HTML file not found');
-    }
+        // Replace allJobsData initialization
+        const allJobsDataPattern = /let\s+allJobsData\s*=\s*\[\s*\];/;
+        if (html.match(allJobsDataPattern)) {
+            html = html.replace(allJobsDataPattern, 'window.allJobsData = [];');
+        }
 
-    // Replace allJobsData initialization
-    const allJobsDataPattern = /let\s+allJobsData\s*=\s*\[\s*\];/;
-    if (html.match(allJobsDataPattern)) {
-      html = html.replace(allJobsDataPattern, 'window.allJobsData = [];');
-    }
+        // Remove any existing integration scripts that might call /api/jobs
+        html = html.replace(/\/api\/jobs(?!-)/g, '/api/bmj-careers-jobs-api');
 
-// Critical CSS inline, defer non-critical
 const criticalCSS = `
 <style>
 /* Only critical above-the-fold styles */
@@ -2500,151 +2920,192 @@ html = html.replace('</head>', criticalCSS + deferredCSS + '</head>');
         };
         `;
 
-  // Enhanced integration script with click tracking
-  const integrationScript = `
-  // BMJ Careers API Integration - Fixed Version
-  (function() {
-      'use strict';
+        const integrationScript = `
+        // BMJ Careers Direct API Integration - v2.0
+        (function() {
+            'use strict';
 
-      console.log('Starting BMJ Careers integration...');
+            console.log('BMJ Careers Direct API Integration starting...');
 
-      // Show loading immediately
-      const showLoading = () => {
-          const overlay = document.getElementById('loadingOverlay');
-          if (overlay) {
-              overlay.style.display = 'flex';
-              console.log('Loading overlay shown');
-          }
-      };
+            let isLoading = false;
+            let jobsLoadPromise = null;
 
-      const hideLoading = () => {
-          const overlay = document.getElementById('loadingOverlay');
-          if (overlay) {
-              overlay.style.display = 'none';
-              console.log('Loading overlay hidden');
-          }
-      };
+            const showLoading = () => {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) overlay.style.display = 'flex';
+            };
 
-      // Enhanced job loading function
-      function loadJobsFromAPI() {
-          console.log('Loading jobs from API...');
-          showLoading();
+            const hideLoading = () => {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) overlay.style.display = 'none';
+            };
 
-          const startTime = Date.now();
+            // Direct API call to bmj-careers-jobs-api
+            function loadJobsDirectly(forceRefresh = false) {
+                if (isLoading && !forceRefresh) {
+                    return jobsLoadPromise;
+                }
 
-          return fetch('/api/jobs', {
-              method: 'GET',
-              credentials: 'same-origin',
-              headers: {
-                  'Accept': 'application/json',
-                  'Content-Type': 'application/json'
-              }
-          })
-          .then(response => {
-              console.log('API Response status:', response.status);
-              if (!response.ok) {
-                  throw new Error('HTTP ' + response.status + ': ' + response.statusText);
-              }
-              return response.json();
-          })
-          .then(data => {
-              const loadTime = Date.now() - startTime;
-              console.log('Jobs loaded in ' + loadTime + 'ms:', data);
+                isLoading = true;
+                showLoading();
 
-              if (data && data.jobs && Array.isArray(data.jobs)) {
-                  window.allJobsData = data.jobs;
-                  console.log('Set window.allJobsData with ' + data.jobs.length + ' jobs');
+                const apiUrl = '/api/bmj-careers-jobs-api' + (forceRefresh ? '?refresh=true' : '');
 
-                  // Initialize app immediately
-                  if (typeof window.initApp === 'function') {
-                      console.log('Calling initApp...');
-                      window.initApp();
-                  } else {
-                      console.error('initApp function not found');
-                      // Try calling it after a short delay
-                      setTimeout(() => {
-                          if (typeof window.initApp === 'function') {
-                              console.log('Calling initApp after delay...');
-                              window.initApp();
-                          }
-                      }, 100);
-                  }
+                jobsLoadPromise = fetch(apiUrl, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(\`BMJ Careers Jobs API error: \${response.status} \${response.statusText}\`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('BMJ Careers Jobs API successful:', {
+                        total: data.total,
+                        source: data.source,
+                        fromCache: data.fromCache
+                    });
 
-                  // Dispatch custom event
-                  window.dispatchEvent(new CustomEvent('jobsDataLoaded', {
-                      detail: { jobs: data.jobs, count: data.jobs.length }
-                  }));
+                    if (!data.success || !Array.isArray(data.jobs)) {
+                        throw new Error('Invalid response format from BMJ Careers Jobs API');
+                    }
 
-                  return data;
-              } else {
-                  throw new Error('Invalid data structure received from API');
-              }
-          })
-          .catch(error => {
-              console.error('Failed to load jobs:', error);
+                    // Set global data
+                    window.allJobsData = data.jobs;
+                    window.jobsApiMetadata = {
+                        source: data.source,
+                        total: data.total,
+                        newJobs: data.newJobsCount,
+                        updatedJobs: data.updatedJobsCount,
+                        lastFetch: data.lastFetch,
+                        fromCache: data.fromCache
+                    };
 
-              // Initialize with empty data to show the interface
-              window.allJobsData = [];
-              if (typeof window.initApp === 'function') {
-                  window.initApp();
-              }
+                    // Initialize app
+                    if (typeof window.initApp === 'function') {
+                        window.initApp();
+                    }
 
-              // Show error message
-              const jobsList = document.getElementById('jobsList');
-              if (jobsList) {
-                  jobsList.innerHTML = '<div class="no-jobs-message" style="text-align: center; padding: 2rem; color: #e74c3c;"><h3>Unable to load jobs</h3><p>Error: ' + error.message + '</p><button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry</button></div>';
-              }
+                    // Dispatch loaded event
+                    window.dispatchEvent(new CustomEvent('jobsDataLoaded', {
+                        detail: { jobs: data.jobs, count: data.jobs.length, metadata: window.jobsApiMetadata }
+                    }));
 
-              throw error;
-          })
-          .finally(() => {
-              hideLoading();
-          });
-      }
+                    return data;
+                })
+                .catch(error => {
+                    console.error('BMJ Careers Jobs API failed:', error);
 
-      // Enhanced initialization
-      function initializeWidget() {
-          console.log('Initializing widget...');
-          console.log('Document ready state:', document.readyState);
+                    // Fallback: Try to get data directly from XML feed
+                    return fetch('/api/bmj-careers-xml-fallback')
+                        .then(response => response.json())
+                        .then(fallbackData => {
+                            if (fallbackData.success && fallbackData.jobs) {
+                                window.allJobsData = fallbackData.jobs;
+                                if (typeof window.initApp === 'function') {
+                                    window.initApp();
+                                }
+                                console.log('Fallback XML data loaded:', fallbackData.jobs.length, 'jobs');
+                                return fallbackData;
+                            }
+                            throw new Error('Both API and XML fallback failed');
+                        })
+                        .catch(fallbackError => {
+                            console.error('Complete failure:', fallbackError);
+                            window.allJobsData = [];
+                            if (typeof window.initApp === 'function') {
+                                window.initApp();
+                            }
 
-          // Check if DOM is ready
-          if (document.readyState === 'loading') {
-              console.log('Waiting for DOM to load...');
-              document.addEventListener('DOMContentLoaded', () => {
-                  console.log('DOM loaded, starting job load...');
-                  setTimeout(loadJobsFromAPI, 100);
-              });
-          } else {
-              console.log('DOM already loaded, starting job load immediately...');
-              setTimeout(loadJobsFromAPI, 100);
-          }
-      }
+                            const jobsList = document.getElementById('jobsList');
+                            if (jobsList) {
+                                jobsList.innerHTML = \`
+                                    <div style="text-align: center; padding: 2rem; color: #e74c3c;">
+                                        <h3>Unable to load jobs</h3>
+                                        <p>Both primary API and fallback failed</p>
+                                        <button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry</button>
+                                    </div>
+                                \`;
+                            }
+                            throw fallbackError;
+                        });
+                })
+                .finally(() => {
+                    isLoading = false;
+                    hideLoading();
+                });
 
-      // Expose functions globally
-      window.loadJobsFromAPI = loadJobsFromAPI;
-      window.refreshJobs = function() {
-          console.log('Manual refresh triggered');
-          return fetch('/api/jobs/refresh', { method: 'POST' })
-              .then(response => response.json())
-              .then(() => loadJobsFromAPI())
-              .catch(console.error);
-      };
+                return jobsLoadPromise;
+            }
 
-      // Start initialization
-      initializeWidget();
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => loadJobsDirectly());
+            } else {
+                loadJobsDirectly();
+            }
 
-  })();
-  `;
+// Expose refresh function
+window.refreshJobs = () => loadJobsDirectly(true);
 
+// Enhanced job application tracking
+window.applyToJob = function(jobId) {
+    const job = window.allJobsData.find(j => j.id == jobId);
+    if (!job) return;
 
-    // Insert integration script before closing </script> tag
-    const lastScriptIndex = html.lastIndexOf('</script>');
-    if (lastScriptIndex !== -1) {
-      html = html.slice(0, lastScriptIndex) + integrationScript + html.slice(lastScriptIndex);
+    // Get client tracking info
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get('utm_source') || window.location.hostname || 'direct';
+    const sessionId = sessionStorage.getItem('bmj_session_id') ||
+                     'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+    if (!sessionStorage.getItem('bmj_session_id')) {
+        sessionStorage.setItem('bmj_session_id', sessionId);
     }
 
+    console.log('[CLICK TRACKING] Sending click tracking data...', { jobId, clientId, sessionId });
 
-// Add this script before closing </body>
+    // Track the click before redirecting
+    fetch('/api/track/click', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            jobId: jobId,
+            jobTitle: job.job_title,
+            clientId: clientId,
+            sessionId: sessionId,
+            timestamp: new Date().toISOString()
+        })
+    }).then(response => response.json())
+      .then(data => {
+        console.log('[CLICK TRACKING] Success:', data);
+      })
+      .catch(err => {
+        console.error('[CLICK TRACKING] Failed:', err);
+      });
+
+    // Open job URL
+    window.open(job.job_url, '_blank');
+};
+
+console.log('BMJ Careers Direct API Integration initialized');
+})();
+`;
+
+        // Insert the new integration script
+        const lastScriptIndex = html.lastIndexOf('</script>');
+        if (lastScriptIndex !== -1) {
+            html = html.slice(0, lastScriptIndex) + integrationScript + html.slice(lastScriptIndex);
+        }
+
 const showContentScript = `
 <script>
 // Show content immediately when DOM is ready
@@ -2661,24 +3122,186 @@ setTimeout(function() {
 
 html = html.replace('</body>', showContentScript + '</body>');
 
-    res.send(html);
-  });
+        res.send(html);
+    });
 });
 
-// Click tracking endpoint
+
+// ========================================================================
+// REAL-TIME UPDATES FOR ADMIN CONSOLE
+// ========================================================================
+
+// Store active admin connections for real-time updates
+let activeAdminConnections = new Map();
+
+// Server-Sent Events endpoint for real-time updates
+app.get('/api/admin/stream', async (req, res) => {
+    if (!isAuthenticated(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Set up SSE headers
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    const connectionId = Date.now().toString();
+    activeAdminConnections.set(connectionId, res);
+
+    console.log(`[SSE] Admin connection established: ${connectionId}`);
+
+    // Send initial data
+    const initialData = generateRealTimeUpdate();
+    res.write(`data: ${JSON.stringify(initialData)}\n\n`);
+
+    // Clean up on disconnect
+    req.on('close', () => {
+        activeAdminConnections.delete(connectionId);
+        console.log(`[SSE] Admin connection closed: ${connectionId}`);
+    });
+
+    req.on('aborted', () => {
+        activeAdminConnections.delete(connectionId);
+    });
+});
+
+// Generate real-time update data
+function generateRealTimeUpdate() {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Calculate totals for today
+    const todayTotals = Object.values(clientTracking).reduce((acc, client) => {
+        const todayMetrics = client.metrics?.daily?.[today] || {};
+        acc.pageViews += todayMetrics.loads || 0;
+        acc.clicks += todayMetrics.clicks || 0;
+        acc.sessions += todayMetrics.sessions ? todayMetrics.sessions.size : 0;
+        acc.apiCalls += todayMetrics.apiCalls || 0;
+        return acc;
+    }, { pageViews: 0, clicks: 0, sessions: 0, apiCalls: 0 });
+
+    // Client data for dashboard
+    const clientData = Object.entries(clientTracking).map(([clientId, data]) => ({
+        clientId,
+        name: data.name,
+        domain: data.domain,
+        lastSeen: data.lastSeen,
+        totalMetrics: {
+            pageViews: data.metrics?.totalLoads || 0,
+            clicks: data.metrics?.totalClicks || 0,
+            sessions: data.metrics?.totalSessions || 0,
+            apiCalls: data.metrics?.totalApiCalls || 0
+        },
+        todayMetrics: {
+            pageViews: data.metrics?.daily?.[today]?.loads || 0,
+            clicks: data.metrics?.daily?.[today]?.clicks || 0,
+            sessions: data.metrics?.daily?.[today]?.sessions ? data.metrics?.daily?.[today]?.sessions.size : 0,
+            apiCalls: data.metrics?.daily?.[today]?.apiCalls || 0
+        }
+    }));
+
+    return {
+        type: 'dashboard_update',
+        timestamp: new Date().toISOString(),
+        todayTotals,
+        clients: clientData,
+        activeClients: clientData.filter(c =>
+            new Date() - new Date(c.lastSeen) < 5 * 60 * 1000 // Active in last 5 minutes
+        ).length
+    };
+}
+
+// Broadcast updates to all connected admin consoles
+function broadcastToAdminConsoles(data) {
+    activeAdminConnections.forEach((res, connectionId) => {
+        try {
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        } catch (error) {
+            console.error(`[SSE] Failed to send to ${connectionId}:`, error);
+            activeAdminConnections.delete(connectionId);
+        }
+    });
+}
+
+// Send real-time updates every 5 seconds
+setInterval(() => {
+    if (activeAdminConnections.size > 0) {
+        const updateData = generateRealTimeUpdate();
+        broadcastToAdminConsoles(updateData);
+    }
+}, 5000); // Update every 5 seconds
+
+
+// XML Fallback endpoint - Direct XML to JSON conversion
+app.get('/api/bmj-careers-xml-fallback', async (req, res) => {
+  try {
+    console.log('XML Fallback endpoint called');
+
+    // Direct fetch from BMJ XML feed
+    const xmlJobs = await fetchJobsFromBMJFeed();
+
+    res.json({
+      success: true,
+      jobs: xmlJobs,
+      total: xmlJobs.length,
+      source: 'xml_direct_fallback',
+      timestamp: new Date().toISOString(),
+      message: 'Data loaded directly from XML feed as fallback'
+    });
+
+  } catch (error) {
+    console.error('XML Fallback failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'XML Fallback failed',
+      message: error.message,
+      jobs: [],
+      total: 0
+    });
+  }
+});
+
+// Enhanced click tracking endpoint that actually works
 app.post('/api/track/click', async (req, res) => {
   try {
-    const clientInfo = getClientFromRequest(req);
-    const { jobId, jobTitle } = req.body;
+    const { jobId, jobTitle, clientId, sessionId } = req.body;
 
-    trackClientUsage(clientInfo, 'click', { jobId, jobTitle });
+    console.log(`[CLICK TRACKING] Job click detected - Client: ${clientId}, Job: ${jobId}`);
 
-    res.json({ success: true });
+    // Get client info from request
+    const clientInfo = {
+      clientId: clientId || 'unknown',
+      baseClientId: clientId || 'unknown',
+      sessionId: sessionId || `session_${Date.now()}`,
+      utm_source: clientId || 'direct',
+      utm_medium: 'widget',
+      utm_campaign: 'job_application',
+      referer: req.headers.referer || 'embedded'
+    };
+
+    // Track the click
+    trackClientUsage(clientInfo, 'click', {
+      jobId,
+      jobTitle,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Click tracked successfully',
+      clientId: clientId,
+      totalClicks: clientTracking[clientId]?.metrics?.totalClicks || 1
+    });
+
   } catch (error) {
-    console.error('Error tracking click:', error);
+    console.error('Click tracking error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
 
 // Time tracking endpoint
 app.post('/api/track/time', async (req, res) => {
@@ -2754,6 +3377,693 @@ app.post('/api/auth/register', async (req, res) => {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Registration failed' });
   }
+});
+
+// Add this endpoint in server.js
+app.get('/api/admin/enhanced-tracking', async (req, res) => {
+    if (!isAuthenticated(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        const enhancedSessions = Object.values(clientTracking)
+            .filter(session => session.realTimeData)
+            .map(session => ({
+                clientId: session.clientId,
+                clientName: session.clientName,
+                sessionId: session.sessionId,
+                realTimeData: session.realTimeData,
+                billingMetrics: session.billingMetrics,
+                lastActivity: session.lastActivity
+            }));
+
+        res.json({
+            success: true,
+            sessions: enhancedSessions
+        });
+    } catch (error) {
+        console.error('Enhanced tracking retrieval error:', error);
+        res.status(500).json({ error: 'Failed to get enhanced tracking data' });
+    }
+});
+
+// Add these endpoints in server.js
+
+app.post('/api/admin/jobs/search', async (req, res) => {
+    if (!isAuthenticated(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!dynamoDBConnectionStatus.isConnected) {
+        return res.status(503).json({ error: 'DynamoDB not available' });
+    }
+
+    try {
+        const { searchTerm, searchField } = req.body;
+
+        let params = {
+            TableName: TABLE_NAME,
+            FilterExpression: 'attribute_exists(job_title)'
+        };
+
+        if (searchField === 'id') {
+            params.FilterExpression += ' AND id = :searchTerm';
+            params.ExpressionAttributeValues = {
+                ':searchTerm': parseInt(searchTerm)
+            };
+        } else {
+            params.FilterExpression += ` AND contains(#field, :searchTerm)`;
+            params.ExpressionAttributeNames = {
+                '#field': searchField
+            };
+            params.ExpressionAttributeValues = {
+                ':searchTerm': searchTerm
+            };
+        }
+
+        const command = new ScanCommand(params);
+        const result = await dynamodb.send(command);
+
+        res.json({
+            success: true,
+            jobs: result.Items || []
+        });
+    } catch (error) {
+        console.error('Job search error:', error);
+        res.status(500).json({ error: 'Search failed' });
+    }
+});
+
+app.post('/api/admin/jobs/update', async (req, res) => {
+    if (!isAuthenticated(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!dynamoDBConnectionStatus.isConnected) {
+        return res.status(503).json({ error: 'DynamoDB not available' });
+    }
+
+    try {
+        const { jobId, updates } = req.body;
+
+        // Build update expression
+        const updateExpressions = [];
+        const expressionAttributeValues = {};
+        const expressionAttributeNames = {};
+
+        Object.entries(updates).forEach(([key, value], index) => {
+            const placeholder = `:val${index}`;
+            const namePlaceholder = `#field${index}`;
+            updateExpressions.push(`${namePlaceholder} = ${placeholder}`);
+            expressionAttributeValues[placeholder] = value;
+            expressionAttributeNames[namePlaceholder] = key;
+        });
+
+        const params = {
+            TableName: TABLE_NAME,
+            Key: { id: jobId },
+            UpdateExpression: `SET ${updateExpressions.join(', ')}, modified_date = :modDate`,
+            ExpressionAttributeValues: {
+                ...expressionAttributeValues,
+                ':modDate': new Date().toISOString()
+            },
+            ExpressionAttributeNames: expressionAttributeNames
+        };
+
+        const command = new UpdateCommand(params);
+        await dynamodb.send(command);
+
+        res.json({
+            success: true,
+            message: 'Job updated successfully'
+        });
+    } catch (error) {
+        console.error('Job update error:', error);
+        res.status(500).json({ error: 'Update failed' });
+    }
+});
+
+// Add this endpoint in server.js
+
+app.post('/api/admin/billing/clicks', async (req, res) => {
+    if (!isAuthenticated(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        const { clientId, month } = req.body;
+        const [year, monthNum] = month.split('-').map(Number);
+
+        const startDate = new Date(year, monthNum - 1, 1);
+        const endDate = new Date(year, monthNum, 0, 23, 59, 59);
+
+        // Collect all click events for the client in the specified month
+        const clicks = [];
+
+        // Check enhanced tracking data first
+        Object.values(clientTracking).forEach(session => {
+            if (session.clientId === clientId && session.events) {
+                session.events.forEach(event => {
+                    if (event.billable && event.event === 'job_click') {
+                        const eventDate = new Date(event.timestamp);
+                        if (eventDate >= startDate && eventDate <= endDate) {
+                            clicks.push({
+                                jobId: event.data?.jobId || 'unknown',
+                                jobTitle: event.data?.jobTitle || 'Unknown Job',
+                                location: event.data?.location || 'Unknown',
+                                timestamp: event.timestamp
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+        // Also check regular tracking
+        const client = clientTracking[clientId];
+        if (client && client.clickDetails) {
+            client.clickDetails.forEach(click => {
+                const clickDate = new Date(click.timestamp);
+                if (clickDate >= startDate && clickDate <= endDate) {
+                    clicks.push(click);
+                }
+            });
+        }
+
+        res.json({
+            success: true,
+            clientName: client?.name || clientId,
+            clicks: clicks,
+            period: { start: startDate, end: endDate }
+        });
+
+    } catch (error) {
+        console.error('Billing clicks error:', error);
+        res.status(500).json({ error: 'Failed to get billing clicks' });
+    }
+});
+
+// Add this authentication middleware function if you don't have one already
+const authenticateAdmin = (req, res, next) => {
+    const sessionToken = req.headers['x-session-token'];
+
+    // Simple validation - enhance based on your needs
+    if (!sessionToken) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // You can add more validation here if needed
+    // For now, just checking if token exists
+    next();
+};
+
+// In your server API routes, add:
+app.post('/api/track/event', async (req, res) => {
+    const { eventType, clientId, sessionId, data } = req.body;
+
+    // Store in database or memory
+    if (eventType === 'job_click') {
+        // Update click count in your database
+        await updateClientClicks(clientId, sessionId);
+
+        // Broadcast to admin console via WebSocket or SSE
+        broadcast({
+            type: 'tracking-update',
+            clientId: clientId,
+            event: 'job_click',
+            data: data
+        });
+    }
+
+    res.json({ success: true });
+});
+
+// Real-time metrics endpoint
+app.get('/api/admin/realtime-metrics', authenticateAdmin, async (req, res) => {
+    try {
+        // Get real-time metrics from your tracking collection
+        const metrics = [];
+
+        // Aggregate metrics for each client
+        const clientEntries = Object.entries(clientTracking);
+        for (const client of Object.values(clientTracking) || []) {
+            const clientMetrics = {
+                clientId: client.client_id,
+                totalLoads: 0,
+                totalClicks: 0,
+                todayLoads: 0,
+                todayClicks: 0
+            };
+
+            // Calculate metrics from tracking data
+            const today = new Date().toISOString().split('T')[0];
+
+            Object.values(clientTracking).forEach(session => {
+                            if (session.clientId === clientId) {
+                                clientMetrics.totalLoads += session.metrics?.totalLoads || 0;
+                                clientMetrics.totalClicks += session.metrics?.totalClicks || 0;
+
+                                // Check if session is from today
+                                const todayMetrics = session.metrics?.daily?.[today] || {};
+                                clientMetrics.todayLoads += todayMetrics.loads || 0;
+                                clientMetrics.todayClicks += todayMetrics.clicks || 0;
+                            }
+                        });
+
+            metrics.push(clientMetrics);
+        }
+
+        res.json({ metrics });
+    } catch (error) {
+        console.error('Realtime metrics error:', error);
+        res.status(500).json({ error: 'Failed to fetch metrics' });
+    }
+});
+
+// Client data status check
+app.get('/api/admin/client-data/status', authenticateAdmin, async (req, res) => {
+    try {
+        // Check if DynamoDB table exists
+        if (dynamoDB) {
+            const params = {
+                TableName: 'BMJCareersClientData' // Your table name
+            };
+
+            try {
+                await dynamoDB.describeTable(params).promise();
+                res.json({ tableExists: true });
+            } catch (error) {
+                if (error.code === 'ResourceNotFoundException') {
+                    res.json({ tableExists: false });
+                } else {
+                    throw error;
+                }
+            }
+        } else {
+            res.json({ tableExists: false });
+        }
+    } catch (error) {
+        console.error('Client data status error:', error);
+        res.status(500).json({ error: 'Failed to check status' });
+    }
+});
+
+// Generate client usage report
+app.post('/api/admin/client-data/report', authenticateAdmin, async (req, res) => {
+    try {
+        const { clientId, reportType, startDate, endDate } = req.body;
+
+        // Initialize report data
+        const report = {
+            clientName: clientId ? Object.values(clientTracking)?.find(c => c.client_id === clientId)?.name : 'All Clients',
+            period: `${startDate} to ${endDate}`,
+            totalViews: 0,
+            totalClicks: 0,
+            totalRevenue: 0,
+            dailyData: []
+        };
+
+        // Generate daily data
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+
+            // Get data for this date
+            let dayViews = 0;
+            let dayClicks = 0;
+
+            Object.values(clientTracking || {}).forEach(session => {
+                if ((!clientId || session.client_id === clientId) &&
+                    session.date && session.date.startsWith(dateStr)) {
+                    dayViews += session.pageViews || 0;
+                    dayClicks += session.jobClicks || 0;
+                }
+            });
+
+            const dayRevenue = (dayViews * 0.02) + (dayClicks * 0.50);
+
+            report.dailyData.push({
+                date: dateStr,
+                clientName: report.clientName,
+                views: dayViews,
+                clicks: dayClicks,
+                revenue: dayRevenue
+            });
+
+            report.totalViews += dayViews;
+            report.totalClicks += dayClicks;
+            report.totalRevenue += dayRevenue;
+        }
+
+        res.json(report);
+    } catch (error) {
+        console.error('Report generation error:', error);
+        res.status(500).json({ error: 'Failed to generate report' });
+    }
+});
+
+// Update job in DynamoDB
+app.post('/api/admin/jobs/update-dynamo', authenticateAdmin, async (req, res) => {
+    try {
+        const { jobId, updates } = req.body;
+
+        if (!dynamoDB) {
+            return res.status(503).json({ error: 'DynamoDB not configured' });
+        }
+
+        // Build update expression
+        const updateExpressions = [];
+        const expressionAttributeNames = {};
+        const expressionAttributeValues = {};
+
+        Object.keys(updates).forEach((key, index) => {
+            const placeholder = `#field${index}`;
+            const valuePlaceholder = `:value${index}`;
+
+            updateExpressions.push(`${placeholder} = ${valuePlaceholder}`);
+            expressionAttributeNames[placeholder] = key;
+            expressionAttributeValues[valuePlaceholder] = updates[key];
+        });
+
+        const params = {
+            TableName: process.env.DYNAMO_TABLE_NAME || 'BMJCareersJobs',
+            Key: { id: jobId },
+            UpdateExpression: `SET ${updateExpressions.join(', ')}, updated_at = :timestamp`,
+            ExpressionAttributeNames: expressionAttributeNames,
+            ExpressionAttributeValues: {
+                ...expressionAttributeValues,
+                ':timestamp': new Date().toISOString()
+            }
+        };
+
+        await dynamoDB.update(params).promise();
+
+        // Clear cache to reflect changes
+        jobsCache = null;
+
+        res.json({ success: true, message: 'Job updated in DynamoDB' });
+    } catch (error) {
+        console.error('DynamoDB update error:', error);
+        res.status(500).json({ error: 'Failed to update job' });
+    }
+});
+
+// Search jobs locally (works without DynamoDB)
+app.post('/api/admin/jobs/search', authenticateAdmin, async (req, res) => {
+    try {
+        const { searchTerm, searchField } = req.body;
+
+        // Get jobs from cache or XML
+        let jobs = [];
+
+        if (jobsCache && jobsCache.jobs) {
+            jobs = jobsCache.jobs;
+        } else {
+            // Try to fetch from XML
+            const xmlJobs = await fetchAndParseXML();
+            if (xmlJobs) {
+                jobs = xmlJobs.jobs || [];
+            }
+        }
+
+        // Filter jobs based on search
+        const filteredJobs = jobs.filter(job => {
+            const value = job[searchField];
+            if (!value) return false;
+            return value.toString().toLowerCase().includes(searchTerm.toLowerCase());
+        });
+
+        res.json({
+            jobs: filteredJobs.slice(0, 50), // Limit to 50 results
+            total: filteredJobs.length
+        });
+    } catch (error) {
+        console.error('Job search error:', error);
+        res.status(500).json({ error: 'Search failed' });
+    }
+});
+
+// Enhanced tracking data collection endpoint
+app.post('/api/admin/enhanced-tracking', authenticateAdmin, async (req, res) => {
+    try {
+        const enhancedData = {
+            sessions: []
+        };
+
+        // Collect enhanced metrics for each client
+        Object.values(clientTracking)?.forEach(client => {
+            const clientSessions = Object.values(clientTracking || {})
+                .filter(s => s.client_id === client.client_id);
+
+            const realTimeData = {
+                jobClicks: 0,
+                billableEvents: 0
+            };
+
+            clientSessions.forEach(session => {
+                realTimeData.jobClicks += session.jobClicks || 0;
+                realTimeData.billableEvents += session.billableEvents || 0;
+            });
+
+            enhancedData.sessions.push({
+                clientId: client.client_id,
+                clientName: client.name,
+                realTimeData,
+                billingMetrics: {
+                    totalClicks: realTimeData.jobClicks,
+                    clickRevenue: realTimeData.jobClicks * 0.50
+                }
+            });
+        });
+
+        res.json(enhancedData);
+    } catch (error) {
+        console.error('Enhanced tracking error:', error);
+        res.status(500).json({ error: 'Failed to get enhanced tracking' });
+    }
+});
+
+// Billing clicks data endpoint
+app.post('/api/admin/billing/clicks', authenticateAdmin, async (req, res) => {
+    try {
+        const { clientId, month } = req.body;
+        const [year, monthNum] = month.split('-').map(Number);
+
+        // Find client
+        const client = Object.values(clientTracking)?.find(c => c.client_id === clientId);
+        if (!client) {
+            return res.status(404).json({ error: 'Client not found' });
+        }
+
+        // Collect clicks for the specified month
+        const clicks = [];
+        const startDate = new Date(year, monthNum - 1, 1);
+        const endDate = new Date(year, monthNum, 0);
+
+        Object.values(clientTracking || {}).forEach(click => {
+            const clickDate = new Date(click.timestamp);
+            if (click.client_id === clientId &&
+                clickDate >= startDate &&
+                clickDate <= endDate) {
+                clicks.push({
+                    jobId: click.jobId,
+                    jobTitle: click.jobTitle || 'Unknown Job',
+                    location: click.location || 'Unknown',
+                    timestamp: click.timestamp
+                });
+            }
+        });
+
+        res.json({
+            clientName: client.name,
+            clicks: clicks
+        });
+    } catch (error) {
+        console.error('Billing clicks error:', error);
+        res.status(500).json({ error: 'Failed to fetch billing data' });
+    }
+});
+
+// Enhanced real-time tracking endpoint for accurate billing
+app.post('/api/track/widget-enhanced', async (req, res) => {
+    try {
+        const {
+            event,
+            clientId,
+            clientName,
+            sessionId,
+            data
+        } = req.body;
+
+        console.log(`[ENHANCED TRACKING] ${event} from ${clientId} - Session: ${sessionId}`);
+
+        const now = new Date();
+        const dateKey = now.toISOString().split('T')[0];
+        const hourKey = `${dateKey}-${now.getHours()}`;
+
+        // Initialize enhanced client tracking
+        if (!clientTracking[sessionId]) {
+            clientTracking[sessionId] = {
+                clientId: clientId,
+                clientName: clientName,
+                sessionId: sessionId,
+                startTime: now.toISOString(),
+                lastActivity: now.toISOString(),
+                realTimeData: {
+                    totalClicks: 0,
+                    jobClicks: 0,
+                    searches: 0,
+                    filterChanges: 0,
+                    timeOnPage: 0,
+                    scrollDepth: 0,
+                    billableEvents: 0
+                },
+                events: [],
+                billingMetrics: {
+                    clicksToday: 0,
+                    jobViewsToday: 0,
+                    searchesToday: 0
+                }
+            };
+        }
+
+        const session = clientTracking[sessionId];
+        session.lastActivity = now.toISOString();
+
+        // Process event and update real-time metrics
+        switch (event) {
+            case 'job_click':
+                session.realTimeData.jobClicks++;
+                session.realTimeData.billableEvents++;
+                session.billingMetrics.clicksToday++;
+                session.billingMetrics.jobViewsToday++;
+
+                console.log(`[BILLING EVENT] Job click from ${clientId} - Total billable: ${session.realTimeData.billableEvents}`);
+                break;
+
+            case 'search':
+                session.realTimeData.searches++;
+                session.billingMetrics.searchesToday++;
+                break;
+
+            case 'filter_change':
+                session.realTimeData.filterChanges++;
+                break;
+
+            case 'heartbeat':
+                if (data.timeOnPage) session.realTimeData.timeOnPage = data.timeOnPage;
+                if (data.scrollDepth) session.realTimeData.scrollDepth = data.scrollDepth;
+                if (data.clicks) session.realTimeData.totalClicks = data.clicks;
+                break;
+
+            case 'real_time_tracking':
+                // Update all metrics from client
+                if (data.sessionData) {
+                    Object.assign(session.realTimeData, {
+                        totalClicks: data.sessionData.clicks || 0,
+                        jobClicks: data.sessionData.jobViews || 0,
+                        searches: data.sessionData.searches || 0,
+                        filterChanges: data.sessionData.filterChanges || 0,
+                        timeOnPage: data.sessionData.timeOnPage || 0,
+                        scrollDepth: data.sessionData.scrollDepth || 0
+                    });
+                }
+                break;
+        }
+
+        // Store event with timestamp
+        session.events.push({
+            event: event,
+            timestamp: now.toISOString(),
+            data: data,
+            billable: ['job_click', 'job_view'].includes(event)
+        });
+
+        // Persist to DynamoDB with enhanced structure
+        if (dynamoDBConnectionStatus.isConnected) {
+            const trackingParams = {
+                TableName: TABLE_NAME,
+                Item: {
+                    id: `ENHANCED_SESSION_${sessionId}`,
+                    type: 'enhanced_client_session',
+                    clientId: clientId,
+                    clientName: clientName,
+                    sessionId: sessionId,
+                    sessionData: session,
+                    lastUpdated: now.toISOString(),
+                    ttl: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60) // 7 days TTL
+                }
+            };
+
+            dynamodb.send(new PutCommand(trackingParams)).catch(err => {
+                console.error('Failed to persist enhanced tracking:', err.message);
+            });
+        }
+
+        res.json({
+            success: true,
+            tracked: true,
+            event: event,
+            sessionId: sessionId,
+            realTimeMetrics: session.realTimeData,
+            billingMetrics: session.billingMetrics
+        });
+
+    } catch (error) {
+        console.error('[ENHANCED TRACKING ERROR]:', error);
+        res.status(500).json({
+            error: 'Enhanced tracking failed',
+            message: error.message
+        });
+    }
+});
+
+// Real-time billing analytics endpoint
+app.get('/api/admin/real-time-billing/:clientId', async (req, res) => {
+    if (!isAuthenticated(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        const { clientId } = req.params;
+        const sessions = Object.values(clientTracking).filter(s =>
+            s.clientId === clientId && s.realTimeData
+        );
+
+        const aggregate = sessions.reduce((acc, session) => {
+            acc.totalBillableEvents += session.realTimeData.billableEvents || 0;
+            acc.totalJobClicks += session.realTimeData.jobClicks || 0;
+            acc.totalSearches += session.realTimeData.searches || 0;
+            acc.totalTimeOnPage += session.realTimeData.timeOnPage || 0;
+            acc.activeSessions++;
+            return acc;
+        }, {
+            totalBillableEvents: 0,
+            totalJobClicks: 0,
+            totalSearches: 0,
+            totalTimeOnPage: 0,
+            activeSessions: 0
+        });
+
+        res.json({
+            success: true,
+            clientId: clientId,
+            realTimeBilling: aggregate,
+            sessions: sessions.map(s => ({
+                sessionId: s.sessionId,
+                startTime: s.startTime,
+                lastActivity: s.lastActivity,
+                metrics: s.realTimeData,
+                billing: s.billingMetrics
+            }))
+        });
+
+    } catch (error) {
+        console.error('Real-time billing error:', error);
+        res.status(500).json({ error: 'Failed to get real-time billing data' });
+    }
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -3145,6 +4455,79 @@ app.get('/api/jobs', async (req, res) => {
   }
 });
 
+// BMJ Careers Jobs API - Consolidated job loading endpoint
+app.get('/api/bmj-careers-jobs-api', async (req, res) => {
+  try {
+    console.log('BMJ Careers Jobs API called');
+
+    // Track API call
+    await trackAPICall('/api/bmj-careers-jobs-api');
+
+    // Get client info for tracking
+    const clientInfo = getClientFromRequest(req);
+    trackClientUsage(clientInfo, 'api');
+
+    // Force refresh if requested, otherwise use cache
+    const forceRefresh = req.query.refresh === 'true';
+    const result = await loadJobsWithCaching(forceRefresh);
+
+    console.log(`BMJ Careers Jobs API returning ${result.jobs.length} jobs from ${result.source}`);
+
+    // Sort jobs: updated first, then new, then by created date
+    const jobs = [...result.jobs].sort((a, b) => {
+      if (a.is_updated && !b.is_updated) return -1;
+      if (!a.is_updated && b.is_updated) return 1;
+      if (a.is_new && !b.is_new) return -1;
+      if (!a.is_new && b.is_new) return 1;
+      return new Date(b.created_date) - new Date(a.created_date);
+    });
+
+    const responseData = {
+      success: true,
+      jobs: jobs,
+      total: jobs.length,
+      newJobsCount: jobs.filter(j => j.is_new).length,
+      updatedJobsCount: jobs.filter(j => j.is_updated).length,
+      lastFetch: jobsCache.lastFetch ? new Date(jobsCache.lastFetch).toISOString() : null,
+      source: result.source,
+      fromCache: result.fromCache,
+      timestamp: new Date().toISOString(),
+      dynamodbStatus: {
+        connected: dynamoDBConnectionStatus.isConnected,
+        lastChecked: dynamoDBConnectionStatus.lastChecked,
+        lastError: dynamoDBConnectionStatus.lastError
+      },
+      metadata: {
+        xmlFeedUrl: BMJ_XML_FEED_URL,
+        cacheAge: jobsCache.lastFetch ? Math.floor((Date.now() - jobsCache.lastFetch) / 1000) : null,
+        serverUptime: process.uptime()
+      }
+    };
+
+    console.log('BMJ Careers Jobs API - Sending response:', {
+      jobsCount: responseData.jobs.length,
+      source: responseData.source,
+      success: responseData.success
+    });
+
+    res.json(responseData);
+  } catch (error) {
+    console.error('Error in BMJ Careers Jobs API:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch jobs',
+      message: error.message,
+      jobs: [], // Always provide jobs array even on error
+      total: 0,
+      dynamodbStatus: {
+        connected: dynamoDBConnectionStatus.isConnected,
+        lastChecked: dynamoDBConnectionStatus.lastChecked,
+        lastError: dynamoDBConnectionStatus.lastError
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 // Public API endpoint - Get job listings
 app.get('/jobs', async (req, res) => {
@@ -3483,12 +4866,12 @@ const server = app.listen(PORT, async () => {
   console.log(`BMJ Careers API Server - Optimized with AWS Profile Support`);
   console.log(`${'='.repeat(80)}`);
   console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`\nEndpoints:`);
-  console.log(`  - GET  / ........................... Main page (widget)`);
-  console.log(`  - GET  /api/jobs ................... Get all jobs (with caching)`);
-  console.log(`  - POST /api/jobs/refresh ........... Force refresh from source`);
-  console.log(`  - GET  /api/stats .................. API usage statistics`);
-  console.log(`  - GET  /health ..................... Health check`);
+console.log(`\nEndpoints:`);
+console.log(`  - GET  / ........................... Main page (uses bmj-careers-jobs-api)`);
+console.log(`  - GET  /api/bmj-careers-jobs-api .... PRIMARY: Consolidated Jobs API`);
+console.log(`  - GET  /api/bmj-careers-xml-fallback  FALLBACK: Direct XML conversion`);
+console.log(`  - GET  /api/jobs ................... LEGACY: Redirects to bmj-careers-jobs-api`);
+console.log(`  - POST /api/jobs/refresh ........... Force refresh from source`);
   console.log(`\n${'='.repeat(80)}`);
   console.log(`ADMIN CONSOLE:`);
   console.log(`${'='.repeat(80)}`);
