@@ -909,16 +909,19 @@ locationHierarchy['Overseas'].subcategories = [
                 return jobTitle.includes('consultant') || grade.includes('consultant');
             }
         },
-        gp: {
-            name: 'GP',
-            keywords: ['gp'],
-            filter: (job) => {
-                const sectors = job.sector || [];
-                return sectors.some(sector =>
-                    sector.toLowerCase().includes('gp')
-                );
-            }
-        },
+gp: {
+    name: 'GP',
+    keywords: ['gp'],
+    filter: (job) => {
+        const sectors = job.sector || [];
+        const jobTitle = (job.job_title || '').toLowerCase();
+        const grade = (job.grade || '').toLowerCase();
+
+        return sectors.some(sector => sector.toLowerCase().includes('gp')) ||
+               jobTitle.includes('gp') ||
+               grade.includes('gp');
+    }
+},
         overseas: {
             name: 'Overseas',
             keywords: [],
@@ -1098,17 +1101,14 @@ locationHierarchy['Overseas'].subcategories = [
         updateCategoryButtons();
     }
 
- // Modified function to count jobs for published filters with correct logic
-function countJobsForPublishedFilter(filterName, allActiveJobs) {
-    return allActiveJobs.filter(job => {
+function countJobsForPublishedFilter(filterName, baseJobs) {
+    return baseJobs.filter(job => {
         if (!job.published) return false;
         const jobDays = parseDaysFromPublished(job.published);
         if (!jobDays) return false;
 
-        // Exclusive counting logic for each range
+        // Use the same logic as the actual filtering
         switch(filterName) {
-            case "Last 3 Days":
-                return jobDays <= 3;
             case "Last 7 Days":
                 return jobDays <= 7;
             case "Last 14 Days":
@@ -1116,12 +1116,13 @@ function countJobsForPublishedFilter(filterName, allActiveJobs) {
             case "Last 28 Days":
                 return jobDays <= 28;
             case "More than 28 Days":
-                return jobDays > 28; // Only jobs older than 28 days
+                return jobDays > 28;
             default:
                 return false;
         }
     }).length;
 }
+
 
     // Function to make keywords keyboard accessible
     function renderKeywords() {
@@ -1844,133 +1845,12 @@ window.handleParentCategoryKeydown = function(event, category, parentName) {
         return checkedGrades;
     }
 
-function countJobsForLocationCategoryWithFilters(categoryName, subcategories, currentFilters) {
-    let jobs = filterActiveJobs(allJobsData);
 
-    if (activeCategoryFilter !== 'all') {
-        jobs = jobs.filter(job => categoryFilters[activeCategoryFilter].filter(job));
-    }
+    function buildLocationHierarchy() {
+    const locationData = [];
 
-    const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
-    if (searchTerm) {
-        jobs = jobs.filter(job => {
-            const sectors = job.sector || [];
-            const employer = job.alternate_recruiter_name || job.recruiter_name;
-            return job.job_title.toLowerCase().includes(searchTerm) ||
-                   job.location_description.toLowerCase().includes(searchTerm) ||
-                   employer.toLowerCase().includes(searchTerm) ||
-                   job.short_description.toLowerCase().includes(searchTerm) ||
-                   sectors.some(s => s.toLowerCase().includes(searchTerm)) ||
-                   (job.grade && job.grade.toLowerCase().includes(searchTerm));
-        });
-    }
-
-    const checkedProfessions = getCheckedProfessions();
-    if (checkedProfessions.length > 0) {
-        jobs = jobs.filter(job => {
-            const sectors = job.sector || [];
-            const employer = job.alternate_recruiter_name || job.recruiter_name;
-            const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${employer}`.toLowerCase();
-            return checkedProfessions.some(profession => {
-                return searchText.includes(profession.toLowerCase()) ||
-                       sectors.some(s => s.toLowerCase() === profession.toLowerCase());
-            });
-        });
-    }
-
-    const checkedGrades = [];
-    filterData.grade?.forEach(item => {
-        const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-        const checkbox = document.getElementById(checkboxId);
-        if (checkbox && checkbox.checked) {
-            checkedGrades.push(item.name);
-        }
-    });
-    if (checkedGrades.length > 0) {
-        jobs = jobs.filter(job => job.grade && checkedGrades.includes(job.grade));
-    }
-
-    const checkedPublished = [];
-    filterData.published?.forEach(item => {
-        const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-        const checkbox = document.getElementById(checkboxId);
-        if (checkbox && checkbox.checked) {
-            checkedPublished.push(item.name);
-        }
-    });
-    if (checkedPublished.length > 0) {
-        jobs = jobs.filter(job => {
-            if (!job.published) return false;
-            const jobDays = parseDaysFromPublished(job.published);
-            if (!jobDays) return false;
-            return checkedPublished.some(selectedCategory => {
-                switch(selectedCategory) {
-                    case "Last 3 Days": return jobDays <= 3;
-                    case "Last 7 Days": return jobDays <= 7;
-                    case "Last 14 Days": return jobDays <= 14;
-                    case "Last 28 Days": return jobDays <= 28;
-                    case "More than 28 Days": return jobDays > 28;
-                    default: return false;
-                }
-            });
-        });
-    }
-
-    // NEW LOGIC: Only count jobs that match available subcategories
-    let totalCount = 0;
-
-    subcategories.forEach(subcategory => {
-        const subcategoryCount = jobs.filter(job => {
-            const location = job.location_description || '';
-
-            if (categoryName === 'Overseas' && dynamicLocationHierarchy.Overseas.subcategories.includes(subcategory)) {
-                if (!categoryFilters.overseas.filter(job)) {
-                    return false;
-                }
-
-                const country = job.location_country || '';
-                const locationLower = location.toLowerCase();
-                const countryLower = country.toLowerCase();
-
-                if (subcategory === 'Canada') {
-                    return locationLower.includes('canada') || countryLower.includes('canada');
-                } else if (subcategory === 'Australia') {
-                    return locationLower.includes('australia') || countryLower.includes('australia');
-                } else if (subcategory === 'New Zealand') {
-                    return locationLower.includes('new zealand') || countryLower.includes('new zealand');
-                } else if (subcategory === 'Republic of Ireland') {
-                    return (locationLower.includes('ireland') || countryLower.includes('ireland')) &&
-                           !locationLower.includes('northern') && !countryLower.includes('northern');
-                } else if (subcategory === 'United States') {
-                    return locationLower.includes('usa') || locationLower.includes('united states') ||
-                           countryLower.includes('usa') || countryLower.includes('united states');
-                } else if (subcategory === 'UAE') {
-                    return locationLower.includes('dubai') || locationLower.includes('uae') ||
-                           countryLower.includes('dubai') || countryLower.includes('uae');
-                } else if (subcategory === country) {
-                    return true;
-                }
-                return false;
-            } else {
-                const categorized = categorizeLocation(location);
-                if (categorized.region === categoryName) {
-                    return true;
-                }
-                const normalizedSubcat = normalizeLocation(subcategory);
-                const normalizedLocation = normalizeLocation(location);
-                return normalizedLocation.includes(normalizedSubcat);
-            }
-        }).length;
-
-        if (subcategoryCount > 0) {
-            totalCount += subcategoryCount;
-        }
-    });
-
-    return totalCount;
-}
-
-    function countJobsForSpecificLocationWithFilters(locationName, currentFilters) {
+    // Get base jobs for location counting (excluding location filters)
+    const getBaseJobsForLocation = () => {
         let jobs = filterActiveJobs(allJobsData);
 
         if (activeCategoryFilter !== 'all') {
@@ -1991,19 +1871,26 @@ function countJobsForLocationCategoryWithFilters(categoryName, subcategories, cu
             });
         }
 
+        // Apply profession filters
         const checkedProfessions = getCheckedProfessions();
         if (checkedProfessions.length > 0) {
             jobs = jobs.filter(job => {
-                const sectors = job.sector || [];
-                const employer = job.alternate_recruiter_name || job.recruiter_name;
-                const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${employer}`.toLowerCase();
                 return checkedProfessions.some(profession => {
-                    return searchText.includes(profession.toLowerCase()) ||
-                           sectors.some(s => s.toLowerCase() === profession.toLowerCase());
+                    if (profession.toLowerCase() === 'gp') {
+                        return categoryFilters.gp.filter(job);
+                    } else if (profession.toLowerCase().includes('consultant')) {
+                        return categoryFilters.consultant.filter(job);
+                    } else {
+                        const sectors = job.sector || [];
+                        const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''}`.toLowerCase();
+                        return searchText.includes(profession.toLowerCase()) ||
+                               sectors.some(s => s.toLowerCase() === profession.toLowerCase());
+                    }
                 });
             });
         }
 
+        // Apply grade filters
         const checkedGrades = [];
         filterData.grade?.forEach(item => {
             const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
@@ -2013,9 +1900,18 @@ function countJobsForLocationCategoryWithFilters(categoryName, subcategories, cu
             }
         });
         if (checkedGrades.length > 0) {
-            jobs = jobs.filter(job => job.grade && checkedGrades.includes(job.grade));
+            jobs = jobs.filter(job => {
+                return checkedGrades.some(gradeName => {
+                    if (gradeName.toLowerCase().includes('consultant')) {
+                        return categoryFilters.consultant.filter(job);
+                    } else {
+                        return job.grade === gradeName;
+                    }
+                });
+            });
         }
 
+        // Apply published filters
         const checkedPublished = [];
         filterData.published?.forEach(item => {
             const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
@@ -2030,101 +1926,107 @@ function countJobsForLocationCategoryWithFilters(categoryName, subcategories, cu
                 const jobDays = parseDaysFromPublished(job.published);
                 if (!jobDays) return false;
                 return checkedPublished.some(selectedCategory => {
-    switch(selectedCategory) {
-        case "Last 3 Days": return jobDays <= 3;
-        case "Last 7 Days": return jobDays <= 7;
-        case "Last 14 Days": return jobDays <= 14;
-        case "Last 28 Days": return jobDays <= 28;
-        case "More than 28 Days": return jobDays > 28; // Only jobs older than 28 days
-        default: return false;
-    }
-});
-            });
-        }
-
-        const isOverseasLocation = dynamicLocationHierarchy.Overseas.subcategories.includes(locationName);
-
-        if (isOverseasLocation) {
-            return jobs.filter(job => {
-                if (!categoryFilters.overseas.filter(job)) {
-                    return false;
-                }
-
-                const location = job.location_description || '';
-                const country = job.location_country || '';
-                const locationLower = location.toLowerCase();
-                const countryLower = country.toLowerCase();
-                const searchLower = locationName.toLowerCase();
-
-                if (countryLower.includes(searchLower) || searchLower.includes(countryLower)) {
-                    return true;
-                }
-
-                if (locationName === 'Australia') {
-                    return locationLower.includes('australia') ||
-                           locationLower.includes('sydney') || locationLower.includes('melbourne') ||
-                           locationLower.includes('brisbane') || locationLower.includes('perth') ||
-                           locationLower.includes('adelaide');
-                } else if (locationName === 'New Zealand') {
-                    return locationLower.includes('new zealand') ||
-                           locationLower.includes('auckland') || locationLower.includes('wellington') ||
-                           locationLower.includes('christchurch');
-                } else if (locationName === 'Canada') {
-                    return locationLower.includes('canada') ||
-                           locationLower.includes('toronto') || locationLower.includes('vancouver') ||
-                           locationLower.includes('montreal');
-                }
-
-               return false;
-            }).length;
-        } else {
-            return jobs.filter(job => {
-                const location = job.location_description || '';
-                const normalizedLocation = normalizeLocation(location);
-                const normalizedSearch = normalizeLocation(locationName);
-                return normalizedLocation.includes(normalizedSearch);
-            }).length;
-        }
-    }
-
-    function buildLocationHierarchy() {
-        const locationData = [];
-        const currentFilters = {};
-
-        const londonCount = countJobsForSpecificLocationWithFilters('London', currentFilters);
-        if (londonCount > 0) {
-            locationData.push({
-                name: 'London',
-                count: londonCount,
-                subcategories: []
-            });
-        }
-
-        Object.entries(dynamicLocationHierarchy).forEach(([parentName, parentData]) => {
-            if (parentName === 'London') return;
-
-            const parentCount = countJobsForLocationCategoryWithFilters(parentName, parentData.subcategories, currentFilters);
-
-            if (parentCount > 0) {
-                const subcategoryData = [];
-
-                parentData.subcategories.forEach(subcategory => {
-                    const count = countJobsForSpecificLocationWithFilters(subcategory, currentFilters);
-                    if (count > 0) {
-                        subcategoryData.push({ name: subcategory, count });
+                    switch(selectedCategory) {
+                        case "Last 3 Days": return jobDays <= 3;
+                        case "Last 7 Days": return jobDays <= 7;
+                        case "Last 14 Days": return jobDays <= 14;
+                        case "Last 28 Days": return jobDays <= 28;
+                        case "More than 28 Days": return jobDays > 28;
+                        default: return false;
                     }
                 });
+            });
+        }
 
-                locationData.push({
-                    name: parentName,
-                    count: parentCount,
-                    subcategories: subcategoryData
-                });
+        return jobs;
+    };
+
+    const baseJobs = getBaseJobsForLocation();
+
+    // Count London jobs directly
+    const londonCount = baseJobs.filter(job => {
+        const location = job.location_description || '';
+        const normalizedLocation = normalizeLocation(location);
+        return normalizedLocation.includes('london');
+    }).length;
+
+    if (londonCount > 0) {
+        locationData.push({
+            name: 'London',
+            count: londonCount,
+            subcategories: []
+        });
+    }
+
+    // Process other location categories
+    Object.entries(dynamicLocationHierarchy).forEach(([parentName, parentData]) => {
+        if (parentName === 'London') return; // Already handled above
+
+        const subcategoryData = [];
+        let parentCount = 0;
+
+        parentData.subcategories.forEach(subcategory => {
+            let subcategoryCount;
+
+            if (parentName === 'Overseas') {
+                // Special handling for overseas locations
+                subcategoryCount = baseJobs.filter(job => {
+                    if (!categoryFilters.overseas.filter(job)) {
+                        return false;
+                    }
+
+                    const location = job.location_description || '';
+                    const country = job.location_country || '';
+                    const locationLower = location.toLowerCase();
+                    const countryLower = country.toLowerCase();
+
+                    if (subcategory === 'Canada') {
+                        return locationLower.includes('canada') || countryLower.includes('canada');
+                    } else if (subcategory === 'Australia') {
+                        return locationLower.includes('australia') || countryLower.includes('australia');
+                    } else if (subcategory === 'New Zealand') {
+                        return locationLower.includes('new zealand') || countryLower.includes('new zealand');
+                    } else if (subcategory === 'Republic of Ireland') {
+                        return (locationLower.includes('ireland') || countryLower.includes('ireland')) &&
+                               !locationLower.includes('northern') && !countryLower.includes('northern');
+                    } else if (subcategory === 'United States') {
+                        return locationLower.includes('usa') || locationLower.includes('united states') ||
+                               countryLower.includes('usa') || countryLower.includes('united states');
+                    } else if (subcategory === 'UAE') {
+                        return locationLower.includes('dubai') || locationLower.includes('uae') ||
+                               countryLower.includes('dubai') || countryLower.includes('uae');
+                    } else if (subcategory === country) {
+                        return true;
+                    }
+                    return false;
+                }).length;
+            } else {
+                // Regular UK location matching
+                subcategoryCount = baseJobs.filter(job => {
+                    const location = job.location_description || '';
+                    const normalizedLocation = normalizeLocation(location);
+                    const normalizedSubcategory = normalizeLocation(subcategory);
+                    return normalizedLocation.includes(normalizedSubcategory);
+                }).length;
+            }
+
+            if (subcategoryCount > 0) {
+                subcategoryData.push({ name: subcategory, count: subcategoryCount });
+                parentCount += subcategoryCount;
             }
         });
 
-        return locationData;
-    }
+        if (parentCount > 0) {
+            locationData.push({
+                name: parentName,
+                count: parentCount,
+                subcategories: subcategoryData
+            });
+        }
+    });
+
+    return locationData;
+}
 
     function getCheckedLocations() {
         const checkedLocations = [];
@@ -2152,137 +2054,40 @@ function countJobsForLocationCategoryWithFilters(categoryName, subcategories, cu
         return checkedLocations;
     }
 
-    function countJobsForProfessionCategoryWithFilters(categoryName, subcategories, currentFilters) {
-    let jobs = filterActiveJobs(allJobsData);
 
-    if (activeCategoryFilter !== 'all') {
-        jobs = jobs.filter(job => categoryFilters[activeCategoryFilter].filter(job));
-    }
+    function getCheckedProfessions() {
+        const checkedProfessions = [];
 
-    const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
-    if (searchTerm) {
-        jobs = jobs.filter(job => {
-            const sectors = job.sector || [];
-            const employer = job.alternate_recruiter_name || job.recruiter_name;
-            return job.job_title.toLowerCase().includes(searchTerm) ||
-                   job.location_description.toLowerCase().includes(searchTerm) ||
-                   employer.toLowerCase().includes(searchTerm) ||
-                   job.short_description.toLowerCase().includes(searchTerm) ||
-                   sectors.some(s => s.toLowerCase().includes(searchTerm)) ||
-                   (job.grade && job.grade.toLowerCase().includes(searchTerm));
-        });
-    }
-
-    const checkedLocations = getCheckedLocations();
-    if (checkedLocations.length > 0) {
-        jobs = jobs.filter(job => {
-            const jobLocation = job.location_description || '';
-
-            return checkedLocations.some(location => {
-                if (dynamicLocationHierarchy.Overseas.subcategories.includes(location)) {
-                    if (!categoryFilters.overseas.filter(job)) {
-                        return false;
-                    }
-
-                    const country = job.location_country || '';
-                    const locationLower = jobLocation.toLowerCase();
-                    const countryLower = country.toLowerCase();
-
-                    if (location === 'Canada') {
-                        return locationLower.includes('canada') || countryLower.includes('canada');
-                    } else if (location === 'Australia') {
-                        return locationLower.includes('australia') || countryLower.includes('australia');
-                    } else if (location === 'New Zealand') {
-                        return locationLower.includes('new zealand') || countryLower.includes('new zealand');
-                    } else if (location === 'Republic of Ireland') {
-                        return (locationLower.includes('ireland') || countryLower.includes('ireland')) &&
-                               !locationLower.includes('northern') && !countryLower.includes('northern');
-                    } else if (location === 'North America') {
-                        return locationLower.includes('usa') || locationLower.includes('united states') ||
-                               countryLower.includes('usa') || countryLower.includes('united states');
-                    } else if (location === 'Middle East') {
-                        return locationLower.includes('dubai') || locationLower.includes('uae') ||
-                               countryLower.includes('dubai') || countryLower.includes('uae');
-                    } else if (location === country) {
-                        return true;
-                    }
-
-                    return false;
-                } else {
-                    const normalizedJobLocation = normalizeLocation(jobLocation);
-                    const normalizedSearch = normalizeLocation(location);
-                    return normalizedJobLocation.includes(normalizedSearch);
-                }
-            });
-        });
-    }
-
-    const checkedGrades = [];
-    filterData.grade?.forEach(item => {
-        const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-        const checkbox = document.getElementById(checkboxId);
-        if (checkbox && checkbox.checked) {
-            checkedGrades.push(item.name);
-        }
-    });
-    if (checkedGrades.length > 0) {
-        jobs = jobs.filter(job => job.grade && checkedGrades.includes(job.grade));
-    }
-
-    const checkedPublished = [];
-    filterData.published?.forEach(item => {
-        const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-        const checkbox = document.getElementById(checkboxId);
-        if (checkbox && checkbox.checked) {
-            checkedPublished.push(item.name);
-        }
-    });
-    if (checkedPublished.length > 0) {
-        jobs = jobs.filter(job => {
-            if (!job.published) return false;
-            const jobDays = parseDaysFromPublished(job.published);
-            if (!jobDays) return false;
-            return checkedPublished.some(selectedCategory => {
-                switch(selectedCategory) {
-                    case "Last 3 Days": return jobDays <= 3;
-                    case "Last 7 Days": return jobDays <= 7;
-                    case "Last 14 Days": return jobDays <= 14;
-                    case "Last 28 Days": return jobDays <= 28;
-                    case "More than 28 Days": return jobDays > 28;
-                    default: return false;
-                }
-            });
-        });
-    }
-
-    // NEW LOGIC: Only count jobs that match available subcategories
-    let totalCount = 0;
-
-    subcategories.forEach(subcat => {
-        const subcategoryCount = jobs.filter(job => {
-            const sectors = job.sector || [];
-            const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
-
-            if (typeof subcat === 'string') {
-                return searchText.includes(subcat.toLowerCase()) || sectors.some(s => s.toLowerCase() === subcat.toLowerCase());
-            } else if (typeof subcat === 'object' && subcat.subcategories) {
-                return searchText.includes(subcat.name.toLowerCase()) ||
-                       subcat.subcategories.some(nested => searchText.includes(nested.toLowerCase()));
+        const subCheckboxes = document.querySelectorAll('.profession-sub-checkbox:checked');
+        subCheckboxes.forEach(checkbox => {
+            const label = checkbox.nextElementSibling;
+            if (label && label.textContent) {
+                const professionName = label.textContent.trim();
+                const cleanName = professionName.replace(/\s*\(\d+\)$/, '');
+                checkedProfessions.push(cleanName);
             }
-            return false;
-        }).length;
+        });
 
-        if (subcategoryCount > 0) {
-            totalCount += subcategoryCount;
-        }
-    });
+        return checkedProfessions;
+    }
 
-    return totalCount;
-}
+   function calculateFilterCounts() {
+    // Initialize as empty arrays
+    filterData = {
+        published: [],
+        profession: [],
+        grade: [],
+        location: []
+    };
 
+    const activeJobs = filterActiveJobs(allJobsData);
+    if (activeJobs.length === 0) return;
 
-    function countJobsForSpecificProfessionWithFilters(professionName, currentFilters) {
-        let jobs = filterActiveJobs(allJobsData);
+    buildDynamicHierarchies();
+
+    // Get base jobs after applying current filters (excluding the filter type we're counting)
+    const getBaseJobsExcluding = (excludeFilterType) => {
+        let jobs = activeJobs;
 
         if (activeCategoryFilter !== 'all') {
             jobs = jobs.filter(job => categoryFilters[activeCategoryFilter].filter(job));
@@ -2302,222 +2107,264 @@ function countJobsForLocationCategoryWithFilters(categoryName, subcategories, cu
             });
         }
 
+        // Apply all other active filters except the one we're excluding
+        const checkedProfessions = getCheckedProfessions();
+        if (excludeFilterType !== 'profession' && checkedProfessions.length > 0) {
+            jobs = jobs.filter(job => {
+                return checkedProfessions.some(profession => {
+                    if (profession.toLowerCase() === 'gp') {
+                        return categoryFilters.gp.filter(job);
+                    } else if (profession.toLowerCase().includes('consultant')) {
+                        return categoryFilters.consultant.filter(job);
+                    } else {
+                        const sectors = job.sector || [];
+                        const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description}`.toLowerCase();
+                        return searchText.includes(profession.toLowerCase()) ||
+                               sectors.some(s => s.toLowerCase() === profession.toLowerCase());
+                    }
+                });
+            });
+        }
+
         const checkedLocations = getCheckedLocations();
-        if (checkedLocations.length > 0) {
+        if (excludeFilterType !== 'location' && checkedLocations.length > 0) {
             jobs = jobs.filter(job => {
                 const jobLocation = job.location_description || '';
-
                 return checkedLocations.some(location => {
-                    if (dynamicLocationHierarchy.Overseas.subcategories.includes(location)) {
-                        if (!categoryFilters.overseas.filter(job)) {
-                            return false;
-                        }
-
-                        const country = job.location_country || '';
-                        const locationLower = jobLocation.toLowerCase();
-                        const countryLower = country.toLowerCase();
-
-                        if (location === 'Canada') {
-                            return locationLower.includes('canada') || countryLower.includes('canada');
-                        } else if (location === 'Australia') {
-                            return locationLower.includes('australia') || countryLower.includes('australia');
-                        } else if (location === 'New Zealand') {
-                            return locationLower.includes('new zealand') || countryLower.includes('new zealand');
-                        } else if (location === 'Republic of Ireland') {
-                            return (locationLower.includes('ireland') || countryLower.includes('ireland')) &&
-                                   !locationLower.includes('northern') && !countryLower.includes('northern');
-                        } else if (location === 'North America') {
-                            return locationLower.includes('usa') || locationLower.includes('united states') ||
-                                   countryLower.includes('usa') || countryLower.includes('united states');
-                        } else if (location === 'Middle East') {
-                            return locationLower.includes('dubai') || locationLower.includes('uae') ||
-                                   countryLower.includes('dubai') || countryLower.includes('uae');
-                        } else if (location === country) {
-                            return true;
-                        }
-
-                        return false;
-                    } else {
-                        const normalizedJobLocation = normalizeLocation(jobLocation);
-                        const normalizedSearch = normalizeLocation(location);
-                        return normalizedJobLocation.includes(normalizedSearch);
-                    }
+                    const normalizedJobLocation = normalizeLocation(jobLocation);
+                    const normalizedSearch = normalizeLocation(location);
+                    return normalizedJobLocation.includes(normalizedSearch);
                 });
             });
         }
 
         const checkedGrades = [];
-        filterData.grade?.forEach(item => {
-            const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-            const checkbox = document.getElementById(checkboxId);
-            if (checkbox && checkbox.checked) {
-                checkedGrades.push(item.name);
+        if (excludeFilterType !== 'grade') {
+            filterData.grade?.forEach(item => {
+                const checkboxId = `grade_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+                const checkbox = document.getElementById(checkboxId);
+                if (checkbox && checkbox.checked) {
+                    checkedGrades.push(item.name);
+                }
+            });
+            if (checkedGrades.length > 0) {
+                jobs = jobs.filter(job => {
+                    return checkedGrades.some(gradeName => {
+                        if (gradeName.toLowerCase().includes('consultant')) {
+                            return categoryFilters.consultant.filter(job);
+                        } else {
+                            return job.grade === gradeName;
+                        }
+                    });
+                });
             }
-        });
-        if (checkedGrades.length > 0) {
-            jobs = jobs.filter(job => job.grade && checkedGrades.includes(job.grade));
         }
 
         const checkedPublished = [];
-        filterData.published?.forEach(item => {
-            const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-            const checkbox = document.getElementById(checkboxId);
-            if (checkbox && checkbox.checked) {
-                checkedPublished.push(item.name);
-            }
-        });
-        if (checkedPublished.length > 0) {
-            jobs = jobs.filter(job => {
-                if (!job.published) return false;
-                const jobDays = parseDaysFromPublished(job.published);
-                if (!jobDays) return false;
-                return checkedPublished.some(selectedCategory => {
-    switch(selectedCategory) {
-        case "Last 3 Days": return jobDays <= 3;
-        case "Last 7 Days": return jobDays <= 7;
-        case "Last 14 Days": return jobDays <= 14;
-        case "Last 28 Days": return jobDays <= 28;
-        case "More than 28 Days": return jobDays > 28; // Only jobs older than 28 days
-        default: return false;
-    }
-});
+        if (excludeFilterType !== 'published') {
+            filterData.published?.forEach(item => {
+                const checkboxId = `published_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+                const checkbox = document.getElementById(checkboxId);
+                if (checkbox && checkbox.checked) {
+                    checkedPublished.push(item.name);
+                }
             });
+            if (checkedPublished.length > 0) {
+                jobs = jobs.filter(job => {
+                    if (!job.published) return false;
+                    const jobDays = parseDaysFromPublished(job.published);
+                    if (!jobDays) return false;
+                    return checkedPublished.some(selectedCategory => {
+                        switch(selectedCategory) {
+                            case "Last 3 Days": return jobDays <= 3;
+                            case "Last 7 Days": return jobDays <= 7;
+                            case "Last 14 Days": return jobDays <= 14;
+                            case "Last 28 Days": return jobDays <= 28;
+                            case "More than 28 Days": return jobDays > 28;
+                            default: return false;
+                        }
+                    });
+                });
+            }
         }
 
-        return jobs.filter(job => {
-            const sectors = job.sector || [];
-            const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
-            return searchText.includes(professionName.toLowerCase()) || sectors.some(s => s.toLowerCase() === professionName.toLowerCase());
-        }).length;
-    }
-
-    function buildProfessionHierarchy() {
-        const professionData = [];
-
-        Object.entries(dynamicProfessionHierarchy).forEach(([parentName, parentData]) => {
-            const parentCount = countJobsForProfessionCategoryWithFilters(parentName, parentData.subcategories, {});
-
-            if (parentCount > 0) {
-                const subcategoryData = [];
-
-                parentData.subcategories.forEach(subcategory => {
-                    if (typeof subcategory === 'string') {
-                        const count = countJobsForSpecificProfessionWithFilters(subcategory, {});
-                        if (count > 0) {
-                            subcategoryData.push({ name: subcategory, count });
-                        }
-                    } else if (typeof subcategory === 'object' && subcategory.subcategories) {
-                        const nestedCount = countJobsForSpecificProfessionWithFilters(subcategory.name, {});
-                        if (nestedCount > 0) {
-                            const nestedSubcategories = [];
-                            subcategory.subcategories.forEach(nestedSub => {
-                                const nestedSubCount = countJobsForSpecificProfessionWithFilters(nestedSub, {});
-                                if (nestedSubCount > 0) {
-                                    nestedSubcategories.push({ name: nestedSub, count: nestedSubCount });
-                                }
-                            });
-
-                            subcategoryData.push({
-                                name: subcategory.name,
-                                count: nestedCount,
-                                subcategories: nestedSubcategories
-                            });
-                        }
-                    }
-                });
-
-                professionData.push({
-                    name: parentName,
-                    count: parentCount,
-                    subcategories: subcategoryData
-                });
-            }
-        });
-
-        return professionData;
-    }
-
-    function getCheckedProfessions() {
-        const checkedProfessions = [];
-
-        const subCheckboxes = document.querySelectorAll('.profession-sub-checkbox:checked');
-        subCheckboxes.forEach(checkbox => {
-            const label = checkbox.nextElementSibling;
-            if (label && label.textContent) {
-                const professionName = label.textContent.trim();
-                const cleanName = professionName.replace(/\s*\(\d+\)$/, '');
-                checkedProfessions.push(cleanName);
-            }
-        });
-
-        return checkedProfessions;
-    }
-
-    function calculateFilterCounts() {
-    // Initialize as empty arrays, not objects
-    filterData = {
-        published: [],
-        profession: [],
-        grade: [],
-        location: []
+        return jobs;
     };
 
-    const activeJobs = filterActiveJobs(allJobsData);
+   // Count published filters using the same logic as filtering
+const baseJobsForPublished = getBaseJobsExcluding('published');
 
-    if (activeJobs.length === 0) return;
-
-    buildDynamicHierarchies();
-
-    let publishedCounts = {};
+const publishedOrder = ["Last 7 Days", "Last 14 Days", "Last 28 Days", "More than 28 Days"];
+filterData.published = publishedOrder
+    .map(category => ({
+        name: category,
+        count: countJobsForPublishedFilter(category, baseJobsForPublished)
+    }))
+    .filter(item => item.count > 0);
+    // Count grades
+    const baseJobsForGrades = getBaseJobsExcluding('grade');
     let gradeCounts = {};
-
-    activeJobs.forEach(job => {
-        if (job.published) {
-            const category = categorizePublishedString(job.published);
-            if (category) {
-                publishedCounts[category] = (publishedCounts[category] || 0) + 1;
-            }
-        }
-
+    baseJobsForGrades.forEach(job => {
         if (job.grade) {
             gradeCounts[job.grade] = (gradeCounts[job.grade] || 0) + 1;
         }
     });
 
-    const publishedOrder = [
-        "Last 7 Days",
-        "Last 14 Days",
-        "Last 28 Days",
-        "More than 28 Days"
-    ];
-
-    // Set published data
-    filterData.published = publishedOrder
-        .filter(category => publishedCounts[category] > 0)
-        .map(category => ({
-            name: category,
-            count: countJobsForPublishedFilter(category, activeJobs)
-        }));
-
-    // Set grade data
     filterData.grade = Object.entries(gradeCounts)
-        .map(([name, count]) => ({ name, count }))
+        .map(([name, originalCount]) => {
+            // Use category filter logic for Consultant grades
+            let actualCount;
+            if (name.toLowerCase().includes('consultant')) {
+                actualCount = baseJobsForGrades.filter(job => categoryFilters.consultant.filter(job)).length;
+            } else {
+                actualCount = originalCount;
+            }
+            return { name, count: actualCount };
+        })
+        .filter(item => item.count > 0)
         .sort((a, b) => b.count - a.count);
 
-    // Set profession data
-    filterData.profession = buildProfessionHierarchy();
+    // Build profession hierarchy with correct counts
+    const baseJobsForProfessions = getBaseJobsExcluding('profession');
+    filterData.profession = buildProfessionHierarchyWithCorrectCounts(baseJobsForProfessions);
 
-    // Set location data
+    // Build location hierarchy
     filterData.location = buildLocationHierarchy();
 
-    // Debug log to verify structure
-    console.log('FilterData structure:', {
-        published: filterData.published.length,
-        profession: filterData.profession.length,
-        grade: filterData.grade.length,
-        location: filterData.location.length
-    });
+    console.log('FilterData rebuilt with consistent counts');
 }
+
+
+function buildProfessionHierarchyWithCorrectCounts(baseJobs) {
+    const professionData = [];
+
+    Object.entries(dynamicProfessionHierarchy).forEach(([parentName, parentData]) => {
+        let actualParentCount = 0;
+        const subcategoryData = [];
+
+// SPECIAL HANDLING FOR GP - Use exact filtering logic for counts
+if (parentName === 'GP') {
+    const gpJobs = baseJobs.filter(job => categoryFilters.gp.filter(job));
+    actualParentCount = gpJobs.length;
+
+    // Count specific GP subcategories using the same logic as filtering
+    const specificGPCounts = {};
+
+    parentData.subcategories.forEach(subcategory => {
+        const subJobs = gpJobs.filter(job => {
+            const jobTitle = job.job_title.toLowerCase();
+            const grade = (job.grade || '').toLowerCase();
+            const searchText = `${jobTitle} ${job.short_description} ${grade}`.toLowerCase();
+            const subcatLower = subcategory.toLowerCase();
+
+            return searchText.includes(subcatLower) ||
+                   jobTitle.includes(subcatLower) ||
+                   grade.includes(subcatLower);
+        });
+
+        if (subJobs.length > 0) {
+            specificGPCounts[subcategory] = subJobs.length;
+            subcategoryData.push({ name: subcategory, count: subJobs.length });
+        }
+    });
+
+    // Count generic GP jobs (GP jobs that don't match specific subcategories)
+    const genericGPJobs = gpJobs.filter(job => {
+        const jobTitle = job.job_title.toLowerCase();
+        const grade = (job.grade || '').toLowerCase();
+        const searchText = `${jobTitle} ${job.short_description} ${grade}`.toLowerCase();
+
+        const isSpecificGPType = ['digital gp', 'gp partner', 'gp trainee', 'locum gp', 'salaried gp'].some(gpType =>
+            searchText.includes(gpType) || jobTitle.includes(gpType) || grade.includes(gpType)
+        );
+
+        return !isSpecificGPType;
+    });
+
+    if (genericGPJobs.length > 0) {
+        subcategoryData.unshift({
+            name: 'GP',
+            count: genericGPJobs.length
+        });
+    }
+}
+        // NORMAL HANDLING FOR OTHER PROFESSIONS
+        else {
+            const processedJobIds = new Set();
+
+            parentData.subcategories.forEach(subcategory => {
+                if (typeof subcategory === 'string') {
+                    let matchingJobs;
+                    if (subcategory.toLowerCase().includes('consultant')) {
+                        matchingJobs = baseJobs.filter(job => categoryFilters.consultant.filter(job));
+                    } else {
+                        matchingJobs = baseJobs.filter(job => {
+                            const sectors = job.sector || [];
+                            const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''}`.toLowerCase();
+                            return searchText.includes(subcategory.toLowerCase()) ||
+                                   sectors.some(s => s.toLowerCase() === subcategory.toLowerCase());
+                        });
+                    }
+
+                    if (matchingJobs.length > 0) {
+                        subcategoryData.push({ name: subcategory, count: matchingJobs.length });
+                        matchingJobs.forEach(job => processedJobIds.add(job.id));
+                    }
+                } else if (typeof subcategory === 'object' && subcategory.subcategories) {
+                    const nestedSubcategories = [];
+                    let nestedParentCount = 0;
+                    const nestedProcessedJobIds = new Set();
+
+                    subcategory.subcategories.forEach(nestedSub => {
+                        let matchingJobs;
+                        if (nestedSub.toLowerCase().includes('consultant')) {
+                            matchingJobs = baseJobs.filter(job => categoryFilters.consultant.filter(job));
+                        } else {
+                            matchingJobs = baseJobs.filter(job => {
+                                const sectors = job.sector || [];
+                                const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''}`.toLowerCase();
+                                return searchText.includes(nestedSub.toLowerCase()) ||
+                                       sectors.some(s => s.toLowerCase() === nestedSub.toLowerCase());
+                            });
+                        }
+
+                        if (matchingJobs.length > 0) {
+                            nestedSubcategories.push({ name: nestedSub, count: matchingJobs.length });
+                            matchingJobs.forEach(job => {
+                                if (!nestedProcessedJobIds.has(job.id)) {
+                                    nestedProcessedJobIds.add(job.id);
+                                    nestedParentCount++;
+                                }
+                            });
+                        }
+                    });
+
+                    if (nestedParentCount > 0) {
+                        subcategoryData.push({
+                            name: subcategory.name,
+                            count: nestedParentCount,
+                            subcategories: nestedSubcategories
+                        });
+                        nestedProcessedJobIds.forEach(id => processedJobIds.add(id));
+                    }
+                }
+            });
+
+            actualParentCount = processedJobIds.size;
+        }
+
+        if (actualParentCount > 0) {
+            professionData.push({
+                name: parentName,
+                count: actualParentCount,
+                subcategories: subcategoryData
+            });
+        }
+    });
+
+    return professionData;
+}
+
 
  function renderLocationFilters(locationData) {
     return `
@@ -2691,220 +2538,181 @@ window.loadMoreFilters = function(type) {
 };
 
 function applyFilters(shouldScroll = true) {
-        const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
-        const activeFilters = {};
+    const searchTerm = document.getElementById('keywordSearch').value.toLowerCase().trim();
+    const activeFilters = {};
 
-        Object.keys(filterData).forEach(category => {
-            activeFilters[category] = [];
-            if (category === 'profession') {
-                activeFilters[category] = getCheckedProfessions();
-            } else if (category === 'location') {
-                activeFilters[category] = getCheckedLocations();
-            } else {
-                if (filterData[category]) {
-                    filterData[category].forEach(item => {
-                        const checkboxId = `${category}_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
-                        const checkbox = document.getElementById(checkboxId);
-                        if (checkbox && checkbox.checked) {
-                            activeFilters[category].push(item.name);
-                        }
-                    });
-                }
+    // Get all active filter selections
+    Object.keys(filterData).forEach(category => {
+        activeFilters[category] = [];
+        if (category === 'profession') {
+            activeFilters[category] = getCheckedProfessions();
+        } else if (category === 'location') {
+            activeFilters[category] = getCheckedLocations();
+        } else {
+            if (filterData[category]) {
+                filterData[category].forEach(item => {
+                    const checkboxId = `${category}_${item.name.replace(/\s+/g, '_').replace(/[()]/g, '').replace(/\./g, '')}`;
+                    const checkbox = document.getElementById(checkboxId);
+                    if (checkbox && checkbox.checked) {
+                        activeFilters[category].push(item.name);
+                    }
+                });
             }
-        });
+        }
+    });
 
-        const hasActiveFilters = searchTerm.length > 0 ||
-                                Object.values(activeFilters).some(arr => arr.length > 0);
+    const hasActiveFilters = searchTerm.length > 0 || Object.values(activeFilters).some(arr => arr.length > 0);
 
-        if (hasActiveFilters && activeCategoryFilter === 'all') {
-            const allBtn = document.getElementById('btn-all');
-            if (allBtn) allBtn.classList.remove('active');
+    if (hasActiveFilters && activeCategoryFilter === 'all') {
+        const allBtn = document.getElementById('btn-all');
+        if (allBtn) allBtn.classList.remove('active');
+    }
+
+    let activeJobs = filterActiveJobs(allJobsData);
+
+    // **CRITICAL FIX**: Use the EXACT same filtering logic as the count display
+    filteredJobs = activeJobs.filter(job => {
+        // Apply category filter first
+        if (activeCategoryFilter !== 'all') {
+            if (!categoryFilters[activeCategoryFilter].filter(job)) {
+                return false;
+            }
         }
 
-        if (window.self !== window.top && searchTerm) {
-            window.parent.postMessage({
-                type: 'bmj-careers-search',
-                searchTerm: searchTerm,
-                resultsCount: filteredJobs.length
-            }, '*');
+        // Apply search filter
+        if (searchTerm.length > 0) {
+            const sectors = job.sector || [];
+            const employer = job.alternate_recruiter_name || job.recruiter_name;
+            const matchesSearch = job.job_title.toLowerCase().includes(searchTerm) ||
+                                job.location_description.toLowerCase().includes(searchTerm) ||
+                                employer.toLowerCase().includes(searchTerm) ||
+                                job.short_description.toLowerCase().includes(searchTerm) ||
+                                sectors.some(s => s.toLowerCase().includes(searchTerm)) ||
+                                (job.grade && job.grade.toLowerCase().includes(searchTerm));
+            if (!matchesSearch) return false;
         }
 
-        let activeJobs = filterActiveJobs(allJobsData);
+        // Apply profession filters - USE EXACT SAME LOGIC AS COUNT CALCULATION
+        if (activeFilters.profession.length > 0) {
+const matchesProfession = activeFilters.profession.some(profession => {
+    // Handle GP subcategories specifically
+    if (profession === 'GP') {
+        // For main GP option, filter out jobs that match specific GP subcategories
+        const isGPJob = categoryFilters.gp.filter(job);
+        if (!isGPJob) return false;
 
-        filteredJobs = activeJobs.filter(job => {
-            if (activeCategoryFilter !== 'all') {
-                if (!categoryFilters[activeCategoryFilter].filter(job)) {
-                    return false;
-                }
-            }
+        // Check if it's NOT a specific GP type
+        const jobTitle = job.job_title.toLowerCase();
+        const grade = (job.grade || '').toLowerCase();
+        const searchText = `${jobTitle} ${job.short_description} ${grade}`.toLowerCase();
 
-            if (searchTerm.length > 0) {
-                const sectors = job.sector || [];
-                const employer = job.alternate_recruiter_name || job.recruiter_name;
-                const matchesSearch = job.job_title.toLowerCase().includes(searchTerm) ||
-                                    job.location_description.toLowerCase().includes(searchTerm) ||
-                                    employer.toLowerCase().includes(searchTerm) ||
-                                    job.short_description.toLowerCase().includes(searchTerm) ||
-                                    sectors.some(s => s.toLowerCase().includes(searchTerm)) ||
-                                    (job.grade && job.grade.toLowerCase().includes(searchTerm));
-                if (!matchesSearch) return false;
-            }
+        const isSpecificGPType = ['digital gp', 'gp partner', 'gp trainee', 'locum gp', 'salaried gp'].some(gpType =>
+            searchText.includes(gpType) || jobTitle.includes(gpType) || grade.includes(gpType)
+        );
 
-            for (const [category, selectedValues] of Object.entries(activeFilters)) {
-                if (selectedValues.length > 0) {
-                    if (category === 'profession') {
-                        const checkedProfessions = selectedValues;
-                        const sectors = job.sector || [];
-                        const employer = job.alternate_recruiter_name || job.recruiter_name;
-                        const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${employer}`.toLowerCase();
-                        const matchesProfession = checkedProfessions.some(profession => {
-                            return searchText.includes(profession.toLowerCase()) ||
-                                   sectors.some(s => s.toLowerCase() === profession.toLowerCase());
-                        });
-                        if (!matchesProfession) return false;
-                    } else if (category === 'location') {
-                        const checkedLocations = selectedValues;
-                        const jobLocation = job.location_description || '';
+        return !isSpecificGPType; // Return jobs that are GP but not specific types
+    } else if (profession.includes('GP') && profession !== 'GP') {
+        // For specific GP subcategories, use specific matching
+        const isGPJob = categoryFilters.gp.filter(job);
+        if (!isGPJob) return false;
 
-                        const matchesLocation = checkedLocations.some(location => {
-                            if (dynamicLocationHierarchy && dynamicLocationHierarchy.Overseas &&
-                                dynamicLocationHierarchy.Overseas.subcategories &&
-                                dynamicLocationHierarchy.Overseas.subcategories.includes(location)) {
-                                if (!categoryFilters.overseas.filter(job)) {
-                                    return false;
-                                }
+        const jobTitle = job.job_title.toLowerCase();
+        const grade = (job.grade || '').toLowerCase();
+        const searchText = `${jobTitle} ${job.short_description} ${grade}`.toLowerCase();
+        const professionLower = profession.toLowerCase();
 
-                                const country = job.location_country || '';
-                                const locationLower = jobLocation.toLowerCase();
-                                const countryLower = country.toLowerCase();
-
-                                if (location === 'Canada') {
-                                    return locationLower.includes('canada') || countryLower.includes('canada');
-                                } else if (location === 'Australia') {
-                                    return locationLower.includes('australia') || countryLower.includes('australia');
-                                } else if (location === 'New Zealand') {
-                                    return locationLower.includes('new zealand') || countryLower.includes('new zealand');
-                                } else if (location === 'Republic of Ireland') {
-                                    return (locationLower.includes('ireland') || countryLower.includes('ireland')) &&
-                                           !locationLower.includes('northern') && !countryLower.includes('northern');
-                                } else if (location === 'North America') {
-                                    return locationLower.includes('usa') || locationLower.includes('united states') ||
-                                           countryLower.includes('usa') || countryLower.includes('united states');
-                                } else if (location === 'Middle East') {
-                                    return locationLower.includes('dubai') || locationLower.includes('uae') ||
-                                           countryLower.includes('dubai') || countryLower.includes('uae');
-                                } else if (location === country) {
-                                    return true;
-                                }
-
-                                return false;
-                            } else {
-                                const normalizedJobLocation = normalizeLocation(jobLocation);
-                                const normalizedSearch = normalizeLocation(location);
-                                return normalizedJobLocation.includes(normalizedSearch);
-                            }
-                        });
-
-                        if (!matchesLocation) return false;
-                    } else if (category === 'grade') {
-                        if (!job.grade || !selectedValues.includes(job.grade)) {
-                            return false;
-                        }
-                    } else if (category === 'published') {
-                        if (!job.published) return false;
-
-                        const jobDays = parseDaysFromPublished(job.published);
-                        if (!jobDays) return false;
-
-    const matchesPublished = selectedValues.some(selectedCategory => {
-    switch(selectedCategory) {
-        case "Last 3 Days":
-            return jobDays <= 3;
-        case "Last 7 Days":
-            return jobDays <= 7;
-        case "Last 14 Days":
-            return jobDays <= 14;
-        case "Last 28 Days":
-            return jobDays <= 28;
-        case "More than 28 Days":
-            return jobDays > 28;
-        default:
-            return false;
+        return searchText.includes(professionLower) ||
+               jobTitle.includes(professionLower) ||
+               grade.includes(professionLower);
+    } else if (profession.toLowerCase().includes('consultant')) {
+        return categoryFilters.consultant.filter(job);
+    } else {
+        const sectors = job.sector || [];
+        const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''}`.toLowerCase();
+        return searchText.includes(profession.toLowerCase()) ||
+               sectors.some(s => s.toLowerCase() === profession.toLowerCase());
     }
 });
-                        if (!matchesPublished) return false;
-                    }
-                }
-            }
-
-            return true;
-        });
-
-        currentPage = 1;
-
-    // Batch DOM operations to prevent forced reflow
-    const batchUpdates = () => {
-        // Read all DOM properties first
-        const jobsList = document.getElementById('jobsList');
-        const pageJobs = getCurrentPageJobs();
-
-        // Then write all at once
-        if (pageJobs.length === 0) {
-            jobsList.innerHTML = '<div class="no-jobs-message">No jobs found matching your criteria.</div>';
-        } else {
-            // Use DocumentFragment for efficient DOM updates
-            const fragment = document.createDocumentFragment();
-            const tempDiv = document.createElement('div');
-
-tempDiv.innerHTML = pageJobs.map(job => {
-    const employer = job.alternate_recruiter_name || job.recruiter_name || 'Unknown Employer';
-    return `
-        <div class="job-card">
-            <div class="job-header">${job.job_title}</div>
-            <div class="job-body">
-                ${job.logo_url ? `<img src="${job.logo_url}" alt="${employer} Logo" class="nhs-logo" loading="lazy">` : ''}
-                <div class="job-details">
-                    <ul>
-                        <li><strong>Location:</strong> ${job.location_description}</li>
-                        <li><strong>Salary:</strong> ${job.salary || 'Competitive'}</li>
-                        <li><strong>Employer:</strong> ${employer}</li>
-                    </ul>
-                </div>
-                <div class="job-description">${job.short_description}</div>
-                <button class="apply-btn" onclick="applyToJob(${job.id})">View Details on BMJ Careers</button>
-            </div>
-        </div>
-    `;
-}).join('');
-
-            // Move nodes efficiently
-            while (tempDiv.firstChild) {
-                fragment.appendChild(tempDiv.firstChild);
-            }
-
-            jobsList.innerHTML = '';
-            jobsList.appendChild(fragment);
+            if (!matchesProfession) return false;
         }
 
-        // Update pagination and counts
-        updatePagination();
-        updateJobCount();
-    };
+        // Apply location filters
+        if (activeFilters.location.length > 0) {
+            const matchesLocation = activeFilters.location.some(location => {
+                if (dynamicLocationHierarchy.Overseas && dynamicLocationHierarchy.Overseas.subcategories.includes(location)) {
+                    if (!categoryFilters.overseas.filter(job)) {
+                        return false;
+                    }
+                    const country = job.location_country || '';
+                    const jobLocation = job.location_description || '';
+                    const locationLower = jobLocation.toLowerCase();
+                    const countryLower = country.toLowerCase();
 
-    // Use single RAF for all updates
-    requestAnimationFrame(() => {
-        batchUpdates();
-        // Update filter counts in next frame to avoid blocking
-        requestAnimationFrame(() => {
-            updateFilterCounts();
-            restoreFilterStates();
-        });
+                    if (location === 'Canada') {
+                        return locationLower.includes('canada') || countryLower.includes('canada');
+                    } else if (location === 'Australia') {
+                        return locationLower.includes('australia') || countryLower.includes('australia');
+                    } else if (location === 'New Zealand') {
+                        return locationLower.includes('new zealand') || countryLower.includes('new zealand');
+                    } else if (location === 'Republic of Ireland') {
+                        return (locationLower.includes('ireland') || countryLower.includes('ireland')) &&
+                               !locationLower.includes('northern') && !countryLower.includes('northern');
+                    }
+                    return false;
+                } else {
+                    const jobLocation = job.location_description || '';
+                    const normalizedJobLocation = normalizeLocation(jobLocation);
+                    const normalizedSearch = normalizeLocation(location);
+                    return normalizedJobLocation.includes(normalizedSearch);
+                }
+            });
+            if (!matchesLocation) return false;
+        }
+
+        // Apply grade filters - USE EXACT SAME LOGIC AS COUNT CALCULATION
+        if (activeFilters.grade.length > 0) {
+            const matchesGrade = activeFilters.grade.some(gradeName => {
+                if (gradeName.toLowerCase().includes('consultant')) {
+                    return categoryFilters.consultant.filter(job);
+                } else {
+                    return job.grade === gradeName;
+                }
+            });
+            if (!matchesGrade) return false;
+        }
+
+        // Apply published filters
+        if (activeFilters.published.length > 0) {
+            if (!job.published) return false;
+            const jobDays = parseDaysFromPublished(job.published);
+            if (!jobDays) return false;
+
+            const matchesPublished = activeFilters.published.some(selectedCategory => {
+                switch(selectedCategory) {
+                    case "Last 3 Days": return jobDays <= 3;
+                    case "Last 7 Days": return jobDays <= 7;
+                    case "Last 14 Days": return jobDays <= 14;
+                    case "Last 28 Days": return jobDays <= 28;
+                    case "More than 28 Days": return jobDays > 28;
+                    default: return false;
+                }
+            });
+            if (!matchesPublished) return false;
+        }
+
+        return true;
     });
+
+    currentPage = 1;
+    renderJobsList();
+    updatePagination();
+    updateJobCount();
 
     if (shouldScroll) {
         scrollToTop();
     }
 }
+
 
    function updateFilterCounts() {
     const activeFilters = {
@@ -2954,68 +2762,81 @@ tempDiv.innerHTML = pageJobs.map(job => {
     // Update counts for each filter option
     function updateFilterOptionCounts() {
         // Update profession counts
-        document.querySelectorAll('.profession-sub-item .filter-count').forEach(countElement => {
-            const item = countElement.closest('.profession-sub-item');
-            const checkbox = item.querySelector('.profession-sub-checkbox');
-            if (checkbox) {
-                const label = checkbox.nextElementSibling;
-                if (label) {
-                    const professionName = label.textContent.trim().replace(/\s*\(\d+\)$/, '');
+        // Update profession counts
+document.querySelectorAll('.profession-sub-item .filter-count').forEach(countElement => {
+    const item = countElement.closest('.profession-sub-item');
+    const checkbox = item.querySelector('.profession-sub-checkbox');
+    if (checkbox) {
+        const label = checkbox.nextElementSibling;
+        if (label) {
+            const professionName = label.textContent.trim().replace(/\s*\(\d+\)$/, '');
 
-                    // Count jobs that would match if this profession was selected
-                    const jobsForThisProfession = baseJobs.filter(job => {
-                        // Apply all OTHER active filters except this profession
-                        let matchesOtherFilters = true;
+            // Count jobs that would match if this profession was selected
+            const jobsForThisProfession = baseJobs.filter(job => {
+                // Apply all OTHER active filters except this profession
+                let matchesOtherFilters = true;
 
-                        // Check locations
-                        if (activeFilters.location.length > 0) {
-                            const jobLocation = job.location_description || '';
-                            const matchesLocation = activeFilters.location.some(location => {
-                                const normalizedJobLocation = normalizeLocation(jobLocation);
-                                const normalizedSearch = normalizeLocation(location);
-                                return normalizedJobLocation.includes(normalizedSearch);
-                            });
-                            if (!matchesLocation) matchesOtherFilters = false;
-                        }
-
-                        // Check grades
-                        if (activeFilters.grade.length > 0) {
-                            if (!job.grade || !activeFilters.grade.includes(job.grade)) {
-                                matchesOtherFilters = false;
-                            }
-                        }
-
-                        // Check published
-                        if (activeFilters.published.length > 0) {
-                            if (!job.published) return false;
-                            const jobDays = parseDaysFromPublished(job.published);
-                            if (!jobDays) return false;
-                            const matchesPublished = activeFilters.published.some(selectedCategory => {
-                                switch(selectedCategory) {
-                                    case "Last 3 Days": return jobDays <= 3;
-                                    case "Last 7 Days": return jobDays <= 7;
-                                    case "Last 14 Days": return jobDays <= 14;
-                                    case "Last 28 Days": return jobDays <= 28;
-                                    case "More than 28 Days": return jobDays > 28;
-                                    default: return false;
-                                }
-                            });
-                            if (!matchesPublished) matchesOtherFilters = false;
-                        }
-
-                        if (!matchesOtherFilters) return false;
-
-                        // Now check if this job matches the current profession
-                        const sectors = job.sector || [];
-                        const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
-                        return searchText.includes(professionName.toLowerCase()) ||
-                               sectors.some(s => s.toLowerCase() === professionName.toLowerCase());
+                // Check locations
+                if (activeFilters.location.length > 0) {
+                    const jobLocation = job.location_description || '';
+                    const matchesLocation = activeFilters.location.some(location => {
+                        const normalizedJobLocation = normalizeLocation(jobLocation);
+                        const normalizedSearch = normalizeLocation(location);
+                        return normalizedJobLocation.includes(normalizedSearch);
                     });
-
-                    countElement.textContent = jobsForThisProfession.length;
+                    if (!matchesLocation) matchesOtherFilters = false;
                 }
-            }
-        });
+
+                // Check grades
+                if (activeFilters.grade.length > 0) {
+                    const matchesGrade = activeFilters.grade.some(gradeName => {
+                        if (gradeName.toLowerCase().includes('consultant')) {
+                            return categoryFilters.consultant.filter(job);
+                        } else {
+                            return job.grade === gradeName;
+                        }
+                    });
+                    if (!matchesGrade) matchesOtherFilters = false;
+                }
+
+                // Check published
+                if (activeFilters.published.length > 0) {
+                    if (!job.published) return false;
+                    const jobDays = parseDaysFromPublished(job.published);
+                    if (!jobDays) return false;
+                    const matchesPublished = activeFilters.published.some(selectedCategory => {
+                        switch(selectedCategory) {
+                            case "Last 3 Days": return jobDays <= 3;
+                            case "Last 7 Days": return jobDays <= 7;
+                            case "Last 14 Days": return jobDays <= 14;
+                            case "Last 28 Days": return jobDays <= 28;
+                            case "More than 28 Days": return jobDays > 28;
+                            default: return false;
+                        }
+                    });
+                    if (!matchesPublished) matchesOtherFilters = false;
+                }
+
+                if (!matchesOtherFilters) return false;
+
+                // Use category filter logic for GP and Consultant
+                if (professionName.toLowerCase() === 'gp' || professionName === 'GP') {
+                    return categoryFilters.gp.filter(job);
+                } else if (professionName.toLowerCase().includes('consultant') || professionName.includes('Consultant')) {
+                    return categoryFilters.consultant.filter(job);
+                } else {
+                    // For other professions, use text matching
+                    const sectors = job.sector || [];
+                    const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''} ${job.location_description} ${job.recruiter_name}`.toLowerCase();
+                    return searchText.includes(professionName.toLowerCase()) ||
+                           sectors.some(s => s.toLowerCase() === professionName.toLowerCase());
+                }
+            });
+
+            countElement.textContent = jobsForThisProfession.length;
+        }
+    }
+});
 
         // Update location counts
         document.querySelectorAll('.location-sub-checkbox').forEach(checkbox => {
@@ -3077,42 +2898,33 @@ tempDiv.innerHTML = pageJobs.map(job => {
             }
         });
 
-        // Update grade and published counts similarly
-        document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
-            const item = checkbox.closest('.filter-item');
-            const countElement = item?.querySelector('.filter-count');
-            if (countElement) {
-                const label = checkbox.nextElementSibling;
-                if (label) {
-                    const filterValue = label.textContent.trim().replace(/\s*\(\d+\)$/, '');
-                    const filterType = checkbox.id.split('_')[0];
+// Update grade and published counts
+document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+    const item = checkbox.closest('.filter-item');
+    const countElement = item?.querySelector('.filter-count');
+    if (countElement) {
+        const label = checkbox.nextElementSibling;
+        if (label) {
+            const filterValue = label.textContent.trim().replace(/\s*\(\d+\)$/, '');
+            const filterType = checkbox.id.split('_')[0];
 
-                    const jobsForThisFilter = baseJobs.filter(job => {
-                        // Apply all OTHER filters and check if this filter value would match
-                        // Implementation depends on filter type (grade/published)
-                        if (filterType === 'grade') {
-                            return job.grade === filterValue;
-                        } else if (filterType === 'published') {
-                            if (!job.published) return false;
-                            const jobDays = parseDaysFromPublished(job.published);
-                            if (!jobDays) return false;
-
-                            switch(filterValue) {
-                                case "Last 3 Days": return jobDays <= 3;
-                                case "Last 7 Days": return jobDays <= 7;
-                                case "Last 14 Days": return jobDays <= 14;
-                                case "Last 28 Days": return jobDays <= 28;
-                                case "More than 28 Days": return jobDays > 28;
-                                default: return false;
-                            }
-                        }
-                        return false;
-                    });
-
-                    countElement.textContent = jobsForThisFilter.length;
-                }
+            if (filterType === 'grade') {
+                const jobsForThisFilter = baseJobs.filter(job => {
+                    if (filterValue.toLowerCase().includes('consultant')) {
+                        return categoryFilters.consultant.filter(job);
+                    } else {
+                        return job.grade === filterValue;
+                    }
+                });
+                countElement.textContent = jobsForThisFilter.length;
+            } else if (filterType === 'published') {
+                // Use the same counting function for dynamic updates
+                const count = countJobsForPublishedFilter(filterValue, baseJobs);
+                countElement.textContent = count;
             }
-        });
+        }
+    }
+});
     }
 
     // Call the update function
