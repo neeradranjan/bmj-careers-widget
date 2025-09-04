@@ -2711,6 +2711,13 @@ const matchesProfession = activeFilters.profession.some(profession => {
     if (shouldScroll) {
         scrollToTop();
     }
+
+    // Refresh published counts dynamically (isolated from other functionality)
+if (typeof updateFilterCounts === 'function') {
+    setTimeout(() => {
+        updateFilterCounts();
+    }, 50);
+}
 }
 
 
@@ -2834,6 +2841,109 @@ document.querySelectorAll('.profession-sub-item .filter-count').forEach(countEle
             });
 
             countElement.textContent = jobsForThisProfession.length;
+        }
+    }
+});
+
+// Update published counts dynamically
+document.querySelectorAll('.filter-item').forEach(item => {
+    const checkbox = item.querySelector('.filter-checkbox');
+    const countElement = item.querySelector('.filter-count');
+
+    if (checkbox && countElement && checkbox.id.startsWith('published_')) {
+        const label = checkbox.nextElementSibling;
+        if (label) {
+            const publishedCategory = label.textContent.trim().replace(/\s*\(\d+\)$/, '');
+
+            // Apply all OTHER active filters except published
+            let jobsForThisPublished = baseJobs.filter(job => {
+                // Apply profession filters if any
+                if (activeFilters.profession.length > 0) {
+                    const matchesProfession = activeFilters.profession.some(profession => {
+                        if (profession === 'GP') {
+                            const isGPJob = categoryFilters.gp.filter(job);
+                            if (!isGPJob) return false;
+
+                            const jobTitle = job.job_title.toLowerCase();
+                            const grade = (job.grade || '').toLowerCase();
+                            const searchText = `${jobTitle} ${job.short_description} ${grade}`.toLowerCase();
+
+                            const isSpecificGPType = ['digital gp', 'gp partner', 'gp trainee', 'locum gp', 'salaried gp'].some(gpType =>
+                                searchText.includes(gpType) || jobTitle.includes(gpType) || grade.includes(gpType)
+                            );
+
+                            return !isSpecificGPType;
+                        } else if (profession.includes('GP') && profession !== 'GP') {
+                            const isGPJob = categoryFilters.gp.filter(job);
+                            if (!isGPJob) return false;
+
+                            const jobTitle = job.job_title.toLowerCase();
+                            const grade = (job.grade || '').toLowerCase();
+                            const searchText = `${jobTitle} ${job.short_description} ${grade}`.toLowerCase();
+                            const professionLower = profession.toLowerCase();
+
+                            return searchText.includes(professionLower) ||
+                                   jobTitle.includes(professionLower) ||
+                                   grade.includes(professionLower);
+                        } else if (profession.toLowerCase().includes('consultant')) {
+                            return categoryFilters.consultant.filter(job);
+                        } else {
+                            const sectors = job.sector || [];
+                            const searchText = `${job.job_title} ${job.short_description} ${sectors.join(' ')} ${job.grade || ''}`.toLowerCase();
+                            return searchText.includes(profession.toLowerCase()) ||
+                                   sectors.some(s => s.toLowerCase() === profession.toLowerCase());
+                        }
+                    });
+                    if (!matchesProfession) return false;
+                }
+
+                // Apply location filters if any
+                if (activeFilters.location.length > 0) {
+                    const jobLocation = job.location_description || '';
+                    const matchesLocation = activeFilters.location.some(location => {
+                        const normalizedJobLocation = normalizeLocation(jobLocation);
+                        const normalizedSearch = normalizeLocation(location);
+                        return normalizedJobLocation.includes(normalizedSearch);
+                    });
+                    if (!matchesLocation) return false;
+                }
+
+                // Apply grade filters if any
+                if (activeFilters.grade.length > 0) {
+                    const matchesGrade = activeFilters.grade.some(gradeName => {
+                        if (gradeName.toLowerCase().includes('consultant')) {
+                            return categoryFilters.consultant.filter(job);
+                        } else {
+                            return job.grade === gradeName;
+                        }
+                    });
+                    if (!matchesGrade) return false;
+                }
+
+                return true;
+            });
+
+            // Now check how many of these jobs match this specific published category
+            const finalCount = jobsForThisPublished.filter(job => {
+                if (!job.published) return false;
+                const jobDays = parseDaysFromPublished(job.published);
+                if (!jobDays) return false;
+
+                switch(publishedCategory) {
+                    case "Last 7 Days":
+                        return jobDays <= 7;
+                    case "Last 14 Days":
+                        return jobDays <= 14;
+                    case "Last 28 Days":
+                        return jobDays <= 28;
+                    case "More than 28 Days":
+                        return jobDays > 28;
+                    default:
+                        return false;
+                }
+            }).length;
+
+            countElement.textContent = finalCount;
         }
     }
 });
