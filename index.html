@@ -2778,6 +2778,10 @@ document.querySelectorAll('.profession-sub-item .filter-count').forEach(countEle
         if (label) {
             const professionName = label.textContent.trim().replace(/\s*\(\d+\)$/, '');
 
+			if (professionName === 'GP' || professionName.includes('GP')) {
+                return; // Skip this iteration
+            }
+
             // Count jobs that would match if this profession was selected
             const jobsForThisProfession = baseJobs.filter(job => {
                 // Apply all OTHER active filters except this profession
@@ -4106,3 +4110,4 @@ window.addEventListener('jobsDataLoaded', function(event) {
 </script>
 </body>
 </html>
+
